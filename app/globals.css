@@ -1,26 +1,202 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
+/* 让 Tailwind 的 dark: 工具类跟着 .dark 类走（v4 写法） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== 多主题系统（5 套预设 × 明暗，每套自带字体 + 纹样）=====
+   两个维度：preset（<html data-theme="...">）× scheme（<html>.dark）。
+   每套预设定义自己的颜色 token + 字体（--display-font/--body-font/--mono-font）。
+   token 命名对齐 shadcn 约定（muted=bg/muted-foreground=text、accent=hover-bg），
+   自有主强调用 --brand、次强调用 --felt。组件用 bg-background 等 token，换主题只换值。 */
+
+/* Joker（小丑：皇家紫 + 小丑红 + 骨白）-- 默认 */
+:root,
+:root[data-theme="joker"] {
+  --background: #f1eadb;
+  --foreground: #1e1430;
+  --surface: #fbf6ec;
+  --muted-foreground: #6a5c7c;
+  --border: #dcd2bd;
+  --brand: #c5302a;
+  --felt: #5b2a86;
+  --display-font: var(--font-fraunces);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-geist-mono);
+}
+:root.dark,
+:root[data-theme="joker"].dark {
+  --background: #190f24;
+  --foreground: #ece3d4;
+  --surface: #241630;
+  --muted-foreground: #968aa6;
+  --border: #322243;
+  --brand: #e45a4c;
+  --felt: #9159c9;
+}
+
+/* 磐石之信（海军蓝 + 白 + 政务红）*/
+:root[data-theme="panshi"] {
+  --background: #f3f6fa;
+  --foreground: #122036;
+  --surface: #ffffff;
+  --muted-foreground: #56697f;
+  --border: #d2dce8;
+  --brand: #1e4fd8;
+  --felt: #b91c1c;
+  --display-font: var(--font-plex-sans);
+  --body-font: var(--font-plex-sans);
+  --mono-font: var(--font-geist-mono);
+}
+:root[data-theme="panshi"].dark {
+  --background: #08111f;
+  --foreground: #d8e2f0;
+  --surface: #101e33;
+  --muted-foreground: #8497ae;
+  --border: #1c2e48;
+  --brand: #4f7fe0;
+  --felt: #e05858;
+}
+
+/* 鸿泰安康（深绛红 + 白 + 金）*/
+:root[data-theme="hongtai"] {
+  --background: #f6f2f1;
+  --foreground: #2a1418;
+  --surface: #ffffff;
+  --muted-foreground: #695256;
+  --border: #e4d7d5;
+  --brand: #b01e1e;
+  --felt: #a8842e;
+  --display-font: var(--font-plex-sans);
+  --body-font: var(--font-plex-sans);
+  --mono-font: var(--font-geist-mono);
+}
+:root[data-theme="hongtai"].dark {
+  --background: #170a0c;
+  --foreground: #ede0de;
+  --surface: #261116;
+  --muted-foreground: #a68e8c;
+  --border: #381e22;
+  --brand: #d8453c;
+  --felt: #c9a24b;
+}
+
+/* Cyberpunk（赛博朋克：霓虹品红 + 电青 + 近黑）*/
+:root[data-theme="cyberpunk"] {
+  --background: #ebeef4;
+  --foreground: #14141f;
+  --surface: #ffffff;
+  --muted-foreground: #585872;
+  --border: #d4d8e2;
+  --brand: #d81b7a;
+  --felt: #0099b8;
+  --display-font: var(--font-space-mono);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-space-mono);
+}
+:root[data-theme="cyberpunk"].dark {
+  --background: #0a0a14;
+  --foreground: #dcdcf0;
+  --surface: #11111e;
+  --muted-foreground: #76769a;
+  --border: #1e1e32;
+  --brand: #ff2e97;
+  --felt: #00e5ff;
+}
+
+/* Minimal（极简科技：白 + 近黑 + 电蓝）*/
+:root[data-theme="minimal"] {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0f1a;
+  --surface: #f5f7fa;
+  --muted-foreground: #6b7280;
+  --border: #e5e7eb;
+  --brand: #2563eb;
+  --felt: #1e40af;
+  --display-font: var(--font-geist-sans);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-geist-mono);
+}
+:root[data-theme="minimal"].dark {
+  --background: #0a0f1a;
+  --foreground: #e5e7eb;
+  --surface: #141923;
+  --muted-foreground: #9ca3af;
+  --border: #1f2937;
+  --brand: #3b82f6;
+  --felt: #60a5fa;
+}
+
+/* 签名纹样（极淡，仅 Joker 菱形纹 + Cyberpunk 扫描线）*/
+:root[data-theme="joker"] body {
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 9px, rgba(91, 42, 134, 0.025) 9px 18px),
+    repeating-linear-gradient(-45deg, transparent 0 9px, rgba(197, 48, 42, 0.02) 9px 18px);
+}
+:root[data-theme="cyberpunk"] body {
+  background-image: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 229, 255, 0.025) 2px 3px);
 }
 
 @theme inline {
+  /* 自有 token */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-felt: var(--felt);
+
+  /* shadcn 约定 token（引用上面的值，每套预设自动适配）*/
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--background);
+  --color-secondary: var(--surface);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--surface);
+  --color-accent: var(--background);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--brand);
+  --color-destructive-foreground: var(--background);
+  --color-input: var(--border);
+  --color-ring: var(--brand);
+
+  /* sidebar（映射到自有 token）*/
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--brand);
+  --color-sidebar-primary-foreground: var(--background);
+  --color-sidebar-accent: var(--background);
+  --color-sidebar-accent-foreground: var(--foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--brand);
+
+  /* chart（占位，真做图表再细化）*/
+  --color-chart-1: var(--brand);
+  --color-chart-2: var(--felt);
+  --color-chart-3: var(--foreground);
+  --color-chart-4: var(--muted-foreground);
+  --color-chart-5: var(--border);
+
+  /* 字体（每套预设自带，跟随 data-theme）*/
+  --font-sans: var(--body-font);
+  --font-mono: var(--mono-font);
+  --font-display: var(--display-font);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  *, ::before, ::after {
+    border-color: var(--border);
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
 }

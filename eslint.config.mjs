@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // shadcn/ui 为 vendored 源码，其模式会触发 react-hooks 严格规则，不纳入 lint
+    "components/ui/**",
+    "hooks/use-mobile.ts",
   ]),
 ]);
 
