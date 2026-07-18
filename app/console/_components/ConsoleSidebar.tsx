@@ -1,265 +1,279 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
-  ChevronDown,
-  ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   LayoutDashboard,
-  LogOut,
+  LayoutGrid,
   Settings,
   Shield,
   Users,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useMenuTree } from "@/hooks/useMenuTree";
 import { useUser } from "@/hooks/useUser";
-import { cn } from "@/lib/utils";
+import { MENU_TYPE } from "@/types";
 
-type MenuChild = { href: string; label: string };
-type MenuItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  children?: MenuChild[];
+// 接口不返回 icon，按 path 映射顶级菜单图标；未知用兜底图标。
+// 图标是纯展示层，菜单结构/可见性仍由后端驱动。
+const MENU_ICONS: Record<string, LucideIcon> = {
+  "/console": LayoutDashboard,
+  "/console/users": Users,
+  "/console/roles": Shield,
+  "/console/orgs": Building2,
+  "/console/settings": Settings,
 };
+const FALLBACK_ICON = LayoutGrid;
+function iconFor(path: string): LucideIcon {
+  return MENU_ICONS[path] ?? FALLBACK_ICON;
+}
 
-// 后台菜单：/console 为扁平项，其余支持子菜单（占位路由，暂无页面）。
-const menu: MenuItem[] = [
-  { href: "/console", label: "仪表盘", icon: LayoutDashboard },
-  {
-    href: "/console/users",
-    label: "用户管理",
-    icon: Users,
-    children: [
-      { href: "/console/users/list", label: "用户列表" },
-      { href: "/console/users/new", label: "新增用户" },
-    ],
-  },
-  {
-    href: "/console/roles",
-    label: "角色管理",
-    icon: Shield,
-    children: [
-      { href: "/console/roles/list", label: "角色列表" },
-      { href: "/console/roles/perm", label: "权限配置" },
-    ],
-  },
-  {
-    href: "/console/orgs",
-    label: "机构管理",
-    icon: Building2,
-    children: [
-      { href: "/console/orgs/list", label: "机构列表" },
-      { href: "/console/orgs/members", label: "机构成员" },
-    ],
-  },
-  {
-    href: "/console/settings",
-    label: "系统设置",
-    icon: Settings,
-    children: [
-      { href: "/console/settings/basic", label: "基本设置" },
-      { href: "/console/settings/security", label: "安全设置" },
-    ],
-  },
-];
-
-// 后台侧边栏：上 logo(+收起钮) / 中 菜单(可收起、支持子菜单) / 下 用户+退出。
+// 后台侧边栏（shadcn Sidebar）：菜单由后端 /menu/menuTree(menuType=-1) 驱动，
+// useMenuTree 按 whiteList + authPaths 过滤。可折叠图标栏 + 移动端 Sheet + 折叠 tooltip。
 export function ConsoleSidebar() {
   const pathname = usePathname();
   const { logout } = useAuth();
   const { user } = useUser();
-
-  const [collapsed, setCollapsed] = useState(false);
-  const [openMenus, setOpenMenus] = useState<Set<string>>(() => {
-    // 默认展开当前路由所属的父菜单
-    const initial = new Set<string>();
-    for (const item of menu) {
-      if (item.children && pathname.startsWith(item.href)) initial.add(item.href);
-    }
-    return initial;
-  });
+  const { menu, loading } = useMenuTree(MENU_TYPE.CONSOLE);
+  const { state, isMobile } = useSidebar();
 
   const initials = (user?.nickname || user?.username || "?")
     .slice(0, 2)
     .toUpperCase();
   const name = user?.nickname ?? user?.username ?? "用户";
 
-  function toggleMenu(href: string) {
-    setOpenMenus((prev) => {
-      const next = new Set(prev);
-      if (next.has(href)) next.delete(href);
-      else next.add(href);
-      return next;
-    });
-  }
-
-  // 收起态点父菜单：展开侧栏 + 打开该子菜单
-  function handleParentClickCollapsed(href: string) {
-    setCollapsed(false);
-    setOpenMenus((prev) => new Set(prev).add(href));
-  }
-
   return (
-    <aside
-      className={cn(
-        "flex h-full flex-col border-r bg-surface transition-[width] duration-200",
-        collapsed ? "w-16" : "w-60",
-      )}
-    >
-      {/* 上：logo + 收起钮 */}
-      <div
-        className={cn(
-          "flex h-16 shrink-0 items-center border-b",
-          collapsed
-            ? "flex-col justify-center gap-1"
-            : "gap-2 px-4",
-        )}
-      >
-        <span
-          className="flex h-7 w-6 shrink-0 flex-col items-center justify-center rounded-[3px] border leading-none"
-          aria-hidden="true"
-        >
-          <span className="font-display text-[10px] font-bold">J</span>
-          <span className="text-[11px] leading-none text-brand">♠</span>
-        </span>
-        {!collapsed && (
-          <span className="flex-1 font-display text-lg font-semibold tracking-tight">
-            Joker Box
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? "展开侧栏" : "收起侧栏"}
-          className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground",
-            !collapsed && "ml-auto",
-          )}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-
-      {/* 中：菜单 */}
-      <nav className="flex-1 overflow-y-auto p-2">
-        {menu.map((item) => {
-          const Icon = item.icon;
-
-          if (!item.children) {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  collapsed && "justify-center px-0",
-                  active
-                    ? "bg-background font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-background hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && item.label}
-              </Link>
-            );
-          }
-
-          const open = openMenus.has(item.href);
-          const active = pathname.startsWith(item.href);
-          return (
-            <div key={item.href}>
-              <button
-                type="button"
-                onClick={() =>
-                  collapsed
-                    ? handleParentClickCollapsed(item.href)
-                    : toggleMenu(item.href)
-                }
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  collapsed && "justify-center px-0",
-                  active
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:bg-background hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
-                {!collapsed && (
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 shrink-0 transition-transform",
-                      open && "rotate-180",
-                    )}
-                  />
-                )}
-              </button>
-              {!collapsed && open && (
-                <div className="mb-0.5 ml-4 mt-0.5 flex flex-col gap-0.5 border-l pl-2">
-                  {item.children.map((child) => {
-                    const childActive =
-                      pathname === child.href || pathname.startsWith(child.href + "/");
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className={cn(
-                          "rounded-md px-3 py-1.5 text-sm transition-colors",
-                          childActive
-                            ? "bg-background font-medium text-foreground"
-                            : "text-muted-foreground hover:bg-background hover:text-foreground",
-                        )}
-                      >
-                        {child.label}
-                      </Link>
-                    );
-                  })}
+    <Sidebar collapsible="icon">
+      {/* 上：logo（点回仪表盘）*/}
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link href="/console">
+                <span
+                  className="flex h-7 w-6 flex-col items-center justify-center rounded-[3px] border leading-none"
+                  aria-hidden="true"
+                >
+                  <span className="font-display text-[10px] font-bold">J</span>
+                  <span className="text-[11px] leading-none text-brand">♠</span>
+                </span>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="font-display truncate font-semibold">
+                    Joker Box
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    管理后台
+                  </span>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
-      {/* 下：用户信息 + 退出 */}
-      <div className="shrink-0 border-t p-2">
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-md px-2 py-1.5",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback className="bg-felt font-display text-xs text-background">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && <span className="flex-1 truncate text-sm">{name}</span>}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={logout}
-            aria-label="退出登录"
-            className="h-8 w-8 shrink-0 text-muted-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </aside>
+      {/* 中：菜单（父项用 Collapsible；当前路由所在组默认展开）*/}
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {loading ? (
+                <>
+                  <SidebarMenuSkeleton showIcon />
+                  <SidebarMenuSkeleton showIcon />
+                  <SidebarMenuSkeleton showIcon />
+                  <SidebarMenuSkeleton showIcon />
+                </>
+              ) : (
+                (menu ?? []).map((item) => {
+                  const Icon = iconFor(item.path);
+                  const active = pathname.startsWith(item.path);
+
+                  if (!item.children?.length) {
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === item.path}
+                          tooltip={item.name}
+                        >
+                          <Link href={item.path}>
+                            <Icon />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  }
+
+                  if (state === "collapsed" && !isMobile) {
+                    // 折叠态：点开向右浮层，子项自动关闭并跳转
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <SidebarMenuButton isActive={active}>
+                              <Icon />
+                              <span>{item.name}</span>
+                              <ChevronRight className="ml-auto" />
+                            </SidebarMenuButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            side="right"
+                            align="start"
+                            className="w-52"
+                          >
+                            <DropdownMenuLabel>{item.name}</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {item.children.map((child) => (
+                              <DropdownMenuItem asChild key={child.path}>
+                                <Link href={child.path}>{child.name}</Link>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </SidebarMenuItem>
+                    );
+                  }
+                  return (
+                    <Collapsible
+                      key={item.path}
+                      asChild
+                      defaultOpen={active}
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton tooltip={item.name}>
+                            <Icon />
+                            <span>{item.name}</span>
+                            <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.children.map((child) => {
+                              const childActive =
+                                pathname === child.path ||
+                                pathname.startsWith(child.path + "/");
+                              return (
+                                <SidebarMenuSubItem key={child.path}>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={childActive}
+                                  >
+                                    <Link href={child.path}>
+                                      <span>{child.name}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                })
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* 下：用户菜单（向上展开）—— 用户信息 / 返回前台 / 退出登录 */}
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  tooltip={name}
+                  className="data-[state=open]:bg-sidebar-accent"
+                >
+                  <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                    <AvatarFallback className="rounded-lg bg-felt font-display text-xs text-background">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{name}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      @{user?.username ?? "-"}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="w-64">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-display font-semibold leading-none">
+                        {name}
+                      </span>
+                      {user?.admin && <Badge>管理员</Badge>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      @{user?.username ?? "-"}
+                    </span>
+                    {user?.mail && (
+                      <span className="truncate font-mono text-xs text-muted-foreground">
+                        {user.mail}
+                      </span>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/">返回前台</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="text-destructive focus:text-destructive"
+                >
+                  退出登录
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

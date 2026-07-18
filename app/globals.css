@@ -4,13 +4,14 @@
 /* 让 Tailwind 的 dark: 工具类跟着 .dark 类走（v4 写法） */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ===== 多主题系统（5 套预设 × 明暗，每套自带字体 + 纹样）=====
+/* ===== 多主题系统（5 套预设 × 明暗，每套独立：颜色 + 字体 + 圆角 + 阴影 + 字距 + 纹样）=====
    两个维度：preset（<html data-theme="...">）× scheme（<html>.dark）。
-   每套预设定义自己的颜色 token + 字体（--display-font/--body-font/--mono-font）。
-   token 命名对齐 shadcn 约定（muted=bg/muted-foreground=text、accent=hover-bg），
-   自有主强调用 --brand、次强调用 --felt。组件用 bg-background 等 token，换主题只换值。 */
+   每套预设自定义多维度 token：颜色、字体、--radius（圆角基准）、--elevation-*（阴影）、
+   --tracking-display（标题字距）、body 纹样。token 命名对齐 shadcn 约定
+   （muted=bg/muted-foreground=text、accent=hover-bg），自有主强调 --brand、次强调 --felt。
+   组件用 bg-background / rounded-md / shadow-sm 等 token，换主题只换值。 */
 
-/* Joker（小丑：皇家紫 + 小丑红 + 骨白）-- 默认 */
+/* Joker（小丑：皇家紫 + 小丑红 + 骨白）-- 锐角、菱形纹、Fraunces -- 默认 */
 :root,
 :root[data-theme="joker"] {
   --background: #f1eadb;
@@ -23,6 +24,11 @@
   --display-font: var(--font-fraunces);
   --body-font: var(--font-geist-sans);
   --mono-font: var(--font-geist-mono);
+  --radius: 0.25rem;
+  --elevation-sm: 0 1px 2px rgb(30 20 48 / 0.06);
+  --elevation-md: 0 4px 12px rgb(30 20 48 / 0.08);
+  --elevation-lg: 0 8px 24px rgb(30 20 48 / 0.1);
+  --tracking-display: 0em;
 }
 :root.dark,
 :root[data-theme="joker"].dark {
@@ -35,7 +41,7 @@
   --felt: #9159c9;
 }
 
-/* 磐石之信（海军蓝 + 白 + 政务红）*/
+/* 磐石之信（海军蓝 + 白 + 政务红）-- 标准 */
 :root[data-theme="panshi"] {
   --background: #f3f6fa;
   --foreground: #122036;
@@ -47,6 +53,11 @@
   --display-font: var(--font-plex-sans);
   --body-font: var(--font-plex-sans);
   --mono-font: var(--font-geist-mono);
+  --radius: 0.5rem;
+  --elevation-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --elevation-md: 0 4px 8px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --elevation-lg: 0 12px 16px -4px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  --tracking-display: 0em;
 }
 :root[data-theme="panshi"].dark {
   --background: #08111f;
@@ -58,7 +69,7 @@
   --felt: #e05858;
 }
 
-/* 鸿泰安康（深绛红 + 白 + 金）*/
+/* 鸿泰安康（深绛红 + 白 + 金）-- 标准 */
 :root[data-theme="hongtai"] {
   --background: #f6f2f1;
   --foreground: #2a1418;
@@ -70,6 +81,11 @@
   --display-font: var(--font-plex-sans);
   --body-font: var(--font-plex-sans);
   --mono-font: var(--font-geist-mono);
+  --radius: 0.5rem;
+  --elevation-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --elevation-md: 0 4px 8px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --elevation-lg: 0 12px 16px -4px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  --tracking-display: 0em;
 }
 :root[data-theme="hongtai"].dark {
   --background: #170a0c;
@@ -81,7 +97,7 @@
   --felt: #c9a24b;
 }
 
-/* Cyberpunk（赛博朋克：霓虹品红 + 电青 + 近黑）*/
+/* Cyberpunk（赛博朋克：霓虹品红 + 电青 + 近黑）-- 零圆角、扫描线、全 Mono、霓虹辉光 */
 :root[data-theme="cyberpunk"] {
   --background: #ebeef4;
   --foreground: #14141f;
@@ -91,8 +107,13 @@
   --brand: #d81b7a;
   --felt: #0099b8;
   --display-font: var(--font-space-mono);
-  --body-font: var(--font-geist-sans);
+  --body-font: var(--font-space-mono);
   --mono-font: var(--font-space-mono);
+  --radius: 0rem;
+  --elevation-sm: 0 1px 3px rgb(0 0 0 / 0.4);
+  --elevation-md: 0 4px 12px rgb(0 0 0 / 0.4), 0 0 10px color-mix(in srgb, var(--brand) 18%, transparent);
+  --elevation-lg: 0 8px 24px rgb(0 0 0 / 0.4), 0 0 16px color-mix(in srgb, var(--felt) 16%, transparent);
+  --tracking-display: 0.04em;
 }
 :root[data-theme="cyberpunk"].dark {
   --background: #0a0a14;
@@ -104,7 +125,7 @@
   --felt: #00e5ff;
 }
 
-/* Minimal（极简科技：白 + 近黑 + 电蓝）*/
+/* Minimal（极简科技：白 + 近黑 + 电蓝）-- 大圆角、点阵纹、无阴影、紧字距 */
 :root[data-theme="minimal"] {
   --background: #ffffff;
   --foreground: #0a0f1a;
@@ -116,6 +137,11 @@
   --display-font: var(--font-geist-sans);
   --body-font: var(--font-geist-sans);
   --mono-font: var(--font-geist-mono);
+  --radius: 0.75rem;
+  --elevation-sm: none;
+  --elevation-md: 0 1px 2px rgb(10 15 26 / 0.04);
+  --elevation-lg: 0 2px 8px rgb(10 15 26 / 0.06);
+  --tracking-display: -0.02em;
 }
 :root[data-theme="minimal"].dark {
   --background: #0a0f1a;
@@ -127,7 +153,7 @@
   --felt: #60a5fa;
 }
 
-/* 签名纹样（极淡，仅 Joker 菱形纹 + Cyberpunk 扫描线）*/
+/* 签名纹样（极淡，不干扰阅读）：Joker 菱形 / Cyberpunk 扫描线 / Minimal 点阵 */
 :root[data-theme="joker"] body {
   background-image:
     repeating-linear-gradient(45deg, transparent 0 9px, rgba(91, 42, 134, 0.025) 9px 18px),
@@ -135,6 +161,11 @@
 }
 :root[data-theme="cyberpunk"] body {
   background-image: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 229, 255, 0.025) 2px 3px);
+}
+:root[data-theme="minimal"] body {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
 }
 
 @theme inline {
@@ -181,6 +212,17 @@
   --color-chart-4: var(--muted-foreground);
   --color-chart-5: var(--border);
 
+  /* 圆角（每套预设 --radius 为基准，rounded-sm/md/lg/xl 跟随）*/
+  --radius-sm: calc(var(--radius) * 0.25);
+  --radius-md: calc(var(--radius) * 0.5);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  /* 阴影（每套预设 --elevation-*，shadow-sm/md/lg 跟随）*/
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+
   /* 字体（每套预设自带，跟随 data-theme）*/
   --font-sans: var(--body-font);
   --font-mono: var(--mono-font);
@@ -198,5 +240,6 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
+    letter-spacing: var(--tracking-display, 0em);
   }
 }

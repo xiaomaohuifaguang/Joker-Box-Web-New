@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PRESETS } from "@/lib/theme";
 import { useTheme } from "@/hooks/useTheme";
 
-// 主题预设切换：下拉菜单（点击展开，外部点击关闭）。
+// 主题预设切换：下拉菜单（点击展开，外部点击关闭）。前台 Header / 后台顶栏共用。
 export function ThemeSelect() {
   const { preset, setPreset } = useTheme();
   const [open, setOpen] = useState(false);

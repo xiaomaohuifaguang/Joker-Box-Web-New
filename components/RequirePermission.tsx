@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUser } from "@/hooks/useUser";
 import { useMounted } from "@/hooks/useMounted";
 import { ErrorState } from "@/components/ErrorState";
+import { FORBIDDEN_PROPS } from "@/lib/error-pages";
 
 // 需要登录 + 当前路由在 user.authPaths 内才可访问：
 // - 首帧（mounted=false）不判定，渲染 null，避免基于未就绪的 auth 误跳
@@ -31,13 +32,7 @@ export function RequirePermission({ children }: { children: ReactNode }) {
   if (!authenticated) return null;
   if (!user) return null;
   if (!user.authPaths.includes(pathname)) {
-    return (
-      <ErrorState
-        code="403"
-        title="没有权限"
-        message="你的权限里没有这个页面。"
-      />
-    );
+    return <ErrorState {...FORBIDDEN_PROPS} />;
   }
   return <>{children}</>;
 }

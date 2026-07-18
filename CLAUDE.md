@@ -1,15 +1,18 @@
 @AGENTS.md
 
-# react-study
+# Joker Box
 
-A study project built on `create-next-app` (App Router). The frontend is a **static export** (`output: 'export'`) served by nginx; it only renders pages and calls a separate backend API at runtime. The home page is intentionally blank - content/logos come from the backend later.
+A study project built on `create-next-app` (App Router). The frontend is a **static export** (`output: 'export'`) served by nginx; it only renders pages and calls a separate backend API at runtime. The home page is a branding hero; feature pages are implemented incrementally (some are `ComingSoon` placeholders).
 
 ## Stack
 
-- **Next.js 16.2.10** (App Router only - no `pages/`), **React 19.2.4**, **TypeScript 5** (strict), **Tailwind CSS v4** (via `@tailwindcss/postcss`, configured in `postcss.config.mjs` - there is no `tailwind.config.*` file; v4 uses CSS-first config in `app/globals.css` with `@import "tailwindcss"` + `@theme inline`).
-- Path alias: `@/*` -> project root (`./*`). Import app code as `@/app/...`.
-- ESLint v9 **flat config** (`eslint.config.mjs`) using `eslint-config-next/core-web-vitals` + `/typescript`.
-- **Static export** (`output: 'export'` in `next.config.ts`) -> `next build` emits static HTML to `out/` for nginx. No SSR, Server Actions, `proxy.ts`, or server-side route handlers; all runtime data is fetched client-side from the backend at `/joker-box/*` (dev: proxied via `next.config.ts` `rewrites`; prod: via nginx).
+- **Next.js 16.2.10** (App Router only - no `pages/`), **React 19.2.4**, **TypeScript 5** (strict), **Tailwind CSS v4** (via `@tailwindcss/postcss`; CSS-first config in `app/globals.css` - no `tailwind.config.*`).
+- Path alias `@/*` -> project root. Import app code as `@/app/...`.
+- ESLint v9 flat config. `next lint` is removed - use `npm run lint`.
+- **Static export** (`output: 'export'`) -> `out/` for nginx. No SSR / Server Actions / `proxy.ts` / server route handlers; all runtime data is fetched client-side from `/joker-box/*` (dev: `next.config.ts` `rewrites`; prod: nginx).
+- **Forms/validation**: `react-hook-form` + `zod` + `@hookform/resolvers/zod`.
+- **UI kit**: shadcn/ui (`radix-ui`) in `components/ui/`, `lucide-react` icons, `sonner` toasts. In use: `NavigationMenu`, `Sidebar`, `Sheet`, `Collapsible`, `Tooltip`, `ContextMenu`, `Form`, `Table`, `Dialog`, `AlertDialog`, `Select`, `Sonner`.
+- **Editors/parsers**: `@uiw/react-codemirror` + `@codemirror/lang-json` (JSON editor); `cronstrue` (cron→自然语言, zh_CN via `cronstrue/dist/cronstrue-i18n`) + `cron-parser` **v4** (cron 下次触发).
 
 ## Commands
 
@@ -25,80 +28,105 @@ npx tsc --noEmit # type-check only, without building
 
 ```
 app/
-  layout.tsx            # Root layout (Server): html/body, fonts
-  not-found.tsx         # Global 404 (front chrome + 404 content)
-  globals.css           # Tailwind import + theme tokens
+  layout.tsx            # Root layout (Server): html/body, fonts, <UserBootstrap>, <Toaster>, <TooltipProvider>
+  loading.tsx / error.tsx / not-found.tsx   # Root loading / error / 404
+  globals.css           # Tailwind + 多维主题 token（颜色/字体/圆角/阴影/字距/纹样 × 5 预设 × 明暗）
   (front)/              # Front route group (URL unaffected)
     layout.tsx          # Front layout (Server): Header + {children} + Footer
-    page.tsx            # Front home "/"
-    website/page.tsx    # 收藏网站 (nav gated by authPaths)
-    _components/        # Front-private components (Header, Footer, UserMenu, ThemeSelect)
-  login/page.tsx        # Unified login (client)
-  register/page.tsx     # Register (client; no auth redirect, URL-accessible)
+    loading.tsx / error.tsx
+    page.tsx            # 首页 (Server, branding hero)
+    website/page.tsx    # 收藏网站（分组卡片，/website/group）
+    file-server/        # 码头（云盘）：双视图/排序/拖拽上传/右键菜单
+      page.tsx + _components/ (FileCard, FileRow, FileMenuItems, NameDialog)
+    tools/
+      jsonFormat/page.tsx + _components/JsonTree   # JSON 编辑器 + 结构树（CodeMirror）
+      cron/page.tsx                                 # cron 5 段 + 预设 + 描述 + 下次触发
+      signInCard/page.tsx                           # 签到卡（占位）
+    ganDaShi/page.tsx   # 干大事论坛（占位）
+    code-maker/page.tsx # 代码生成器（占位）
+    process/page.tsx    # 就酱审（占位）
+    _components/        # Header (NavigationMenu + mobile Sheet), Footer, UserMenu
+  login/page.tsx        # 登录 (client)
+  register/page.tsx     # 注册 (client, react-hook-form + zod)
+  test/{403,404}/page.tsx   # 渲染 ForbiddenPage/NotFoundPage（调试，公开）
   console/
-    layout.tsx          # Console layout (client): <RequireAdmin> + app-shell (ConsoleSidebar + main)
-    page.tsx            # Dashboard
-    _components/        # Console-private components (ConsoleSidebar)
+    layout.tsx          # <RequireAdmin> + SidebarProvider(Sidebar + SidebarInset)；顶栏=SidebarTrigger+面包屑+主题/明暗
+    loading.tsx / error.tsx
+    page.tsx            # 仪表盘（占位）
+    authority/org-manager/   # 机构管理（树+列表+CRUD，已实现）
+      page.tsx + _components/ (OrgTreePanel, OrgListPanel, OrgFormDialog)
+    authority/{user-manager,role-manager}/   # 占位
+    api-manager / menu-manager / process-manager / website-manager /
+    displayBoard / mail-manager / crawler-task-manager / form/dynamicForm-manager /
+    ai/model-manager / system/{system-prompt,code-table}   # 占位
+    _components/        # ConsoleSidebar (shadcn Sidebar, 折叠浮层, 用户菜单), ConsoleBreadcrumb
 components/
-  ui/                   # Primitive components
-  RequireAuth.tsx       # Login guard (client)
-  RequirePermission.tsx # Login + authPaths guard -> 403 (client)
-  RequireAdmin.tsx      # Login + admin guard -> 404 (client)
-  ErrorState.tsx        # 404/403 content block
-  NotFoundPage.tsx      # Front-chrome 404 (Header + ErrorState + Footer)
-  UserBootstrap.tsx     # Fetches/clears user info on login/logout (client)
+  ui/                   # shadcn primitives
+  RequireAuth.tsx       # 登录守卫 -> /login (client)
+  RequirePermission.tsx # 登录 + authPaths 守卫 -> 403（非白名单页）
+  RequireAdmin.tsx      # 登录 + admin 守卫 -> 404 (client)
+  ErrorState.tsx        # 404/403 内容块
+  NotFoundPage.tsx / ForbiddenPage.tsx   # 前台外壳 404/403
+  ComingSoon.tsx        # 占位页 "敬请期待" (Server)
+  UserBootstrap.tsx     # 登录态变化时拉取/清理用户信息 (client)
+  ThemeSelect.tsx       # 主题预设切换（前台 Header / 后台顶栏共享）
 lib/
-  api/                  # Typed backend client (auto-attaches bearer token)
-    auth.ts             # Auth endpoints: login, getUserInfo, register, sendMailCode
-  auth.ts               # Token in localStorage (get/set/clear/isLoggedIn)
-  user.ts               # Current user in localStorage (get/set/clear/fetch)
-  credentials.ts        # Remembered login creds (base64 localStorage)
-  theme.ts              # dark/light theme (get/set/toggle)
-  utils.ts              # cn() and helpers
-  env.ts                # Placeholder for future NEXT_PUBLIC_* vars
+  api/                  # client.ts (typed, auto-token) + auth, menu, org, file, website
+  auth.ts               # Token in localStorage
+  user.ts               # 当前用户缓存 (localStorage)
+  credentials.ts        # 记住密码 (base64)
+  error-pages.ts        # 403 文案 (FORBIDDEN_PROPS，ForbiddenPage + RequirePermission 共用)
+  theme.ts              # scheme + preset
+  utils.ts              # cn() 等
+  env.ts                # NEXT_PUBLIC_* 占位
 hooks/
-  useAuth.ts            # Reactive login state
-  useUser.ts            # Reactive current user
-  useTheme.ts           # Reactive theme
-  useMounted.ts         # Client-mounted flag (avoid first-frame auth misjudgment)
-  useCredentials.ts     # Reactive remembered credentials
-types/                  # Shared TS types (ApiResponse<T>, User, domain)
-public/                 # Static assets only
+  useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup
+public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
 
-App Router conventions: `app/layout.tsx` (root layout, required), `app/page.tsx` (route UI). Add nested routes as folders under `app/` with their own `page.tsx`; route-private components go in a sibling `_components/` folder.
+App Router conventions: `app/layout.tsx` (root, required), `app/page.tsx` (route UI). Nested routes = folders with `page.tsx`; route-private components go in a sibling `_components/`.
 
 ## Project structure rules
 
-Architecture: static export (`output: 'export'`) served by nginx; the frontend only renders pages and calls a separate backend API. No server-side logic. Many Next.js 16 features below (SSR, Server Actions, `proxy`, server route handlers) **do not apply** under static export.
+Architecture: static export served by nginx; the frontend only renders pages and calls a separate backend API. No server-side logic. Many Next.js 16 features (SSR, Server Actions, `proxy`, server route handlers) **do not apply** under static export.
 
-1. **Routing** - `app/` holds only route files (`page/layout/error/not-found.tsx`, etc.). Keep route files thin; put route-specific components in a sibling `_components/` folder (underscore = excluded from routing).
-2. **API address** - All backend calls go to relative `/joker-box/...` (root path = `BASE_URL` in `lib/api/client.ts`; backend root is `joker-box`). **Development**: `next.config.ts` `rewrites` proxies `/joker-box/*` to the backend (same-origin, no CORS, dev-only). **Production**: static export has no Next server so `rewrites` don't apply - nginx reverse-proxies `/joker-box/*` to the backend. No `NEXT_PUBLIC_API_URL` needed.
-3. **Data layer** - All backend calls go through `lib/api/` (typed wrappers returning the full `ApiResponse<T>`; business errors throw `ApiError` - destructure `.data` for the payload). No raw `fetch` in components. Runtime data is fetched in client components; build-time data (if any) in Server Components.
-4. **Dynamic content** - Prefer `?id=` query params or client-side fetching for dynamic data. Dynamic `[param]` route segments require `generateStaticParams` (must enumerate all paths at build time), which usually isn't possible for backend data.
-5. **Components** - Default to Server Components; add `'use client'` only for interactivity, state, effects, or runtime data. Under static export, runtime data fetching is always client-side.
-6. **Naming** - Component files PascalCase (`Button.tsx`); hooks `useXxx.ts`; utils camelCase; folders kebab-case. One component per file.
-7. **Imports** - Always use the `@/` alias; no deep relative `../../` climbing.
-8. **Assets** - Static files go in `public/` (referenced as `/file.ext`). Brand logos load from the backend at runtime - don't commit them here.
-9. **Styling** - Tailwind utility classes; theme tokens centralized in `globals.css` `@theme`. Extract reused class combos into components rather than scattering `@apply`.
-10. **Types** - API/domain types live in `types/`. Strict mode is on; avoid `any`.
+1. **Routing** - `app/` holds only route files. Keep route files thin; put route-specific components in a sibling `_components/` folder (underscore = excluded from routing).
+2. **API address** - All backend calls go to relative `/joker-box/...` (root = `BASE_URL` in `lib/api/client.ts`). **Dev**: `next.config.ts` `rewrites` proxies `/joker-box/*` to the backend (same-origin, no CORS). **Prod**: nginx reverse-proxies. No `NEXT_PUBLIC_API_URL`.
+3. **Data layer** - All backend calls go through `lib/api/` (typed wrappers returning `ApiResponse<T>`; business errors throw `ApiError` - destructure `.data`). No raw `fetch` in components **except** `lib/api/file.ts` 的上传（multipart）和下载（blob+token）--它们不能用 `api.post`（会设 JSON content-type / 拿不到 blob），直接 `fetch` + `getToken()`. Menus: `POST /menu/menuTree` (`lib/api/menu.ts` + `hooks/useMenuTree.ts`), filtered by `whiteList` + `authPaths`.
+4. **Dynamic content** - Prefer `?id=` query params or client-side fetching. Dynamic `[param]` segments require `generateStaticParams` (must enumerate at build), usually impossible for backend data.
+5. **Components** - Default to Server Components; add `'use client'` only for interactivity/state/effects/runtime data. Under static export, runtime data fetching is always client-side.
+6. **Naming** - Component files PascalCase; hooks `useXxx.ts`; utils camelCase; folders kebab-case. One component per file.
+7. **Imports** - Always use `@/`; no deep relative `../../`.
+8. **Assets** - Static files in `public/`. Brand logos from the backend at runtime.
+9. **Styling** - Tailwind utilities over tokens in `globals.css` `@theme`. Extract reused class combos into components, not scattered `@apply`.
+10. **Types** - API/domain types in `types/`. Strict mode; avoid `any`. Sort/comparators 应对后端 null 字段做兜底（`?? ""`/`?? 0`）。
 
 ## Routing & auth
 
-Two sections with unified login. Static export = no server-side route protection; the backend token check is the real security boundary, the client guard is UX only.
+Two sections, unified login. Static export = no server-side route protection; the backend token check is the real boundary, the client guard is UX only.
 
-- **Front** (`/`) - mostly public; wrapped by `app/(front)/layout.tsx` (Header + content + Footer); login-only pages wrap content in `<RequireAuth>`, permission-gated pages (authPaths) use `<RequirePermission>`.
-- **Console** (`/console/*`) - guarded by `app/console/layout.tsx` via `<RequireAdmin>`: not logged in -> `/` (front home, login via header); logged in but `admin !== true` -> 404 (`NotFoundPage`); else collapsible sidebar (logo / menu / user+logout) + main. Logout clears token -> RequireAdmin sends to `/`.
-- **Login** (`/login`) - unified login page (client). Posts to `/auth/getToken`, stores the returned token (the `data` field is the token string) via `setToken`, redirects to `?from=` (default `/`). Already-authenticated users are redirected away (can't reach `/login` while logged in). Has a 记住密码 checkbox: checked -> save `{username,password}` base64 to localStorage (`lib/credentials.ts`); unchecked + same account -> clear. Inputs uncontrolled (`defaultValue` from saved creds); browser autofill disabled (`autoComplete="off"`/`"new-password"`).
-- **Register** (`/register`) - register page (client). No auth redirect (URL-accessible even when logged in); the 注册 button (header + login page) is hidden when logged in. Posts `/auth/register` `{username,password,nickname,mail,code,sex,phone?}`; email code via `/auth/mailCode?mail=`. Password-confirm validation; on success -> `/login`.
-- **Auth state** - `lib/auth.ts` stores the token in `localStorage` (key `auth_token`): `getToken/setToken/clearToken/isLoggedIn`. `hooks/useAuth.ts` exposes reactive login state. `components/RequireAuth.tsx` redirects unauthenticated users to `/login?from=<path>`.
-- **API auth** - `lib/api/client.ts` auto-attaches `Authorization: Bearer <token>` when a token is present.
-- **Menu visibility** - `authNavItems` (front Header) supports flat items and parent+submenu groups (hover parent to open submenu). An item renders only when permitted by the logged-in user's `authPaths`: a flat item needs its own route; a parent renders if any child route is permitted (children filtered individually). e.g. 收藏网站 `/website`, 工具箱 `/tools` → `/tools/cron` / `/tools/jsonFormat`.
-- **Dynamic console pages** - use `?id=` query params (e.g. `/console/users/detail?id=…`), not `[id]` segments (static export can't enumerate backend IDs at build time).
-- **404 / 403** - Unmatched routes (any login state) hit `app/not-found.tsx` (front chrome + 404 via `ErrorState`). Permission-gated front pages use `<RequirePermission>`: not logged in -> redirect `/` (home; login via header button, never auto-`/login`); logged in but route not in `user.authPaths` -> 403 (`ErrorState`); else render. See `/website`. Guards (`RequirePermission`/`RequireAdmin`) + login page use `useMounted` (`hooks/useMounted.ts`) to skip the first frame (token is client-only, `authenticated` is `false` pre-hydration) so a logged-in refresh of a protected page stays on it (no flash, no redirect); judgment happens only after mount.
+- **Front** (`/`) - mostly public; wrapped by `app/(front)/layout.tsx` (Header + content + Footer). Header nav is backend-driven (see Menus). Login-only pages wrap in `<RequireAuth>` (e.g. `/file-server`); non-whitelist permission pages use `<RequirePermission>`; whitelist (public) pages use no guard (e.g. `/website`).
+- **Console** (`/console/*`) - `<RequireAdmin>`: not logged in -> `/`; logged in but `admin !== true` -> 404 (`NotFoundPage`); else shadcn `Sidebar` app-shell (`SidebarProvider` + `Sidebar` + `SidebarInset`). 顶栏 = `SidebarTrigger` + `ConsoleBreadcrumb`（从菜单树+路由算路径链，纯文本不可点）+ 主题预设/明暗切换. Sidebar menu backend-driven; 折叠态父项点开向右浮层（DropdownMenu, `side="right"`）; footer 用户菜单（向上展开）= 用户信息 + 返回前台 + 退出登录.
+- **Login** (`/login`) - posts `/auth/getToken`, stores token (`data` is the token string), redirects `?from=` (default `/`). 已登录被跳走. 记住密码 checkbox -> base64 localStorage. Inputs uncontrolled; autofill disabled.
+- **Register** (`/register`) - `react-hook-form` + `zod` + shadcn `Form`. No auth redirect. Posts `/auth/register`; email code via `/auth/mailCode?mail=` (60s cooldown). zod: required + email format + password match (`refine` on `confirmPassword`); success -> `/login`.
+- **Auth state** - `lib/auth.ts` token in localStorage (`auth_token`); `hooks/useAuth` reactive. `RequireAuth` redirects to `/login?from=<path>`.
+- **API auth** - `lib/api/client.ts` auto-attaches `Authorization: Bearer <token>`.
+- **Menus (backend-driven)** - Front Header + Console sidebar pull `POST /menu/menuTree?menuType=<-1|-2>` (`-1` console / `-2` front) via `hooks/useMenuTree.ts` (`lib/api/menu.ts`, `types/menu.ts`). `Menu = { path, name, children?, whiteList }`. Visibility: `whiteList==="1"` public (visible logged-out); else needs `path` in `user.authPaths` (parents survive if any child visible). Module-level cache keyed by `menuType + authed + userId` (multiple Header instances share one fetch; re-fetch on login/logout/user switch). 首页 hardcoded first in front nav (logo also links home); API `path:"/"` de-duped. Console icons client-mapped by path (`MENU_ICONS`) with fallback.
+- **404 / 403** - Unmatched routes -> `app/not-found.tsx` -> `NotFoundPage`. `ForbiddenPage` is the 403 counterpart (`FORBIDDEN_PROPS` in `lib/error-pages.ts`, shared with `RequirePermission`). `/test/403` + `/test/404` render these for debugging (public). `RequirePermission`: not logged in -> `/`; logged in but not in `authPaths` -> 403; else render. Whitelist pages no guard. Guards use `useMounted` to skip the first frame (token is client-only) so a logged-in refresh stays put.
+- **Loading / error boundaries** - `loading.tsx` + `error.tsx` per segment (`app/`, `app/(front)/`, `app/console/`). Per-segment so chrome stays during load/error. `error.tsx` is client with `reset`.
+- **Toasts** - `sonner` `<Toaster/>` in `app/layout.tsx`; `components/ui/sonner.tsx` reads project `useTheme` (`scheme`), not `next-themes` (no ThemeProvider). `import { toast } from "sonner"`.
+- **Mobile nav** - Front Header hides desktop nav under `md:` + hamburger -> `Sheet` (nav + theme + auth). Console sidebar auto-`Sheet` drawer on mobile (`useIsMobile`).
 
----
+## Feature pages (implemented)
+
+- **机构管理** `/console/authority/org-manager` - 左机构树（后端虚拟根 id=-1「全部」为第一层单节点）+ 右列表（表格+分页页码+省略号+搜索）。CRUD：新增/编辑（`OrgFormDialog`，父级 Select）、删除（AlertDialog）。`/org/*` 接口（query/getOrgTree 返回单根，取 `[data]`）。增删改后刷新树+列表（`refreshKey`）。
+- **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
+- **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
+- **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。
+- **码头（云盘）** `/file-server`（`<RequireAuth>`）- 双视图（卡片/列表）+ 排序（名称/大小/时间，文件夹置顶）+ 拖拽上传（浮层）+ 右键菜单（项: 打开/下载/重命名/删除；空白区: 上传/新建）+ 面包屑导航。`/file/*`：list/createFolder/delete/rename 走 query 参数；upload 走 multipart（自定义 fetch）；download 走 GET blob+token（触发浏览器下载）。
 
 ## ⚠️ Next.js 16 is NOT the Next.js in your training data
 
@@ -170,6 +198,15 @@ Node.js 20.9+ (18 unsupported), TypeScript 5.1+, browsers Chrome/Edge/Firefox 11
 
 ## Conventions in this project
 
-- **Fonts** use `next/font/google` (`Geist`, `Geist_Mono`) exposing CSS variables (`--font-geist-sans`, `--font-geist-mono`) wired into Tailwind via `@theme inline` in `globals.css`. Prefer this over adding `<link>` font tags.
+- **Fonts** use `next/font/google` (`Geist`, `Geist_Mono`, `Fraunces`, `IBM_Plex_Sans`, `Space_Mono`) exposing CSS variables wired into Tailwind via `@theme inline`. Prefer this over `<link>` font tags.
 - **Images** use `next/image` (see breaking-change notes above before configuring remote/local patterns).
-- **Styling / design system** — Tailwind v4 utility classes over a token system in `globals.css`: colors `background/foreground/surface/muted-foreground/border/brand/felt` plus shadcn tokens (`card/popover/primary/secondary/muted/accent/destructive/input/ring`) mapped to these. Two axes: **preset** (`data-theme` on `<html>`: `joker`/`panshi`/`hongtai`/`cyberpunk`/`minimal`) × **scheme** (`.dark`); each preset defines its own light + dark + fonts. Per-preset fonts: Joker=Fraunces, Gov(blue/red)=IBM Plex Sans, Cyberpunk=Space Mono, Minimal/default body=Geist; each preset sets `--display-font/--body-font/--mono-font`. Signature motifs (faint body bg): Joker harlequin diamonds, Cyberpunk scanlines. Brand signature: a playing-card corner index (`J` + ♠) logo mark; ♠ uses `--brand` (joker red, kept separate from shadcn's `--accent` hover-bg to avoid the name clash) so it adapts per preset. `components.json` + `lib/utils.ts` (`cn` = clsx+tailwind-merge) are set up for shadcn/ui (hybrid: hand-write simple components, use shadcn for complex interactive ones, restyle to these tokens). `lib/theme` + `hooks/useTheme` manage scheme+preset (localStorage `theme` + `theme-preset`); inline script in root layout applies both before paint.
+- **Styling / 多维主题系统** - Tailwind v4 utilities over a token system in `globals.css`. Two axes: **preset** (`data-theme` on `<html>`: `joker`/`panshi`/`hongtai`/`cyberpunk`/`minimal`) × **scheme** (`.dark`). 每套预设**独立定义多维度 token**（不止颜色）：
+  - 颜色：`background/foreground/surface/muted-foreground/border/brand/felt` + shadcn tokens (`card/popover/primary/secondary/muted/accent/destructive/input/ring/sidebar*`) 映射到这些。
+  - 字体：`--display-font/--body-font/--mono-font`（Joker=Fraunces+Geist, Panshi/Hongtai=IBM Plex Sans, Cyberpunk=全 Space Mono, Minimal=Geist）。
+  - 圆角：`--radius` 基准 -> `@theme inline` 映射 `--radius-sm/md/lg/xl`（系数 0.25/0.5/1/1.5），`rounded-*` 跟随。Joker 0.25rem（锐）、Panshi/Hongtai 0.5rem（= Tailwind 默认，不变）、Cyberpunk 0（全直角）、Minimal 0.75rem（软）。
+  - 阴影：`--elevation-sm/md/lg` -> `--shadow-sm/md/lg`，`shadow-*` 跟随。Cyberpunk 用 `color-mix` 霓虹辉光；Minimal 几乎无阴影（flat）。
+  - 字距：`--tracking-display`（base 层 h1-h4 `letter-spacing`）。Cyberpunk 宽、Minimal 紧。
+  - 纹样（淡）：Joker 菱形、Cyberpunk 扫描线、Minimal 点阵（`body` 背景）。
+  - 全部 token 在 `@theme inline` 映射，组件用 `rounded-*`/`shadow-*`/`bg-*` 等自动跟随预设，无需改组件。
+  - Brand signature: 扑克牌角标（`J` + ♠）logo mark；♠ 用 `--brand`（与 shadcn `--accent` 区分）。
+  - `components.json` + `lib/utils.ts` (`cn` = clsx+tailwind-merge) for shadcn/ui. `lib/theme` + `hooks/useTheme` manage scheme+preset (localStorage `theme` + `theme-preset`); inline script in root layout applies both before paint. `hooks/useTheme` returns typed `scheme`/`preset`.

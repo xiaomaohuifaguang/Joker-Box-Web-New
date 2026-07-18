@@ -12,3 +12,15 @@ export interface ApiResponse<T> {
   /** 时间戳（毫秒） */
   timestamp: number;
 }
+
+// 分页响应（对应后端 Page<T>）。
+export interface Page<T> {
+  /** 记录 */
+  records: T[];
+  /** 总数 */
+  total: number;
+  /** 页大小 */
+  size: number;
+  /** 当前页码 */
+  current: number;
+}

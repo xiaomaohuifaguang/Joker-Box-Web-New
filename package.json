@@ -1,5 +1,5 @@
 {
-  "name": "react-study",
+  "name": "Joker-Box-Web-New",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,10 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@codemirror/lang-json": "^6.0.2",
     "@hookform/resolvers": "^5.4.0",
+    "@uiw/react-codemirror": "^4.25.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "cron-parser": "^4.9.0",
+    "cronstrue": "^3.24.0",
     "date-fns": "^4.4.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",

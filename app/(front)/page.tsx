@@ -1,15 +1,6 @@
-"use client";
-
-import Link from "next/link";
-import { useAuth } from "@/hooks/useAuth";
-import { useUser } from "@/hooks/useUser";
-import { Button } from "@/components/ui/button";
-
 // 前台首页：公开（无守卫）。平台定位为聚合平台，文案不绑定到某个具体功能。
+// 登录/注册走 Header、后台走 UserMenu，首页 hero 不再重复这些入口。
 export default function Home() {
-  const { authenticated } = useAuth();
-  const { user } = useUser();
-
   return (
     <div className="flex flex-1 flex-col">
       {/* hero */}
@@ -28,17 +19,6 @@ export default function Home() {
         <p className="mt-2 text-sm text-muted-foreground">
           不止于工具，更是你的全能数字助手。
         </p>
-        <div className="mt-8">
-          {!authenticated ? (
-            <Button asChild>
-              <Link href="/login">登录</Link>
-            </Button>
-          ) : user?.admin ? (
-            <Button asChild>
-              <Link href="/console">进入后台</Link>
-            </Button>
-          ) : null}
-        </div>
       </div>
 
       {/* mission */}

@@ -6,7 +6,7 @@ export interface Role {
   name: string;
 }
 
-export interface Org {
+export interface UserOrg {
   /** 机构名称 */
   name: string;
 }
@@ -21,7 +21,7 @@ export interface User {
   /** 角色 */
   roles: Role[];
   /** 机构 */
-  orgs: Org[];
+  orgs: UserOrg[];
   /** 是否管理员 */
   admin: boolean;
   /** 性别（后端默认 "未知"） */
