@@ -5,6 +5,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
 import { AlertCircle, Check, Copy, Maximize2, Minimize2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { RequirePermission } from "@/components/RequirePermission";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import { JsonTree } from "./_components/JsonTree";
@@ -50,6 +51,7 @@ export default function JsonFormatPage() {
   }
 
   return (
+    <RequirePermission>
     <div className="flex flex-1 flex-col gap-3 p-4 md:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="font-display text-lg font-semibold">JSON 格式化</h1>
@@ -117,5 +119,6 @@ export default function JsonFormatPage() {
         </div>
       </div>
     </div>
+    </RequirePermission>
   );
 }

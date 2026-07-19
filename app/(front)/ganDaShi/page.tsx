@@ -1,5 +1,10 @@
+import { RequirePermission } from "@/components/RequirePermission";
 import { ComingSoon } from "@/components/ComingSoon";
 
 export default function GanDaShiPage() {
-  return <ComingSoon title="干大事论坛" />;
+  return (
+    <RequirePermission>
+      <ComingSoon title="干大事论坛" />
+    </RequirePermission>
+  );
 }

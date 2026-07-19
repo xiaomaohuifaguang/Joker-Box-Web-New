@@ -9,7 +9,7 @@
 // code !== SUCCESS_CODE 抛 ApiError(code, msg)。调用方解构 .data 取数据。
 // 已登录时自动带 Authorization: Bearer <token>（见 lib/auth.ts）。
 
-import { getToken } from "@/lib/auth";
+import { clearToken, getToken } from "@/lib/auth";
 import type { ApiResponse } from "@/types";
 
 /** 业务成功码（按后端约定调整，常见为 200 或 0）。 */
@@ -28,6 +28,15 @@ export class ApiError extends Error {
 // 接口根路径：开发由 next.config.ts rewrites 代理，生产由 nginx 反代。
 const BASE_URL = "/joker-box";
 
+// 401 处理：请求时携带了 token 且响应 code=401 -> token 无效/过期，清空登录信息。
+// clearToken 同步清 token；动态 import clearUser 清用户（避免循环依赖）。
+export function handleUnauthorized(code: number, hadToken: boolean): void {
+  if (code === 401 && hadToken) {
+    clearToken();
+    void import("@/lib/user").then(({ clearUser }) => clearUser());
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
   const headers = new Headers(init?.headers);
   headers.set("Content-Type", "application/json");
@@ -37,11 +46,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
 
   if (!res.ok) {
+    handleUnauthorized(res.status, !!token);
     throw new ApiError(res.status, `请求失败: ${res.status}`);
   }
 
   const body = (await res.json()) as ApiResponse<T>;
   if (body.code !== SUCCESS_CODE) {
+    handleUnauthorized(body.code, !!token);
     throw new ApiError(body.code, body.msg || `请求失败: ${body.code}`);
   }
   return body;

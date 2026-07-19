@@ -1,32 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getMenuTree } from "@/lib/api/menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useMounted } from "@/hooks/useMounted";
 import { useUser } from "@/hooks/useUser";
 import type { Menu, MenuType } from "@/types";
 
-// 单个菜单项是否可见：白名单(whiteList==="1")无需鉴权；否则需 path 在 authPaths 内。
-function isVisible(menu: Menu, authPaths?: string[]): boolean {
-  if (menu.whiteList === "1") return true;
-  return !!authPaths?.includes(menu.path);
-}
-
-// 递归过滤菜单树：叶子按可见性过滤；父菜单任一子可见则保留（子各自过滤）。
-function filterMenuTree(menus: Menu[], authPaths?: string[]): Menu[] {
-  return menus.flatMap((m) => {
-    if (m.children && m.children.length) {
-      const kids = filterMenuTree(m.children, authPaths);
-      return kids.length ? [{ ...m, children: kids }] : [];
-    }
-    return isVisible(m, authPaths) ? [m] : [];
-  });
-}
-
-// 模块级缓存：按 menuType + 登录态 + userId 缓存菜单树。
-// 多个 Header 实例（前台布局 / 404 / 403 测试页等各自带的 Header）共享，避免重复请求。
-// 登录/登出/切换用户 -> key 变 -> 自然失效重拉（登录后带 token 拿完整树）。
+// 模块级缓存：按 menuType + authed + userId 缓存菜单树，多个 Header 实例共享。
+// 后端已按 token 过滤菜单树（返回用户可见的项），客户端直接渲染、不再二次过滤 authPaths。
+// 页面级用 <RequirePermission> 兜底（直接输入 URL 无权限 -> 404）。
 const cache = new Map<string, Menu[]>();
 const pending = new Map<string, Promise<Menu[]>>();
 
@@ -49,10 +32,9 @@ function loadMenuTree(key: string, menuType: MenuType): Promise<Menu[]> {
   return p;
 }
 
-// 拉取菜单树并按权限过滤。
-// - menuType 决定后台(-1)/前台(-2)。
-// - 挂载后按 key 查缓存；命中则直接用（不重复请求），未命中才拉。
-// - 过滤随 user.authPaths 响应更新（无需重拉）。
+// 拉取菜单树（后端已过滤）。menuType 决定后台(-1)/前台(-2)。
+// 挂载后按 key 查缓存；命中则直接用（不重复请求），未命中才拉。
+// 登录/登出/换用户 -> key 变 -> 自然失效重拉。
 export function useMenuTree(menuType: MenuType) {
   const mounted = useMounted();
   const { authenticated } = useAuth();
@@ -79,10 +61,5 @@ export function useMenuTree(menuType: MenuType) {
     };
   }, [mounted, key, menuType]);
 
-  const menu = useMemo(
-    () => (tree ? filterMenuTree(tree, user?.authPaths) : null),
-    [tree, user?.authPaths],
-  );
-
-  return { menu, loading: tree === null };
+  return { menu: tree, loading: tree === null };
 }

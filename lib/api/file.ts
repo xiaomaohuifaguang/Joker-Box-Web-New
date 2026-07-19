@@ -1,4 +1,4 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, handleUnauthorized } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import type { FileItem } from "@/types";
 
@@ -30,6 +30,7 @@ export async function uploadFile(file: File, parentId: string): Promise<void> {
   if (!res.ok) throw new ApiError(res.status, `上传失败: ${res.status}`);
   try {
     const body = await res.json();
+    handleUnauthorized(body.code, !!token);
     if (body.code !== SUCCESS_CODE)
       throw new ApiError(body.code, body.msg || `上传失败: ${body.code}`);
   } catch (e) {
@@ -82,7 +83,10 @@ export async function downloadFile(
     try {
       const body = await res.json();
       msg = body.msg || msg;
-    } catch {}
+      handleUnauthorized(body.code ?? res.status, !!token);
+    } catch {
+      handleUnauthorized(res.status, !!token);
+    }
     throw new ApiError(res.status, msg);
   }
   const blob = await res.blob();

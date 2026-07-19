@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { AlertCircle, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { RequirePermission } from "@/components/RequirePermission";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,7 @@ export default function CronPage() {
   }
 
   return (
+    <RequirePermission>
     <Container className="flex flex-col gap-6 py-8 md:py-12">
         <div>
           <h1 className="font-display text-lg font-semibold">
@@ -173,5 +175,6 @@ export default function CronPage() {
           </div>
         )}
     </Container>
+    </RequirePermission>
   );
 }

@@ -1,5 +1,10 @@
+import { RequirePermission } from "@/components/RequirePermission";
 import { ComingSoon } from "@/components/ComingSoon";
 
 export default function SignInCardPage() {
-  return <ComingSoon title="签到卡" />;
+  return (
+    <RequirePermission>
+      <ComingSoon title="签到卡" />
+    </RequirePermission>
+  );
 }
