@@ -6,8 +6,7 @@ export type Sex = "男" | "女" | "未知";
 // 登录：POST /auth/getToken，返回 token 字符串（data 直接是 token）。
 export async function login(username: string, password: string): Promise<string> {
   const { data } = await api.post<string>("/auth/getToken", {
-    username,
-    password,
+    body: { username, password },
   });
   return data;
 }
@@ -28,10 +27,10 @@ export async function register(body: {
   sex: Sex;
   phone?: string;
 }): Promise<void> {
-  await api.post<unknown>("/auth/register", body);
+  await api.post<unknown>("/auth/register", { body });
 }
 
-// 发送邮箱验证码：POST /auth/mailCode?mail=<mail>（mail 为 query 参数）。
+// 发送邮箱验证码：POST /auth/mailCode?mail=<mail>。
 export async function sendMailCode(mail: string): Promise<void> {
-  await api.post<unknown>(`/auth/mailCode?mail=${encodeURIComponent(mail)}`);
+  await api.post<unknown>("/auth/mailCode", { params: { mail } });
 }

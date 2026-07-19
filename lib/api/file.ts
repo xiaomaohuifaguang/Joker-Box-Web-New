@@ -1,15 +1,15 @@
-import { api, ApiError, handleUnauthorized } from "@/lib/api";
+import { api, ApiError, buildQuery, handleUnauthorized } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import type { FileItem } from "@/types";
 
 const BASE_URL = "/joker-box";
 const SUCCESS_CODE = 200;
 
-// 文件列表：POST /file/list?parentId=<id>（"0" 查根目录）。parentId 为 query 参数。
+// 文件列表：POST /file/list?parentId=<id>（"0" 查根目录）。
 export async function listFiles(parentId: string): Promise<FileItem[]> {
-  const { data } = await api.post<FileItem[]>(
-    `/file/list?parentId=${encodeURIComponent(parentId)}`,
-  );
+  const { data } = await api.post<FileItem[]>("/file/list", {
+    params: { parentId },
+  });
   return data;
 }
 
@@ -44,14 +44,14 @@ export async function createFolder(
   parentId: string,
   fileName: string,
 ): Promise<void> {
-  await api.post<unknown>(
-    `/file/createFolder?parentId=${encodeURIComponent(parentId)}&fileName=${encodeURIComponent(fileName)}`,
-  );
+  await api.post<unknown>("/file/createFolder", {
+    params: { parentId, fileName },
+  });
 }
 
 // 删除：POST /file/delete?fileId=<id>。
 export async function deleteFile(fileId: string): Promise<void> {
-  await api.post<unknown>(`/file/delete?fileId=${encodeURIComponent(fileId)}`);
+  await api.post<unknown>("/file/delete", { params: { fileId } });
 }
 
 // 重命名：POST /file/rename?fileId=<id>&filename=<name>。
@@ -59,9 +59,9 @@ export async function renameFile(
   fileId: string,
   filename: string,
 ): Promise<void> {
-  await api.post<unknown>(
-    `/file/rename?fileId=${encodeURIComponent(fileId)}&filename=${encodeURIComponent(filename)}`,
-  );
+  await api.post<unknown>("/file/rename", {
+    params: { fileId, filename },
+  });
 }
 
 // 下载：GET /file/download?fileId=，带 token；返回 blob 并触发浏览器下载。
@@ -72,10 +72,8 @@ export async function downloadFile(
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(
-    `${BASE_URL}/file/download?fileId=${encodeURIComponent(fileId)}`,
-    { headers },
-  );
+  const url = BASE_URL + "/file/download" + buildQuery({ fileId });
+  const res = await fetch(url, { headers });
   const contentType = res.headers.get("content-type") ?? "";
   if (!res.ok || contentType.includes("application/json")) {
     // 错误响应（JSON）
@@ -90,12 +88,12 @@ export async function downloadFile(
     throw new ApiError(res.status, msg);
   }
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
+  const url2 = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
+  a.href = url2;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(url2);
 }

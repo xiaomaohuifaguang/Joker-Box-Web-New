@@ -1,14 +1,3 @@
-// 后端 API 客户端：所有后端调用统一走这里，组件不直接用 fetch。
-// 接口根路径 /joker-box：
-// - 开发：next.config.ts 的 rewrites 把 /joker-box/* 代理到后端（同源、无 CORS）。
-// - 生产：nginx 把 /joker-box/* 反代到后端（静态导出无 Next 服务器，rewrites 不生效）。
-// 在客户端组件中调用（静态导出下运行时取数只能在客户端）。
-//
-// 后端统一响应格式：{ code, data, msg, timestamp }（见 types/api.ts）。
-// 成功（code === SUCCESS_CODE）时返回整个 body（ApiResponse<T>）；
-// code !== SUCCESS_CODE 抛 ApiError(code, msg)。调用方解构 .data 取数据。
-// 已登录时自动带 Authorization: Bearer <token>（见 lib/auth.ts）。
-
 import { clearToken, getToken } from "@/lib/auth";
 import type { ApiResponse } from "@/types";
 
@@ -37,13 +26,46 @@ export function handleUnauthorized(code: number, hadToken: boolean): void {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  const headers = new Headers(init?.headers);
+// 对象 -> ?key=value&key2=value2（自动 encodeURIComponent，跳过 null/undefined）。
+export function buildQuery(
+  params?: Record<string, string | number | undefined>,
+): string {
+  if (!params) return "";
+  const entries = Object.entries(params).filter(([, v]) => v != null);
+  if (!entries.length) return "";
+  return (
+    "?" +
+    entries
+      .map(
+        ([k, v]) =>
+          `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`,
+      )
+      .join("&")
+  );
+}
+
+// 请求选项：body -> JSON.stringify；params -> buildQuery 拼到 URL。
+type RequestOptions = {
+  method: string;
+  body?: unknown;
+  params?: Record<string, string | number | undefined>;
+};
+
+async function request<T>(
+  path: string,
+  opts: RequestOptions,
+): Promise<ApiResponse<T>> {
+  const url = BASE_URL + path + buildQuery(opts.params);
+  const headers = new Headers();
   headers.set("Content-Type", "application/json");
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  const res = await fetch(url, {
+    method: opts.method,
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
 
   if (!res.ok) {
     handleUnauthorized(res.status, !!token);
@@ -58,21 +80,41 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse
   return body;
 }
 
+// 公开 API：get/delete 只有 query（params）；post/put 可有 body 和/或 params。
 export const api = {
-  get: <T>(path: string, init?: RequestInit) =>
-    request<T>(path, { ...init, method: "GET" }),
-  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
+  get: <T>(
+    path: string,
+    params?: Record<string, string | number | undefined>,
+  ) => request<T>(path, { method: "GET", params }),
+
+  post: <T>(
+    path: string,
+    opts?: {
+      body?: unknown;
+      params?: Record<string, string | number | undefined>;
+    },
+  ) =>
     request<T>(path, {
-      ...init,
       method: "POST",
-      body: body ? JSON.stringify(body) : undefined,
+      body: opts?.body,
+      params: opts?.params,
     }),
-  put: <T>(path: string, body?: unknown, init?: RequestInit) =>
+
+  put: <T>(
+    path: string,
+    opts?: {
+      body?: unknown;
+      params?: Record<string, string | number | undefined>;
+    },
+  ) =>
     request<T>(path, {
-      ...init,
       method: "PUT",
-      body: body ? JSON.stringify(body) : undefined,
+      body: opts?.body,
+      params: opts?.params,
     }),
-  delete: <T>(path: string, init?: RequestInit) =>
-    request<T>(path, { ...init, method: "DELETE" }),
+
+  delete: <T>(
+    path: string,
+    params?: Record<string, string | number | undefined>,
+  ) => request<T>(path, { method: "DELETE", params }),
 };
