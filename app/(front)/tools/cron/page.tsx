@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Container } from "@/components/Container";
 
 const FIELD_LABELS = ["分", "时", "日", "月", "周"] as const;
 const FIELD_HINTS = ["0-59", "0-23", "1-31", "1-12", "0-6"];
@@ -62,8 +63,7 @@ export default function CronPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <Container className="flex flex-col gap-6 py-8 md:py-12">
         <div>
           <h1 className="font-display text-lg font-semibold">
             cron 时间表达式转换
@@ -172,7 +172,6 @@ export default function CronPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Container>
   );
 }

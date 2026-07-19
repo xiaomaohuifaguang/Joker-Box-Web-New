@@ -133,7 +133,7 @@ export function Header() {
               <span className="font-display text-[10px] font-bold">J</span>
               <span className="text-[11px] leading-none text-brand">♠</span>
             </span>
-            <span className="font-display text-lg font-semibold tracking-tight">
+            <span data-slot="logo-text" className="font-display text-lg font-semibold tracking-tight">
               Joker Box
             </span>
           </Link>

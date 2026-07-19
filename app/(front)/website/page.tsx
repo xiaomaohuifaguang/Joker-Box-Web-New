@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import { Container } from "@/components/Container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWebsiteGroups } from "@/hooks/useWebsiteGroups";
 
@@ -18,7 +19,7 @@ export default function WebsitePage() {
   const { groups, loading } = useWebsiteGroups();
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+    <Container className="py-8 md:py-12">
       <header className="mb-8">
         <h1 className="font-display text-2xl font-semibold">收藏网站</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -79,6 +80,6 @@ export default function WebsitePage() {
           ))}
         </div>
       )}
-    </div>
+    </Container>
   );
 }

@@ -17,6 +17,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={scheme}
+      richColors
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
@@ -27,9 +28,21 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
+          "--normal-bg": "var(--surface)",
+          "--normal-text": "var(--foreground)",
           "--normal-border": "var(--border)",
+          "--success-bg": "color-mix(in srgb, var(--success) 12%, var(--surface))",
+          "--success-text": "var(--success)",
+          "--success-border": "color-mix(in srgb, var(--success) 35%, var(--border))",
+          "--info-bg": "color-mix(in srgb, var(--info) 12%, var(--surface))",
+          "--info-text": "var(--info)",
+          "--info-border": "color-mix(in srgb, var(--info) 35%, var(--border))",
+          "--warning-bg": "color-mix(in srgb, var(--warning) 12%, var(--surface))",
+          "--warning-text": "var(--warning)",
+          "--warning-border": "color-mix(in srgb, var(--warning) 35%, var(--border))",
+          "--error-bg": "color-mix(in srgb, var(--error) 12%, var(--surface))",
+          "--error-text": "var(--error)",
+          "--error-border": "color-mix(in srgb, var(--error) 35%, var(--border))",
           "--border-radius": "var(--radius, 0.5rem)",
         } as React.CSSProperties
       }

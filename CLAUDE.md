@@ -70,6 +70,7 @@ components/
   ComingSoon.tsx        # 占位页 "敬请期待" (Server)
   UserBootstrap.tsx     # 登录态变化时拉取/清理用户信息 (client)
   ThemeSelect.tsx       # 主题预设切换（前台 Header / 后台顶栏共享）
+  Container.tsx         # 流式内容容器（w-85% max-w-1600px，className 可覆盖）
 lib/
   api/                  # client.ts (typed, auto-token) + auth, menu, org, file, website
   auth.ts               # Token in localStorage
@@ -117,7 +118,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **Menus (backend-driven)** - Front Header + Console sidebar pull `POST /menu/menuTree?menuType=<-1|-2>` (`-1` console / `-2` front) via `hooks/useMenuTree.ts` (`lib/api/menu.ts`, `types/menu.ts`). `Menu = { path, name, children?, whiteList }`. Visibility: `whiteList==="1"` public (visible logged-out); else needs `path` in `user.authPaths` (parents survive if any child visible). Module-level cache keyed by `menuType + authed + userId` (multiple Header instances share one fetch; re-fetch on login/logout/user switch). 首页 hardcoded first in front nav (logo also links home); API `path:"/"` de-duped. Console icons client-mapped by path (`MENU_ICONS`) with fallback.
 - **404 / 403** - Unmatched routes -> `app/not-found.tsx` -> `NotFoundPage`. `ForbiddenPage` is the 403 counterpart (`FORBIDDEN_PROPS` in `lib/error-pages.ts`, shared with `RequirePermission`). `/test/403` + `/test/404` render these for debugging (public). `RequirePermission`: not logged in -> `/`; logged in but not in `authPaths` -> 403; else render. Whitelist pages no guard. Guards use `useMounted` to skip the first frame (token is client-only) so a logged-in refresh stays put.
 - **Loading / error boundaries** - `loading.tsx` + `error.tsx` per segment (`app/`, `app/(front)/`, `app/console/`). Per-segment so chrome stays during load/error. `error.tsx` is client with `reset`.
-- **Toasts** - `sonner` `<Toaster/>` in `app/layout.tsx`; `components/ui/sonner.tsx` reads project `useTheme` (`scheme`), not `next-themes` (no ThemeProvider). `import { toast } from "sonner"`.
+- **Toasts** - `sonner` `<Toaster position="top-right"/>` in `app/layout.tsx`; `components/ui/sonner.tsx` reads project `useTheme` (`scheme`), themed type colors via per-preset `--success/--warning/--error/--info` + `color-mix` tints (bg=12% tint, text=语义色, border=35% tint). `richColors` enabled. `import { toast } from "sonner"`.
 - **Mobile nav** - Front Header hides desktop nav under `md:` + hamburger -> `Sheet` (nav + theme + auth). Console sidebar auto-`Sheet` drawer on mobile (`useIsMobile`).
 
 ## Feature pages (implemented)
@@ -202,11 +203,19 @@ Node.js 20.9+ (18 unsupported), TypeScript 5.1+, browsers Chrome/Edge/Firefox 11
 - **Images** use `next/image` (see breaking-change notes above before configuring remote/local patterns).
 - **Styling / 多维主题系统** - Tailwind v4 utilities over a token system in `globals.css`. Two axes: **preset** (`data-theme` on `<html>`: `joker`/`panshi`/`hongtai`/`cyberpunk`/`minimal`) × **scheme** (`.dark`). 每套预设**独立定义多维度 token**（不止颜色）：
   - 颜色：`background/foreground/surface/muted-foreground/border/brand/felt` + shadcn tokens (`card/popover/primary/secondary/muted/accent/destructive/input/ring/sidebar*`) 映射到这些。
+  - 语义色：`--success/--warning/--error/--info` 每套预设独立定义（light + dark），`@theme inline` 映射为 `bg-success`/`text-error` 等工具类 + sonner toast 类型色。Joker error=brand 红、Cyberpunk error=品红/info=电青、Minimal info=brand 蓝 等。
   - 字体：`--display-font/--body-font/--mono-font`（Joker=Fraunces+Geist, Panshi/Hongtai=IBM Plex Sans, Cyberpunk=全 Space Mono, Minimal=Geist）。
-  - 圆角：`--radius` 基准 -> `@theme inline` 映射 `--radius-sm/md/lg/xl`（系数 0.25/0.5/1/1.5），`rounded-*` 跟随。Joker 0.25rem（锐）、Panshi/Hongtai 0.5rem（= Tailwind 默认，不变）、Cyberpunk 0（全直角）、Minimal 0.75rem（软）。
-  - 阴影：`--elevation-sm/md/lg` -> `--shadow-sm/md/lg`，`shadow-*` 跟随。Cyberpunk 用 `color-mix` 霓虹辉光；Minimal 几乎无阴影（flat）。
-  - 字距：`--tracking-display`（base 层 h1-h4 `letter-spacing`）。Cyberpunk 宽、Minimal 紧。
-  - 纹样（淡）：Joker 菱形、Cyberpunk 扫描线、Minimal 点阵（`body` 背景）。
-  - 全部 token 在 `@theme inline` 映射，组件用 `rounded-*`/`shadow-*`/`bg-*` 等自动跟随预设，无需改组件。
-  - Brand signature: 扑克牌角标（`J` + ♠）logo mark；♠ 用 `--brand`（与 shadcn `--accent` 区分）。
+  - 圆角：`--radius` 基准 -> `@theme inline` 映射 `--radius-sm/md/lg/xl`（系数 0.25/0.5/1/1.5），`rounded-*` 跟随。Joker 0.25rem、Panshi/Hongtai 0.5rem、Cyberpunk 0、Minimal 1rem。
+  - 阴影：`--elevation-sm/md/lg` -> `--shadow-sm/md/lg`，`shadow-*` 跟随。Cyberpunk 用 `color-mix` 霓虹辉光；Minimal 无阴影（flat）。
+  - 字距：`--tracking-display`（base 层 h1-h4 `letter-spacing`）。Joker -0.05em（极端负）、Cyberpunk 0.05em（宽）、Minimal -0.02em。
+  - 动效：`--motion-duration` + `--motion-ease` -> `@theme inline` 映射 `--duration-150/200/300/500` + `--ease-in-out`，所有 `transition` 跟随。Joker 200ms 弹性 `cubic-bezier(0.18, 1.8, 0.4, 1)`、Cyberpunk 80ms `steps(2, end)`、Minimal 300ms `cubic-bezier(0.16, 1, 0.3, 1)` (Expo Out)。
+  - 间距：`--space-unit` -> `@theme inline` 映射 `--spacing`，所有 `p-*/m-*/gap-*/w-*/h-*` 跟随。Cyberpunk 0.22rem（紧）、Minimal 0.34rem（大留白 1.36x）、其余 0.25rem（标准）。
+  - 纹样：Joker 菱形、Cyberpunk 扫描线（15% alpha, `color-mix(var(--felt))`）、Minimal 点阵。纹样画在 `body` + `.bg-background` + `.bg-surface` + `.bg-sidebar` + `.bg-popover` + `[data-slot="navigation-menu-content"]` 上（全局覆盖，不只是 body）。
+  - 全部 token 在 `@theme inline` 映射，组件用 `rounded-*`/`shadow-*`/`bg-*`/`duration-*`/`ease-*` 等自动跟随预设，无需改组件。
+  - **预设专属特效**（unlayered CSS，仅该预设生效）：
+    - **Joker**：`@keyframes curtain-rise` 幕布拉开入场（Dialog/Dropdown/Popover 等 `data-state="open"` 时）；`::selection` 小丑红+骨白；`.border` 等 2px（版画感）。
+    - **Cyberpunk**：`@keyframes cyberpunk-glitch` 故障动画（Button hover 持续 + h1/h2/logo 入场 3 次）；`clip-path` 双斜切角（右上+左下）；Button hover `filter:drop-shadow` 霓虹辉光；`button/a/label` 全大写；全局 `cursor: crosshair`（输入区例外）；`body` 字距 0.05em。
+    - **Minimal**：去边框（`.border` 等 -> 0，输入框 `:not(input)` 保留 + focus 亮 `--brand`）；`h1-h4` font-weight 800 / `body` 400（字重对比）；hover 去位移（`transform: none`）。
+  - Brand signature: 扑克牌角标（`J` + ♠）logo mark；♠ 用 `--brand`（与 shadcn `--accent` 区分）。Logo 文字带 `data-slot="logo-text"`（Cyberpunk glitch 用）。
+  - `components/Container.tsx`：流式内容容器（`w-[85%] max-w-[1600px]`），`className` 可覆盖（如 jsonFormat 全宽用 `w-full max-w-none`）。
   - `components.json` + `lib/utils.ts` (`cn` = clsx+tailwind-merge) for shadcn/ui. `lib/theme` + `hooks/useTheme` manage scheme+preset (localStorage `theme` + `theme-preset`); inline script in root layout applies both before paint. `hooks/useTheme` returns typed `scheme`/`preset`.

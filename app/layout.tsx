@@ -65,7 +65,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <UserBootstrap />
         <TooltipProvider>{children}</TooltipProvider>
-        <Toaster />
+        <Toaster position="top-right" />
       </body>
     </html>
   );

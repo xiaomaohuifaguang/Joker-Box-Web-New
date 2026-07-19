@@ -21,6 +21,10 @@
   --border: #dcd2bd;
   --brand: #c5302a;
   --felt: #5b2a86;
+  --success: #5a7a3e;
+  --warning: #b07d2c;
+  --error: #c5302a;
+  --info: #3457a3;
   --display-font: var(--font-fraunces);
   --body-font: var(--font-geist-sans);
   --mono-font: var(--font-geist-mono);
@@ -28,7 +32,10 @@
   --elevation-sm: 0 1px 2px rgb(30 20 48 / 0.06);
   --elevation-md: 0 4px 12px rgb(30 20 48 / 0.08);
   --elevation-lg: 0 8px 24px rgb(30 20 48 / 0.1);
-  --tracking-display: 0em;
+  --tracking-display: -0.05em;
+  --motion-duration: 200ms;
+  --motion-ease: cubic-bezier(0.18, 1.8, 0.4, 1);
+  --space-unit: 0.25rem;
 }
 :root.dark,
 :root[data-theme="joker"].dark {
@@ -39,6 +46,10 @@
   --border: #322243;
   --brand: #e45a4c;
   --felt: #9159c9;
+  --success: #7da860;
+  --warning: #d4a04a;
+  --error: #e45a4c;
+  --info: #7894d6;
 }
 
 /* 磐石之信（海军蓝 + 白 + 政务红）-- 标准 */
@@ -50,6 +61,10 @@
   --border: #d2dce8;
   --brand: #1e4fd8;
   --felt: #b91c1c;
+  --success: #2e7d32;
+  --warning: #c77800;
+  --error: #b91c1c;
+  --info: #1e4fd8;
   --display-font: var(--font-plex-sans);
   --body-font: var(--font-plex-sans);
   --mono-font: var(--font-geist-mono);
@@ -58,6 +73,9 @@
   --elevation-md: 0 4px 8px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --elevation-lg: 0 12px 16px -4px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
   --tracking-display: 0em;
+  --motion-duration: 200ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --space-unit: 0.25rem;
 }
 :root[data-theme="panshi"].dark {
   --background: #08111f;
@@ -67,6 +85,10 @@
   --border: #1c2e48;
   --brand: #4f7fe0;
   --felt: #e05858;
+  --success: #4caf50;
+  --warning: #f0a020;
+  --error: #e05858;
+  --info: #4f7fe0;
 }
 
 /* 鸿泰安康（深绛红 + 白 + 金）-- 标准 */
@@ -78,6 +100,10 @@
   --border: #e4d7d5;
   --brand: #b01e1e;
   --felt: #a8842e;
+  --success: #2e7d32;
+  --warning: #a8842e;
+  --error: #b01e1e;
+  --info: #2563eb;
   --display-font: var(--font-plex-sans);
   --body-font: var(--font-plex-sans);
   --mono-font: var(--font-geist-mono);
@@ -86,6 +112,9 @@
   --elevation-md: 0 4px 8px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --elevation-lg: 0 12px 16px -4px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
   --tracking-display: 0em;
+  --motion-duration: 200ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --space-unit: 0.25rem;
 }
 :root[data-theme="hongtai"].dark {
   --background: #170a0c;
@@ -95,6 +124,10 @@
   --border: #381e22;
   --brand: #d8453c;
   --felt: #c9a24b;
+  --success: #4caf50;
+  --warning: #c9a24b;
+  --error: #d8453c;
+  --info: #3b82f6;
 }
 
 /* Cyberpunk（赛博朋克：霓虹品红 + 电青 + 近黑）-- 零圆角、扫描线、全 Mono、霓虹辉光 */
@@ -106,6 +139,10 @@
   --border: #d4d8e2;
   --brand: #d81b7a;
   --felt: #0099b8;
+  --success: #00b86b;
+  --warning: #d9a400;
+  --error: #d81b7a;
+  --info: #0099b8;
   --display-font: var(--font-space-mono);
   --body-font: var(--font-space-mono);
   --mono-font: var(--font-space-mono);
@@ -113,7 +150,10 @@
   --elevation-sm: 0 1px 3px rgb(0 0 0 / 0.4);
   --elevation-md: 0 4px 12px rgb(0 0 0 / 0.4), 0 0 10px color-mix(in srgb, var(--brand) 18%, transparent);
   --elevation-lg: 0 8px 24px rgb(0 0 0 / 0.4), 0 0 16px color-mix(in srgb, var(--felt) 16%, transparent);
-  --tracking-display: 0.04em;
+  --tracking-display: 0.05em;
+  --motion-duration: 80ms;
+  --motion-ease: steps(2, end);
+  --space-unit: 0.22rem;
 }
 :root[data-theme="cyberpunk"].dark {
   --background: #0a0a14;
@@ -123,6 +163,10 @@
   --border: #1e1e32;
   --brand: #ff2e97;
   --felt: #00e5ff;
+  --success: #00ff88;
+  --warning: #ffcc00;
+  --error: #ff2e97;
+  --info: #00e5ff;
 }
 
 /* Minimal（极简科技：白 + 近黑 + 电蓝）-- 大圆角、点阵纹、无阴影、紧字距 */
@@ -134,14 +178,21 @@
   --border: #e5e7eb;
   --brand: #2563eb;
   --felt: #1e40af;
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
   --display-font: var(--font-geist-sans);
   --body-font: var(--font-geist-sans);
   --mono-font: var(--font-geist-mono);
-  --radius: 0.75rem;
+  --radius: 1rem;
   --elevation-sm: none;
   --elevation-md: 0 1px 2px rgb(10 15 26 / 0.04);
   --elevation-lg: 0 2px 8px rgb(10 15 26 / 0.06);
   --tracking-display: -0.02em;
+  --motion-duration: 300ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --space-unit: 0.34rem;
 }
 :root[data-theme="minimal"].dark {
   --background: #0a0f1a;
@@ -151,18 +202,37 @@
   --border: #1f2937;
   --brand: #3b82f6;
   --felt: #60a5fa;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 }
 
 /* 签名纹样（极淡，不干扰阅读）：Joker 菱形 / Cyberpunk 扫描线 / Minimal 点阵 */
-:root[data-theme="joker"] body {
+:root[data-theme="joker"] body,
+:root[data-theme="joker"] .bg-background,
+:root[data-theme="joker"] .bg-surface,
+:root[data-theme="joker"] .bg-sidebar,
+:root[data-theme="joker"] .bg-popover,
+:root[data-theme="joker"] [data-slot="navigation-menu-content"] {
   background-image:
     repeating-linear-gradient(45deg, transparent 0 9px, rgba(91, 42, 134, 0.025) 9px 18px),
     repeating-linear-gradient(-45deg, transparent 0 9px, rgba(197, 48, 42, 0.02) 9px 18px);
 }
-:root[data-theme="cyberpunk"] body {
-  background-image: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 229, 255, 0.025) 2px 3px);
+:root[data-theme="cyberpunk"] body,
+:root[data-theme="cyberpunk"] .bg-background,
+:root[data-theme="cyberpunk"] .bg-surface,
+:root[data-theme="cyberpunk"] .bg-sidebar,
+:root[data-theme="cyberpunk"] .bg-popover,
+:root[data-theme="cyberpunk"] [data-slot="navigation-menu-content"] {
+  background-image: repeating-linear-gradient(0deg, transparent 0 2px, color-mix(in srgb, var(--felt) 15%, transparent) 2px 3px);
 }
-:root[data-theme="minimal"] body {
+:root[data-theme="minimal"] body,
+:root[data-theme="minimal"] .bg-background,
+:root[data-theme="minimal"] .bg-surface,
+:root[data-theme="minimal"] .bg-sidebar,
+:root[data-theme="minimal"] .bg-popover,
+:root[data-theme="minimal"] [data-slot="navigation-menu-content"] {
   background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
   background-size: 24px 24px;
   background-position: -1px -1px;
@@ -194,6 +264,12 @@
   --color-destructive-foreground: var(--background);
   --color-input: var(--border);
   --color-ring: var(--brand);
+
+  /* 语义色（success/warning/error/info）*/
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
 
   /* sidebar（映射到自有 token）*/
   --color-sidebar: var(--surface);
@@ -227,6 +303,16 @@
   --font-sans: var(--body-font);
   --font-mono: var(--mono-font);
   --font-display: var(--display-font);
+
+  /* 动效（每套预设 --motion-duration / --motion-ease，duration 和 ease 跟随）*/
+  --duration-150: var(--motion-duration, 150ms);
+  --duration-200: var(--motion-duration, 200ms);
+  --duration-300: calc(var(--motion-duration, 200ms) * 1.5);
+  --duration-500: calc(var(--motion-duration, 200ms) * 2.5);
+  --ease-in-out: var(--motion-ease, cubic-bezier(0.4, 0, 0.2, 1));
+
+  /* 间距（每套预设 --space-unit，所有 spacing 工具类跟随）*/
+  --spacing: var(--space-unit, 0.25rem);
 }
 
 @layer base {
@@ -243,3 +329,116 @@
     letter-spacing: var(--tracking-display, 0em);
   }
 }
+
+/* ===== Joker 专属：戏剧性入场 + selection + 2px 边框 ===== */
+
+/* ::selection：小丑红 + 骨白 */
+:root[data-theme="joker"] ::selection {
+  background: var(--brand);
+  color: var(--background);
+}
+
+/* 入场动画：幕布拉开（从下往上滑 + 回弹）*/
+@keyframes curtain-rise {
+  from {
+    transform: translateY(50%) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+:root[data-theme="joker"] [data-slot="dialog-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="alert-dialog-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="dropdown-menu-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="popover-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="context-menu-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="navigation-menu-content"] {
+  animation: curtain-rise var(--motion-duration, 200ms) var(--motion-ease, ease) both;
+}
+
+/* 2px 边框（复古版画感）*/
+:root[data-theme="joker"] .border { border-width: 2px; }
+:root[data-theme="joker"] .border-b { border-bottom-width: 2px; }
+:root[data-theme="joker"] .border-t { border-top-width: 2px; }
+:root[data-theme="joker"] .border-r { border-right-width: 2px; }
+:root[data-theme="joker"] .border-l { border-left-width: 2px; }
+
+/* ===== Cyberpunk 专属：机械动效 + 故障 + 斜切角 + 辉光 + 准星 ===== */
+
+/* 全局十字准星（输入区例外）*/
+:root[data-theme="cyberpunk"] { cursor: crosshair; }
+:root[data-theme="cyberpunk"] input,
+:root[data-theme="cyberpunk"] textarea,
+:root[data-theme="cyberpunk"] select { cursor: text; }
+
+/* 全大写 + 全文字距 0.05em（终端像素屏感）*/
+:root[data-theme="cyberpunk"] button,
+:root[data-theme="cyberpunk"] a,
+:root[data-theme="cyberpunk"] label { text-transform: uppercase; }
+:root[data-theme="cyberpunk"] body { letter-spacing: 0.05em; }
+
+/* 故障动画：translateX 错位 + RGB 通道分离（品红 + 青）*/
+@keyframes cyberpunk-glitch {
+  0% { transform: translateX(0); text-shadow: none; }
+  20% { transform: translateX(-2px); text-shadow: 2px 0 var(--brand), -2px 0 var(--felt); }
+  40% { transform: translateX(2px); text-shadow: -2px 0 var(--brand), 2px 0 var(--felt); }
+  60% { transform: translateX(-1px); text-shadow: 1px 0 var(--brand), -1px 0 var(--felt); }
+  80% { transform: translateX(1px); text-shadow: -1px 0 var(--brand), 1px 0 var(--felt); }
+  100% { transform: translateX(0); text-shadow: none; }
+}
+
+/* Glitch：Button hover 持续；h1/h2/logo 入场 3 次后停 */
+:root[data-theme="cyberpunk"] [data-slot="button"]:hover {
+  animation: cyberpunk-glitch 0.3s steps(2) infinite;
+}
+:root[data-theme="cyberpunk"] h1,
+:root[data-theme="cyberpunk"] h2,
+:root[data-theme="cyberpunk"] [data-slot="logo-text"] {
+  animation: cyberpunk-glitch 0.4s steps(2) 3;
+}
+
+/* clip-path 双斜切角（右上 + 左下），排除圆形 */
+:root[data-theme="cyberpunk"] button:not([class*="rounded-full"]),
+:root[data-theme="cyberpunk"] [data-slot="button"]:not([class*="rounded-full"]) {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% 100%,
+    8px 100%,
+    0 calc(100% - 8px)
+  );
+}
+
+/* 辉光：Button hover 用 filter:drop-shadow（跟随 clip-path 形状）*/
+:root[data-theme="cyberpunk"] [data-slot="button"]:hover:not([class*="rounded-full"]) {
+  filter: drop-shadow(0 0 6px var(--brand));
+}
+
+/* ===== Minimal 专属：去边框 + 字重对比 + 去位移 + 输入框保留 ===== */
+
+/* 去边框（输入框/文本域/下拉除外，它们坚决保留）*/
+:root[data-theme="minimal"] .border:not(input):not(textarea):not(select) { border-width: 0; }
+:root[data-theme="minimal"] .border-b { border-bottom-width: 0; }
+:root[data-theme="minimal"] .border-t { border-top-width: 0; }
+:root[data-theme="minimal"] .border-r { border-right-width: 0; }
+:root[data-theme="minimal"] .border-l { border-left-width: 0; }
+
+/* 输入框 Focus 亮品牌色 */
+:root[data-theme="minimal"] input:focus-visible,
+:root[data-theme="minimal"] textarea:focus-visible {
+  border-color: var(--brand);
+}
+
+/* 字重对比：标题 800（极粗），正文 400（常规）*/
+:root[data-theme="minimal"] h1,
+:root[data-theme="minimal"] h2,
+:root[data-theme="minimal"] h3,
+:root[data-theme="minimal"] h4 { font-weight: 800; }
+:root[data-theme="minimal"] body { font-weight: 400; }
+
+/* 微交互：hover 不位移/不缩放，只靠 bg 变化 */
+:root[data-theme="minimal"] [class*="hover:-translate"]:hover { transform: none; }

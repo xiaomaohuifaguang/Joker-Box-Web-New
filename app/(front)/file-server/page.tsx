@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Container } from "@/components/Container";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -189,7 +190,7 @@ function FileServer() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+    <Container className="py-8 md:py-12">
       {/* 标题 + 面包屑 + 上传/新建 */}
       <header className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="font-display text-2xl font-semibold">码头</h1>
@@ -403,6 +404,6 @@ function FileServer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Container>
   );
 }

@@ -93,7 +93,7 @@ export function ConsoleSidebar() {
                   <span className="text-[11px] leading-none text-brand">♠</span>
                 </span>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="font-display truncate font-semibold">
+                  <span data-slot="logo-text" className="font-display truncate font-semibold">
                     Joker Box
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
