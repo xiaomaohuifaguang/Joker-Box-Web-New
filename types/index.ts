@@ -2,6 +2,7 @@
 // 按需新建文件（如 domain.ts）并在此 barrel 导出。
 export * from "./api";
 export * from "./api-path";
+export * from "./code-table";
 export * from "./file";
 export * from "./menu";
 export * from "./menu-manager";
