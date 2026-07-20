@@ -58,12 +58,12 @@ export async function getRoleApiPathTree(
   return data ?? [];
 }
 
-// 角色已选菜单 id 集合：POST /role/menuChoose?roleId=&menuType=。按 menuType 分查（-1 后台 / -2 前台）。
+// 角色已选菜单 id 集合：POST /menu/menuChoose?roleId=&menuType=。按 menuType 分查（-1 后台 / -2 前台）。
 export async function getRoleMenuChoose(
   roleId: number,
   menuType: number,
 ): Promise<number[]> {
-  const { data } = await api.post<number[]>("/role/menuChoose", {
+  const { data } = await api.post<number[]>("/menu/menuChoose", {
     params: { roleId, menuType },
   });
   return data ?? [];
