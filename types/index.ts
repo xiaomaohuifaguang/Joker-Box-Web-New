@@ -11,3 +11,4 @@ export * from "./role-manager";
 export * from "./user";
 export * from "./user-manager";
 export * from "./website";
+export * from "./website-manager";
