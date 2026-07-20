@@ -6,6 +6,7 @@ export * from "./file";
 export * from "./menu";
 export * from "./menu-manager";
 export * from "./org";
+export * from "./role-manager";
 export * from "./user";
 export * from "./user-manager";
 export * from "./website";

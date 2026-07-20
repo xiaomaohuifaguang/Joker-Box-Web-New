@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronRight, Minus } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,57 +9,13 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { apiPathKey, type MenuApiPathServer } from "@/types";
+import { TriCheckbox, triState } from "@/components/TriCheckbox";
 
-type TriState = "all" | "some" | "none";
-
-// 三态勾选框：all=全选(实心对勾) / some=部分(横线) / none=空。
-// 样式跟随 shadcn checkbox token（border-input / primary / primary-foreground）。
-// shadcn Checkbox 只渲染对勾、无 indeterminate 图标，故这里自绘以支持三态。
-function TriCheckbox({
-  state,
-  disabled,
-  onChange,
-  ariaLabel,
-}: {
-  state: TriState;
-  disabled?: boolean;
-  onChange: () => void;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={state === "all" ? true : state === "some" ? "mixed" : false}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={onChange}
-      className={cn(
-        "grid size-4 shrink-0 place-content-center rounded-[4px] border border-input shadow-xs transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
-        state === "all" && "border-primary bg-primary text-primary-foreground",
-        state === "some" && "border-primary text-primary",
-      )}
-    >
-      {state === "all" && <Check className="size-3.5" />}
-      {state === "some" && <Minus className="size-3.5" />}
-    </button>
-  );
-}
-
-// 计算一组可勾选 key 的三态。
-function triState(keys: string[], selected: Set<string>): TriState {
-  if (keys.length === 0) return "none";
-  const hit = keys.filter((k) => selected.has(k)).length;
-  if (hit === 0) return "none";
-  if (hit === keys.length) return "all";
-  return "some";
-}
-
-// 菜单 ↔ api 绑定树：服务 -> 分组 -> apiPath 三级。
+// api 绑定树：服务 -> 分组 -> apiPath 三级。
 // 白名单 api（whiteList=1）不计入可选、禁用勾选（无需绑定）。
 // 选中集合由父级持有（受控）；本组件负责三态计算与切换。
+// 共用于 menu-manager（菜单绑 api）与 role-manager（角色绑 api）：加载态由 apiPath.roleBind 标识。
 export function ApiPathBindingTree({
   tree,
   loading,

@@ -59,11 +59,12 @@ app/
       page.tsx + _components/ (OrgListPanel, OrgFormDialog)
     authority/user-manager/  # 用户管理（树+列表+分页+角色/机构绑定，已实现）
       page.tsx + _components/ (UserListPanel, UserEditDialog)
-    authority/role-manager/  # 占位
+    authority/role-manager/  # 角色管理（列表+分页+权限配置，已实现）
+      page.tsx + _components/ (RoleFormDialog, MenuCheckboxTree)
     api-manager/             # API 管理（筛选+表格+分页+白名单编辑，已实现）
       page.tsx + _components/ (ServerGroupCascader, ApiPathEditDialog)
     menu-manager/             # 菜单管理（树形表格+拖拽排序/改挂+图标+api 绑定，已实现）
-      page.tsx + _components/ (MenuTreeTable, MenuFormDialog, ApiPathBindingTree, IconPicker)
+      page.tsx + _components/ (MenuTreeTable, MenuFormDialog, IconPicker)
     process-manager / website-manager /
     displayBoard / mail-manager / crawler-task-manager / form/dynamicForm-manager /
     ai/model-manager / system/{system-prompt,code-table}   # 占位
@@ -80,8 +81,10 @@ components/
   ThemeSelect.tsx       # 主题预设切换（前台 Header / 后台顶栏共享）
   Container.tsx         # 流式内容容器（w-85% max-w-1600px，className 可覆盖）
   menuIcons.tsx         # Menu 图标注册表（MENU_ICON_GROUPS 14 类 ~149 个）+ MenuIcon switch 渲染（管理页选择 + 前台/后台导航渲染共用；硬编码 switch 规避 static-components）
+  ApiPathBindingTree.tsx # api 绑定树（服务/分组/apiPath 三级 checkbox，roleBind 回显、whiteList 禁用）；菜单/角色管理共用
+  TriCheckbox.tsx       # 三态勾选框（all/some/none）；ApiPathBindingTree + MenuCheckboxTree 共用
 lib/
-  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user
+  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage
   auth.ts               # Token in localStorage
   user.ts               # 当前用户缓存 (localStorage)
   credentials.ts        # 记住密码 (base64)
@@ -89,10 +92,11 @@ lib/
   theme.ts              # scheme + preset
   utils.ts              # cn() 等
   env.ts                # NEXT_PUBLIC_* 占位
+  apiPathTree.ts        # buildApiPathSaveTree（选中集合 -> 保存回传 apiPathTree；菜单/角色管理共用）
 hooks/
   useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
-  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll
-types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload
 public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
@@ -137,6 +141,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **API 管理** `/console/api-manager` - 筛选（搜索+角色 Select+服务/分组级联 `ServerGroupCascader`）+ 表格（名称/路径/服务/分组/白名单 Badge/创建时间/编辑）+ 分页（页码+省略号）。白名单仅可通过编辑弹窗（`ApiPathEditDialog`，Switch 切换）修改。`/apiPath/*` 接口（queryPage body / info query / update body）+ `/role/selector` + `/apiPath/cascadeServerGroup`。
 - **用户管理** `/console/authority/user-manager` - 左机构树（复用 `OrgTreePanel`，选中机构按 orgId 过滤；虚拟根「全部」= 全部用户）+ 右列表（面包屑+搜索+角色 Select+重置 / 表格：用户名/昵称/性别/邮箱/手机号/创建时间/操作 / 分页页码+省略号）。行操作：编辑（`UserEditDialog`，即时绑定角色与机构：Badge × 移除 + 下拉添加，无保存按钮）、重置密码、删除（后两者 AlertDialog 确认）。`/user/*` 接口（queryPage body；userInfo/roles/orgs/addRole/deleteRole/addOrg/deleteOrg 均 query 传 userId）。列表面板 `key=selectedId` 切机构重挂载（与 org-manager 一致）；角色选择器页面级拉取一次（避免重挂载重复请求）。
 - **菜单管理** `/console/menu-manager` - 前台/后台分段（menuType -2/-1，`ToggleGroup`）+ 树形表格（不分页：菜单量级小、层级是核心结构）。**签名**：菜单列渲染为真实导航项（`[图标 chip] 名称`，按 `icon` 字段，`MenuIcon` switch 硬编码渲染规避 static-components；空则不渲染、无兜底）。拖拽排序/改挂（`@dnd-kit`：拖把手 + `DragOverlay` + 落点指示线；落定后 active 成为 over 的兄弟 = `newParentId=over.parentId`，防环校验，重算受影响兄弟 sort，乐观更新+失败回滚，逐个 `/menu/update`）。行操作：编辑/新增子菜单/删除。新增走 `/menu/add`（仅字段，菜单未建不能绑 api）；编辑走 `/menu/save`（字段 + api 绑定一次性存，`MenuFormDialog`）。编辑弹窗：图标选择器（`IconPicker`：Dialog 内**内联下拉面板**非 Popover——Popover portal 受 Dialog 的 react-remove-scroll 拦截滚轮；14 类 ~149 图标 + 搜索 + 清除）+ 关联 api 绑定树（`ApiPathBindingTree` 三级 checkbox：服务/分组 tri-state + apiPath，`roleBind` 预勾选、`whiteList=1` 禁用勾选）。`menu.icon` 同时供前台 Header / 后台 Sidebar 导航渲染。接口 `/menu/{menuTreeAll,apiPathTreeWithMenu,add,remove,update,save,info}`；`useMenuTreeAll` 按 menuType 拉树+refresh。
+- **角色管理** `/console/authority/role-manager` - 列表 + 分页 + 搜索（角色无层级，扁平表）。行：角色名 / 后台管理（`admin=1` 显「后台管理」Badge）/ 更新时间 / 操作。新增仅 name（可选**复制权限自** `withRole` 继承源角色 apiPath+菜单权限）；编辑走 `/role/save`（role{name,admin} + apiPathTree + menuChoose 前后台合并）。编辑弹窗**三 tab 权限编辑器**：apiPath 权限（复用 `ApiPathBindingTree`，`roleBind` 预勾选、`whiteList` 禁用）/ 前台菜单 / 后台菜单（`MenuCheckboxTree` tri-state，`menuChoose(menuType)` 预勾选）。删除：软删 `/role/delete`（有绑定失败，toast 提示改用强删）+ 强制删 `/role/destroy`（级联，destructive）。接口 `/role/{queryPage,add,delete,destroy,info,apiPathTreeWithRole,menuChoose,save}`；`useRolePage` 分页。共享件 `ApiPathBindingTree` / `TriCheckbox`（`components/`）+ `buildApiPathSaveTree`（`lib/apiPathTree.ts`）从 menu-manager 提取。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
 - **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。

@@ -6,11 +6,7 @@ import { addMenu, getMenuApiPathTree, saveMenuWithApi } from "@/lib/api/menuMana
 import { ApiError } from "@/lib/api";
 import { MENU_TYPE } from "@/types";
 import { apiPathKey } from "@/types";
-import type {
-  MenuApiPathSaveServer,
-  MenuApiPathServer,
-  MenuNode,
-} from "@/types";
+import type { MenuApiPathServer, MenuNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +28,8 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IconPicker } from "./IconPicker";
-import { ApiPathBindingTree } from "./ApiPathBindingTree";
+import { ApiPathBindingTree } from "@/components/ApiPathBindingTree";
+import { buildApiPathSaveTree } from "@/lib/apiPathTree";
 
 // 扁平化菜单树为 Select 选项（全角空格缩进表示层级），excludeIds 中的节点及其子树跳过。
 function flattenMenuOptions(
@@ -57,25 +54,7 @@ function collectSubtreeIds(node: MenuNode, acc = new Set<number>()): Set<number>
   return acc;
 }
 
-// 由选中集合 + api 树构建保存回传的 apiPathTree（仅含选中项，按 server -> 分组 嵌套）。
-function buildSaveTree(
-  tree: MenuApiPathServer[],
-  selected: Set<string>,
-): MenuApiPathSaveServer[] {
-  const result: MenuApiPathSaveServer[] = [];
-  for (const svc of tree) {
-    const groups = [];
-    for (const grp of svc.groups) {
-      const apiPaths = grp.apiPaths
-        .filter((ap) => selected.has(apiPathKey(ap.server, ap.path)))
-        .map((ap) => ({ path: ap.path, server: ap.server }));
-      if (apiPaths.length)
-        groups.push({ groupName: grp.groupName, apiPaths });
-    }
-    if (groups.length) result.push({ server: svc.server, groups });
-  }
-  return result;
-}
+// 由选中集合 + api 树构建保存回传的 apiPathTree：见 lib/apiPathTree.ts buildApiPathSaveTree。
 
 type FormState = {
   name: string;
@@ -212,7 +191,7 @@ export function MenuFormDialog({
             menuType,
             whiteList: form.whiteList,
           },
-          apiPathTree: buildSaveTree(apiTree ?? [], selected),
+          apiPathTree: buildApiPathSaveTree(apiTree ?? [], selected),
         });
         toast.success("已保存");
       } else {
