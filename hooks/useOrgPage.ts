@@ -16,9 +16,16 @@ export function useOrgPage(params: {
   const [page, setPage] = useState<Page<Org> | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 参数变化时回到加载态（render 期内条件 setState；effect 内只在异步回调 setState）。
+  const depKey = `${parentId}|${current}|${size}|${search}|${refreshKey}`;
+  const [prevKey, setPrevKey] = useState(depKey);
+  if (prevKey !== depKey) {
+    setPrevKey(depKey);
+    setLoading(true);
+  }
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     queryOrgPage({ parentId, current, size, search: search || undefined })
       .then((data) => {
         if (!cancelled) setPage(data);

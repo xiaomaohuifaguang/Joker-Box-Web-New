@@ -9,9 +9,9 @@ export function useWebsiteGroups() {
   const [groups, setGroups] = useState<WebsiteGroup[] | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 挂载拉取一次：loading 初值已为 true，effect 内只在异步回调 setState（避免 effect 内 sync setState）。
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     getWebsiteGroups()
       .then((data) => {
         if (!cancelled) setGroups(data ?? []);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -33,10 +33,15 @@ export function NameDialog({
   const [value, setValue] = useState(initialValue);
   const [loading, setLoading] = useState(false);
 
-  // 打开时回填
-  useEffect(() => {
+  // 打开（或打开期间 initialValue 变化）时回填（render 期内条件 setState，避免 effect 内 sync setState）。
+  const [prev, setPrev] = useState<{ open: boolean; value: string }>({
+    open,
+    value: initialValue,
+  });
+  if (prev.open !== open || prev.value !== initialValue) {
+    setPrev({ open, value: initialValue });
     if (open) setValue(initialValue);
-  }, [open, initialValue]);
+  }
 
   async function submit() {
     const v = value.trim();

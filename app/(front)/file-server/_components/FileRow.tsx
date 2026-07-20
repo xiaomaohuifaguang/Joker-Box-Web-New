@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { FileItem } from "@/types";
 import { FileMenuItems } from "./FileMenuItems";
-import { formatBytes, iconFor } from "./FileCard";
+import { formatBytes, FileIcon } from "./FileCard";
 
 // 列表视图行：点名称打开/下载；hover 出操作；右键出菜单。
 export function FileRow({
@@ -22,7 +22,6 @@ export function FileRow({
   onDelete: () => void;
   onDownload: () => void;
 }) {
-  const Icon = iconFor(item);
   const isFolder = item.type === "folder";
   return (
     <ContextMenu>
@@ -34,7 +33,8 @@ export function FileRow({
               onClick={isFolder ? onOpen : onDownload}
               className="flex items-center gap-2 text-left"
             >
-              <Icon
+              <FileIcon
+                item={item}
                 className={`h-4 w-4 shrink-0 ${isFolder ? "text-felt" : "text-muted-foreground"}`}
               />
               <span className="truncate font-medium">{item.filename}</span>

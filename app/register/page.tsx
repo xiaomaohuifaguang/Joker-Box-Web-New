@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { register, sendMailCode, type Sex } from "@/lib/api/auth";
@@ -64,7 +64,7 @@ export default function RegisterPage() {
     },
   });
 
-  const mail = form.watch("mail");
+  const mail = useWatch({ control: form.control, name: "mail" });
 
   // 验证码 60s 倒计时（setState 在 setTimeout 回调里，非 effect 体）
   useEffect(() => {

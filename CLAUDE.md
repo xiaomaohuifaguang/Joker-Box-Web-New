@@ -53,10 +53,15 @@ app/
     layout.tsx          # <RequireAdmin> + SidebarProvider(Sidebar + SidebarInset)；顶栏=SidebarTrigger+面包屑+主题/明暗
     loading.tsx / error.tsx
     page.tsx            # 仪表盘（占位）
+    authority/_components/  # 跨页共享：OrgTreePanel（机构树，org-manager / user-manager 共用）
     authority/org-manager/   # 机构管理（树+列表+CRUD，已实现）
-      page.tsx + _components/ (OrgTreePanel, OrgListPanel, OrgFormDialog)
-    authority/{user-manager,role-manager}/   # 占位
-    api-manager / menu-manager / process-manager / website-manager /
+      page.tsx + _components/ (OrgListPanel, OrgFormDialog)
+    authority/user-manager/  # 用户管理（树+列表+分页+角色/机构绑定，已实现）
+      page.tsx + _components/ (UserListPanel, UserEditDialog)
+    authority/role-manager/  # 占位
+    api-manager/             # API 管理（筛选+表格+分页+白名单编辑，已实现）
+      page.tsx + _components/ (ServerGroupCascader, ApiPathEditDialog)
+    menu-manager / process-manager / website-manager /
     displayBoard / mail-manager / crawler-task-manager / form/dynamicForm-manager /
     ai/model-manager / system/{system-prompt,code-table}   # 占位
     _components/        # ConsoleSidebar (shadcn Sidebar, 折叠浮层, 用户菜单), ConsoleBreadcrumb
@@ -72,7 +77,7 @@ components/
   ThemeSelect.tsx       # 主题预设切换（前台 Header / 后台顶栏共享）
   Container.tsx         # 流式内容容器（w-85% max-w-1600px，className 可覆盖）
 lib/
-  api/                  # client.ts (typed, auto-token) + auth, menu, org, file, website
+  api/                  # client.ts (typed, auto-token) + auth, menu, org, file, website, apiPath, user
   auth.ts               # Token in localStorage
   user.ts               # 当前用户缓存 (localStorage)
   credentials.ts        # 记住密码 (base64)
@@ -82,8 +87,8 @@ lib/
   env.ts                # NEXT_PUBLIC_* 占位
 hooks/
   useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
-  useOrgTree / useOrgPage / useFileList / useWebsiteGroups
-types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem
 public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
@@ -125,6 +130,8 @@ Two sections, unified login. Static export = no server-side route protection; th
 ## Feature pages (implemented)
 
 - **机构管理** `/console/authority/org-manager` - 左机构树（后端虚拟根 id=-1「全部」为第一层单节点）+ 右列表（表格+分页页码+省略号+搜索）。CRUD：新增/编辑（`OrgFormDialog`，父级 Select）、删除（AlertDialog）。`/org/*` 接口（query/getOrgTree 返回单根，取 `[data]`）。增删改后刷新树+列表（`refreshKey`）。
+- **API 管理** `/console/api-manager` - 筛选（搜索+角色 Select+服务/分组级联 `ServerGroupCascader`）+ 表格（名称/路径/服务/分组/白名单 Badge/创建时间/编辑）+ 分页（页码+省略号）。白名单仅可通过编辑弹窗（`ApiPathEditDialog`，Switch 切换）修改。`/apiPath/*` 接口（queryPage body / info query / update body）+ `/role/selector` + `/apiPath/cascadeServerGroup`。
+- **用户管理** `/console/authority/user-manager` - 左机构树（复用 `OrgTreePanel`，选中机构按 orgId 过滤；虚拟根「全部」= 全部用户）+ 右列表（面包屑+搜索+角色 Select+重置 / 表格：用户名/昵称/性别/邮箱/手机号/创建时间/操作 / 分页页码+省略号）。行操作：编辑（`UserEditDialog`，即时绑定角色与机构：Badge × 移除 + 下拉添加，无保存按钮）、重置密码、删除（后两者 AlertDialog 确认）。`/user/*` 接口（queryPage body；userInfo/roles/orgs/addRole/deleteRole/addOrg/deleteOrg 均 query 传 userId）。列表面板 `key=selectedId` 切机构重挂载（与 org-manager 一致）；角色选择器页面级拉取一次（避免重挂载重复请求）。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
 - **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。

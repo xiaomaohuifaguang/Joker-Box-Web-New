@@ -45,13 +45,17 @@ export function useMenuTree(menuType: MenuType) {
 
   const [tree, setTree] = useState<Menu[] | null>(() => cache.get(key) ?? null);
 
+  // key 变化时若命中缓存则立即回填（render 期内条件 setState；effect 内只在异步回调 setState）。
+  const [prevKey, setPrevKey] = useState(key);
+  if (prevKey !== key) {
+    setPrevKey(key);
+    const cached = cache.get(key);
+    if (cached) setTree(cached);
+  }
+
   useEffect(() => {
     if (!mounted) return;
-    const cached = cache.get(key);
-    if (cached) {
-      setTree(cached);
-      return;
-    }
+    if (cache.get(key)) return; // 命中缓存：render 期已回填，免请求
     let active = true;
     loadMenuTree(key, menuType).then((data) => {
       if (active) setTree(data);

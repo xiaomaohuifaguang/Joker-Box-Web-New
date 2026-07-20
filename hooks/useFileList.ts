@@ -9,9 +9,16 @@ export function useFileList(parentId: string, refreshKey: number) {
   const [items, setItems] = useState<FileItem[] | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 参数变化时回到加载态（render 期内条件 setState；effect 内只在异步回调 setState）。
+  const depKey = `${parentId}|${refreshKey}`;
+  const [prevKey, setPrevKey] = useState(depKey);
+  if (prevKey !== depKey) {
+    setPrevKey(depKey);
+    setLoading(true);
+  }
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     listFiles(parentId)
       .then((data) => {
         if (!cancelled) setItems(data ?? []);

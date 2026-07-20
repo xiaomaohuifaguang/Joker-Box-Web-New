@@ -11,19 +11,18 @@ import {
   Folder,
   Pencil,
   Trash2,
-  type LucideIcon,
 } from "lucide-react";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import type { FileItem } from "@/types";
 import { FileMenuItems } from "./FileMenuItems";
 
-// 按 type/contentType 选图标。
-export function iconFor(item: FileItem): LucideIcon {
-  if (item.type === "folder") return Folder;
+// 按 type/contentType 渲染图标（组件形式，避免 render 内调用函数返回组件类型触发 static-components）。
+export function FileIcon({ item, className }: { item: FileItem; className?: string }) {
+  if (item.type === "folder") return <Folder className={className} />;
   const ct = item.contentType;
-  if (ct.startsWith("image/")) return FileImage;
-  if (ct.includes("pdf")) return FileText;
+  if (ct.startsWith("image/")) return <FileImage className={className} />;
+  if (ct.includes("pdf")) return <FileText className={className} />;
   if (
     ct.includes("zip") ||
     ct.includes("compressed") ||
@@ -31,17 +30,17 @@ export function iconFor(item: FileItem): LucideIcon {
     ct.includes("rar") ||
     ct.includes("7z")
   )
-    return FileArchive;
-  if (ct.startsWith("video/")) return FileVideo;
-  if (ct.startsWith("audio/")) return FileAudio;
+    return <FileArchive className={className} />;
+  if (ct.startsWith("video/")) return <FileVideo className={className} />;
+  if (ct.startsWith("audio/")) return <FileAudio className={className} />;
   if (
     ct.startsWith("text/") ||
     ct.includes("json") ||
     ct.includes("xml") ||
     ct.includes("javascript")
   )
-    return FileText;
-  return File;
+    return <FileText className={className} />;
+  return <File className={className} />;
 }
 
 // 格式化字节数。
@@ -66,7 +65,6 @@ export function FileCard({
   onDelete: () => void;
   onDownload: () => void;
 }) {
-  const Icon = iconFor(item);
   const isFolder = item.type === "folder";
   return (
     <ContextMenu>
@@ -77,7 +75,8 @@ export function FileCard({
             onClick={isFolder ? onOpen : onDownload}
             className="flex w-full flex-col items-center gap-2"
           >
-            <Icon
+            <FileIcon
+              item={item}
               className={`h-9 w-9 ${isFolder ? "text-felt" : "text-muted-foreground"}`}
             />
             <span className="line-clamp-2 break-all text-xs font-medium">

@@ -30,7 +30,6 @@ import {
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -54,7 +53,6 @@ import {
   uploadFile,
 } from "@/lib/api/file";
 import { ApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import type { FileItem } from "@/types";
 import { FileCard } from "./_components/FileCard";
 import { FileRow } from "./_components/FileRow";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useOrgTree } from "@/hooks/useOrgTree";
-import { OrgTreePanel } from "./_components/OrgTreePanel";
+import { OrgTreePanel } from "@/app/console/authority/_components/OrgTreePanel";
 import { OrgListPanel } from "./_components/OrgListPanel";
 
 // 机构管理：左机构树 + 右列表。树根为后端虚拟节点「全部」(id=-1)，默认选中它查顶级机构。
@@ -18,25 +18,28 @@ export default function OrgManagerPage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden rounded-lg border bg-background">
-      <div className="w-80 shrink-0 border-r bg-surface">
-        <OrgTreePanel
-          tree={tree}
-          loading={treeLoading}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
-      </div>
-      <div className="flex-1 overflow-hidden">
-        {/* key 随选中节点变化 -> 重挂载，重置分页/搜索，避免脏状态 */}
-        <OrgListPanel
-          key={selectedId}
-          parentId={selectedId}
-          refreshKey={listRefreshKey}
-          tree={tree ?? []}
-          onSelect={setSelectedId}
-          onMutated={handleMutated}
-        />
+    <div className="flex h-full flex-col gap-4">
+      <h1 className="font-display text-lg font-semibold">机构管理</h1>
+      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-background">
+        <div className="w-80 shrink-0 border-r bg-surface">
+          <OrgTreePanel
+            tree={tree}
+            loading={treeLoading}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {/* key 随选中节点变化 -> 重挂载，重置分页/搜索，避免脏状态 */}
+          <OrgListPanel
+            key={selectedId}
+            parentId={selectedId}
+            refreshKey={listRefreshKey}
+            tree={tree ?? []}
+            onSelect={setSelectedId}
+            onMutated={handleMutated}
+          />
+        </div>
       </div>
     </div>
   );
