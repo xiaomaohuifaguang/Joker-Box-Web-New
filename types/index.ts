@@ -4,6 +4,7 @@ export * from "./api";
 export * from "./api-path";
 export * from "./file";
 export * from "./menu";
+export * from "./menu-manager";
 export * from "./org";
 export * from "./user";
 export * from "./user-manager";

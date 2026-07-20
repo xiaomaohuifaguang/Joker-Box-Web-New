@@ -12,6 +12,7 @@ A study project built on `create-next-app` (App Router). The frontend is a **sta
 - **Static export** (`output: 'export'`) -> `out/` for nginx. No SSR / Server Actions / `proxy.ts` / server route handlers; all runtime data is fetched client-side from `/joker-box/*` (dev: `next.config.ts` `rewrites`; prod: nginx).
 - **Forms/validation**: `react-hook-form` + `zod` + `@hookform/resolvers/zod`.
 - **UI kit**: shadcn/ui (`radix-ui`) in `components/ui/`, `lucide-react` icons, `sonner` toasts. In use: `NavigationMenu`, `Sidebar`, `Sheet`, `Collapsible`, `Tooltip`, `ContextMenu`, `Form`, `Table`, `Dialog`, `AlertDialog`, `Select`, `Sonner`.
+- **Drag & drop**: `@dnd-kit/core` + `sortable` + `utilities`（菜单管理树形拖拽排序/改挂）。
 - **Editors/parsers**: `@uiw/react-codemirror` + `@codemirror/lang-json` (JSON editor); `cronstrue` (cron→自然语言, zh_CN via `cronstrue/dist/cronstrue-i18n`) + `cron-parser` **v4** (cron 下次触发).
 
 ## Commands
@@ -61,7 +62,9 @@ app/
     authority/role-manager/  # 占位
     api-manager/             # API 管理（筛选+表格+分页+白名单编辑，已实现）
       page.tsx + _components/ (ServerGroupCascader, ApiPathEditDialog)
-    menu-manager / process-manager / website-manager /
+    menu-manager/             # 菜单管理（树形表格+拖拽排序/改挂+图标+api 绑定，已实现）
+      page.tsx + _components/ (MenuTreeTable, MenuFormDialog, ApiPathBindingTree, IconPicker)
+    process-manager / website-manager /
     displayBoard / mail-manager / crawler-task-manager / form/dynamicForm-manager /
     ai/model-manager / system/{system-prompt,code-table}   # 占位
     _components/        # ConsoleSidebar (shadcn Sidebar, 折叠浮层, 用户菜单), ConsoleBreadcrumb
@@ -76,8 +79,9 @@ components/
   UserBootstrap.tsx     # 登录态变化时拉取/清理用户信息 (client)
   ThemeSelect.tsx       # 主题预设切换（前台 Header / 后台顶栏共享）
   Container.tsx         # 流式内容容器（w-85% max-w-1600px，className 可覆盖）
+  menuIcons.tsx         # Menu 图标注册表（MENU_ICON_GROUPS 14 类 ~149 个）+ MenuIcon switch 渲染（管理页选择 + 前台/后台导航渲染共用；硬编码 switch 规避 static-components）
 lib/
-  api/                  # client.ts (typed, auto-token) + auth, menu, org, file, website, apiPath, user
+  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user
   auth.ts               # Token in localStorage
   user.ts               # 当前用户缓存 (localStorage)
   credentials.ts        # 记住密码 (base64)
@@ -87,8 +91,8 @@ lib/
   env.ts                # NEXT_PUBLIC_* 占位
 hooks/
   useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
-  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage
-types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload
 public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
@@ -120,7 +124,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **Register** (`/register`) - `react-hook-form` + `zod` + shadcn `Form`. No auth redirect. Posts `/auth/register`; email code via `/auth/mailCode?mail=` (60s cooldown). zod: required + email format + password match (`refine` on `confirmPassword`); success -> `/login`.
 - **Auth state** - `lib/auth.ts` token in localStorage (`auth_token`); `hooks/useAuth` reactive（`logout()` = clearToken + clearUser + `window.location.href="/"` 硬导航跳首页）. 三个守卫统一规则：**未登录或已登录无权限 -> 404**（隐藏页面存在，不跳转、不显示 403）。`RequireAuth`（登录守卫，如 `/file-server`）：未登录 -> 404 ErrorState。`RequirePermission`（权限守卫）：未登录或 authPaths 不含当前路由 -> 404 ErrorState。`RequireAdmin`（后台守卫）：未登录或非 admin -> 404 NotFoundPage。守卫均用 `useMounted` 跳首帧（token 是 client-only），避免已登录刷新闪 404。
 - **API auth** - `lib/api/client.ts` auto-attaches `Authorization: Bearer <token>`; 响应 code=401 且请求带了 token -> `handleUnauthorized` 清 token+用户（`clearToken` + 动态 import `clearUser`），守卫下一帧响应（404/重定向）。`handleUnauthorized` 导出供 `lib/api/file.ts` 的上传/下载复用。
-- **Menus (backend-driven)** - Front Header + Console sidebar pull `POST /menu/menuTree?menuType=<-1|-2>` (`-1` console / `-2` front) via `hooks/useMenuTree.ts` (`lib/api/menu.ts`, `types/menu.ts`). `Menu = { path, name, children?, whiteList }`. **后端已按 token 过滤菜单树**（返回用户可见的项），客户端直接渲染、不再用 `authPaths` 二次过滤。Module-level cache keyed by `menuType + authed + userId`（多 Header 实例共享；登录/登出/换用户 -> key 变 -> 重拉）。首页 hardcoded first in front nav (logo also links home); API `path:"/"` de-duped. Console icons client-mapped by path (`MENU_ICONS`) with fallback. 页面级用 `<RequirePermission>` 兜底（直接输 URL 无权限 -> 404）。
+- **Menus (backend-driven)** - Front Header + Console sidebar pull `POST /menu/menuTree?menuType=<-1|-2>` (`-1` console / `-2` front) via `hooks/useMenuTree.ts` (`lib/api/menu.ts`, `types/menu.ts`). `Menu = { path, name, children?, whiteList }`. **后端已按 token 过滤菜单树**（返回用户可见的项），客户端直接渲染、不再用 `authPaths` 二次过滤。Module-level cache keyed by `menuType + authed + userId`（多 Header 实例共享；登录/登出/换用户 -> key 变 -> 重拉）。首页 hardcoded first in front nav (logo also links home); API `path:"/"` de-duped. 图标读 `menu.icon` 字段（`components/menuIcons.tsx` 的 `MenuIcon`，空/未知不渲染、无兜底）；由菜单管理页配置。 页面级用 `<RequirePermission>` 兜底（直接输 URL 无权限 -> 404）。
 - **UserBootstrap** - 根布局常驻。已登录 -> 每次挂载（刷新）都重新 `fetchUserInfo()`（获取最新权限/资料，本地缓存先显示）；未登录但有缓存 -> `clearUser()`。用 `useRef` 防止 `setUser` 触发重 fetch 循环。
 - **404 / 403** - Unmatched routes -> `app/not-found.tsx` -> `NotFoundPage`. `/test/403` + `/test/404` render `ForbiddenPage`/`NotFoundPage` for debugging (public). 守卫（RequirePermission/RequireAuth/RequireAdmin）统一 404（不显示 403，隐藏页面存在）。`ForbiddenPage` 仍保留（`FORBIDDEN_PROPS` in `lib/error-pages.ts`）供测试页使用。
 - **Loading / error boundaries** - `loading.tsx` + `error.tsx` per segment (`app/`, `app/(front)/`, `app/console/`). Per-segment so chrome stays during load/error. `error.tsx` is client with `reset`.
@@ -132,6 +136,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **机构管理** `/console/authority/org-manager` - 左机构树（后端虚拟根 id=-1「全部」为第一层单节点）+ 右列表（表格+分页页码+省略号+搜索）。CRUD：新增/编辑（`OrgFormDialog`，父级 Select）、删除（AlertDialog）。`/org/*` 接口（query/getOrgTree 返回单根，取 `[data]`）。增删改后刷新树+列表（`refreshKey`）。
 - **API 管理** `/console/api-manager` - 筛选（搜索+角色 Select+服务/分组级联 `ServerGroupCascader`）+ 表格（名称/路径/服务/分组/白名单 Badge/创建时间/编辑）+ 分页（页码+省略号）。白名单仅可通过编辑弹窗（`ApiPathEditDialog`，Switch 切换）修改。`/apiPath/*` 接口（queryPage body / info query / update body）+ `/role/selector` + `/apiPath/cascadeServerGroup`。
 - **用户管理** `/console/authority/user-manager` - 左机构树（复用 `OrgTreePanel`，选中机构按 orgId 过滤；虚拟根「全部」= 全部用户）+ 右列表（面包屑+搜索+角色 Select+重置 / 表格：用户名/昵称/性别/邮箱/手机号/创建时间/操作 / 分页页码+省略号）。行操作：编辑（`UserEditDialog`，即时绑定角色与机构：Badge × 移除 + 下拉添加，无保存按钮）、重置密码、删除（后两者 AlertDialog 确认）。`/user/*` 接口（queryPage body；userInfo/roles/orgs/addRole/deleteRole/addOrg/deleteOrg 均 query 传 userId）。列表面板 `key=selectedId` 切机构重挂载（与 org-manager 一致）；角色选择器页面级拉取一次（避免重挂载重复请求）。
+- **菜单管理** `/console/menu-manager` - 前台/后台分段（menuType -2/-1，`ToggleGroup`）+ 树形表格（不分页：菜单量级小、层级是核心结构）。**签名**：菜单列渲染为真实导航项（`[图标 chip] 名称`，按 `icon` 字段，`MenuIcon` switch 硬编码渲染规避 static-components；空则不渲染、无兜底）。拖拽排序/改挂（`@dnd-kit`：拖把手 + `DragOverlay` + 落点指示线；落定后 active 成为 over 的兄弟 = `newParentId=over.parentId`，防环校验，重算受影响兄弟 sort，乐观更新+失败回滚，逐个 `/menu/update`）。行操作：编辑/新增子菜单/删除。新增走 `/menu/add`（仅字段，菜单未建不能绑 api）；编辑走 `/menu/save`（字段 + api 绑定一次性存，`MenuFormDialog`）。编辑弹窗：图标选择器（`IconPicker`：Dialog 内**内联下拉面板**非 Popover——Popover portal 受 Dialog 的 react-remove-scroll 拦截滚轮；14 类 ~149 图标 + 搜索 + 清除）+ 关联 api 绑定树（`ApiPathBindingTree` 三级 checkbox：服务/分组 tri-state + apiPath，`roleBind` 预勾选、`whiteList=1` 禁用勾选）。`menu.icon` 同时供前台 Header / 后台 Sidebar 导航渲染。接口 `/menu/{menuTreeAll,apiPathTreeWithMenu,add,remove,update,save,info}`；`useMenuTreeAll` 按 menuType 拉树+refresh。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
 - **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。

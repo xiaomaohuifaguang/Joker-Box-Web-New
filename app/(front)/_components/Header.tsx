@@ -10,6 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useUser } from "@/hooks/useUser";
 import { UserMenu } from "./UserMenu";
 import { ThemeSelect } from "@/components/ThemeSelect";
+import { MenuIcon } from "@/components/menuIcons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,18 +40,21 @@ function NavLink({
   href,
   label,
   active,
+  icon,
 }: {
   href: string;
   label: string;
   active: boolean;
+  icon?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`relative text-sm transition-colors hover:text-foreground ${
+      className={`relative inline-flex items-center gap-1.5 text-sm transition-colors hover:text-foreground ${
         active ? "text-foreground" : "text-muted-foreground"
       }`}
     >
+      {icon && <MenuIcon name={icon} className="h-4 w-4" />}
       {label}
       {active && (
         <span className="absolute -bottom-1.5 left-0 h-px w-full bg-brand" />
@@ -61,9 +65,9 @@ function NavLink({
 
 // NavigationMenu trigger / 子链接样式：覆盖默认填充胶囊，匹配极简文字风。
 const navTriggerClass =
-  "h-auto w-auto rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
+  "inline-flex h-auto w-auto items-center gap-1.5 rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
 const subLinkClass =
-  "flex-row gap-0 rounded-md px-3 py-2 hover:bg-background hover:text-foreground data-[active=true]:bg-transparent data-[active=true]:text-foreground";
+  "flex items-center gap-2 rounded-md px-3 py-2 hover:bg-background hover:text-foreground data-[active=true]:bg-transparent data-[active=true]:text-foreground";
 
 function SunIcon() {
   return (
@@ -103,7 +107,7 @@ function MoonIcon() {
 }
 
 // 前台头部：左 logo / 中 导航（桌面）/ 右 预设+明暗+登录（桌面）或汉堡 Sheet（移动）。
-// 导航由后端 /menu/menuTree(menuType=-2) 驱动，useMenuTree 按 whiteList + authPaths 过滤。
+// 导航由后端 /menu/menuTree(menuType=-2) 驱动；菜单 icon 字段存在时渲染图标，否则纯文字。
 export function Header() {
   const { authenticated, logout } = useAuth();
   const { scheme, toggleScheme } = useTheme();
@@ -143,16 +147,19 @@ export function Header() {
         <NavigationMenu viewport={false} className="hidden flex-none md:flex">
           <NavigationMenuList className="gap-6">
             <NavigationMenuItem>
-              <NavLink href="/" label="首页" active={pathname === "/"} />
+              <NavLink href="/" label="首页" active={pathname === "/"} icon="Home" />
             </NavigationMenuItem>
             {menuItems.map((item) =>
               item.children?.length ? (
                 <NavigationMenuItem key={item.path}>
                   <NavigationMenuTrigger className={navTriggerClass}>
+                    {item.icon && (
+                      <MenuIcon name={item.icon} className="h-4 w-4" />
+                    )}
                     {item.name}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="flex w-40 flex-col">
+                    <ul className="flex w-48 flex-col">
                       {item.children.map((c) => (
                         <li key={c.path}>
                           <NavigationMenuLink
@@ -160,7 +167,12 @@ export function Header() {
                             active={pathname === c.path}
                             className={subLinkClass}
                           >
-                            <Link href={c.path}>{c.name}</Link>
+                            <Link href={c.path}>
+                              {c.icon && (
+                                <MenuIcon name={c.icon} className="h-4 w-4" />
+                              )}
+                              <span>{c.name}</span>
+                            </Link>
                           </NavigationMenuLink>
                         </li>
                       ))}
@@ -173,6 +185,7 @@ export function Header() {
                     href={item.path}
                     label={item.name}
                     active={pathname === item.path}
+                    icon={item.icon}
                   />
                 </NavigationMenuItem>
               ),
@@ -240,16 +253,20 @@ export function Header() {
                 <Link
                   href="/"
                   onClick={() => setMobileOpen(false)}
-                  className={`rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
                     pathname === "/" ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
+                  <MenuIcon name="Home" className="h-4 w-4" />
                   首页
                 </Link>
                 {menuItems.map((item) =>
                   item.children?.length ? (
                     <Collapsible key={item.path}>
-                      <CollapsibleTrigger className="flex w-full items-center px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground">
+                      <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground">
+                        {item.icon && (
+                          <MenuIcon name={item.icon} className="h-4 w-4" />
+                        )}
                         {item.name}
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -259,12 +276,15 @@ export function Header() {
                               key={c.path}
                               href={c.path}
                               onClick={() => setMobileOpen(false)}
-                              className={`rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-background hover:text-foreground ${
+                              className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-background hover:text-foreground ${
                                 pathname === c.path
                                   ? "text-foreground"
                                   : "text-muted-foreground"
                               }`}
                             >
+                              {c.icon && (
+                                <MenuIcon name={c.icon} className="h-4 w-4" />
+                              )}
                               {c.name}
                             </Link>
                           ))}
@@ -276,12 +296,15 @@ export function Header() {
                       key={item.path}
                       href={item.path}
                       onClick={() => setMobileOpen(false)}
-                      className={`rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
                         pathname === item.path
                           ? "text-foreground"
                           : "text-muted-foreground"
                       }`}
                     >
+                      {item.icon && (
+                        <MenuIcon name={item.icon} className="h-4 w-4" />
+                      )}
                       {item.name}
                     </Link>
                   ),

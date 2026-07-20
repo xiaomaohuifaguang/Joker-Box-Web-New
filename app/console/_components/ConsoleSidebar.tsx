@@ -2,17 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
-import {
-  Building2,
-  ChevronRight,
-  ChevronsUpDown,
-  LayoutDashboard,
-  LayoutGrid,
-  Settings,
-  Shield,
-  Users,
-} from "lucide-react";
+import { ChevronRight, ChevronsUpDown } from "lucide-react";
+import { MenuIcon } from "@/components/menuIcons";
 import {
   Collapsible,
   CollapsibleContent,
@@ -49,19 +40,7 @@ import { useMenuTree } from "@/hooks/useMenuTree";
 import { useUser } from "@/hooks/useUser";
 import { MENU_TYPE } from "@/types";
 
-// 接口不返回 icon，按 path 映射顶级菜单图标；未知用兜底图标。
-// 图标是纯展示层，菜单结构/可见性仍由后端驱动。
-const MENU_ICONS: Record<string, LucideIcon> = {
-  "/console": LayoutDashboard,
-  "/console/users": Users,
-  "/console/roles": Shield,
-  "/console/orgs": Building2,
-  "/console/settings": Settings,
-};
-const FALLBACK_ICON = LayoutGrid;
-function iconFor(path: string): LucideIcon {
-  return MENU_ICONS[path] ?? FALLBACK_ICON;
-}
+// 顶级菜单图标取 menu.icon 字段（MenuIcon 渲染，空/未知兜底 LayoutGrid）。
 
 // 后台侧边栏（shadcn Sidebar）：菜单由后端 /menu/menuTree(menuType=-1) 驱动，
 // useMenuTree 按 whiteList + authPaths 过滤。可折叠图标栏 + 移动端 Sheet + 折叠 tooltip。
@@ -120,7 +99,6 @@ export function ConsoleSidebar() {
                 </>
               ) : (
                 (menu ?? []).map((item) => {
-                  const Icon = iconFor(item.path);
                   const active = pathname.startsWith(item.path);
 
                   if (!item.children?.length) {
@@ -132,7 +110,7 @@ export function ConsoleSidebar() {
                           tooltip={item.name}
                         >
                           <Link href={item.path}>
-                            <Icon />
+                            <MenuIcon name={item.icon ?? ""} />
                             <span>{item.name}</span>
                           </Link>
                         </SidebarMenuButton>
@@ -147,7 +125,7 @@ export function ConsoleSidebar() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <SidebarMenuButton isActive={active}>
-                              <Icon />
+                              <MenuIcon name={item.icon ?? ""} />
                               <span>{item.name}</span>
                               <ChevronRight className="ml-auto" />
                             </SidebarMenuButton>
@@ -179,7 +157,7 @@ export function ConsoleSidebar() {
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton tooltip={item.name}>
-                            <Icon />
+                            <MenuIcon name={item.icon ?? ""} />
                             <span>{item.name}</span>
                             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
                           </SidebarMenuButton>

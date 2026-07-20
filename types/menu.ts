@@ -15,6 +15,8 @@ export interface Menu {
   path: string;
   /** 显示名称 */
   name: string;
+  /** 图标名（lucide 图标名，如 "Building2"）；接口未返回/未设置时为 undefined，渲染兜底 LayoutGrid */
+  icon?: string;
   /** 子菜单 */
   children?: Menu[];
   /** 是否白名单："1" 是（无需 authPaths 鉴权，未登录可见）/ "0" 否 */
