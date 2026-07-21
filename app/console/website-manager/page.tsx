@@ -334,6 +334,7 @@ export default function WebsiteManagerPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         editing={editing}
+        groups={groups}
         onSuccess={handleMutated}
       />
 

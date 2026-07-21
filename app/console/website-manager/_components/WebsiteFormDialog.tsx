@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { addWebsite, saveWebsite } from "@/lib/api/websiteManage";
 import { ApiError } from "@/lib/api";
@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { WebsiteRecord } from "@/types";
+import type { WebsiteGroup, WebsiteRecord } from "@/types";
 
 type FormState = {
   groupName: string;
@@ -33,15 +33,30 @@ export function WebsiteFormDialog({
   open,
   onOpenChange,
   editing,
+  groups,
   onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: WebsiteRecord | null;
+  groups: WebsiteGroup[];
   onSuccess: () => void;
 }) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [busy, setBusy] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+
+  // 现有分组名（去重），用于分组输入联想。
+  const groupNames = useMemo(
+    () => [...new Set(groups.map((g) => g.groupName))],
+    [groups],
+  );
+  const filteredNames = useMemo(() => {
+    const q = form.groupName.trim().toLowerCase();
+    return q
+      ? groupNames.filter((n) => n.toLowerCase().includes(q))
+      : groupNames;
+  }, [groupNames, form.groupName]);
 
   const editingId = editing?.id ?? null;
   const [prev, setPrev] = useState<{ open: boolean; id: number | null }>({
@@ -51,6 +66,7 @@ export function WebsiteFormDialog({
   if (prev.open !== open || prev.id !== editingId) {
     setPrev({ open, id: editingId });
     if (open) {
+      setSuggestOpen(false);
       setForm(
         editing
           ? {
@@ -113,11 +129,37 @@ export function WebsiteFormDialog({
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-[64px_1fr] items-center gap-x-4 gap-y-3">
             <Label className="text-sm text-muted-foreground">分组</Label>
-            <Input
-              value={form.groupName}
-              onChange={(e) => set("groupName", e.target.value)}
-              placeholder="默认"
-            />
+            <div className="relative">
+              <Input
+                value={form.groupName}
+                onChange={(e) => {
+                  set("groupName", e.target.value);
+                  setSuggestOpen(true);
+                }}
+                onFocus={() => setSuggestOpen(true)}
+                onBlur={() => setSuggestOpen(false)}
+                placeholder="默认"
+                autoComplete="off"
+              />
+              {suggestOpen && filteredNames.length > 0 && (
+                <div className="absolute top-full left-0 z-50 mt-1 max-h-40 w-full overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+                  {filteredNames.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        set("groupName", n);
+                        setSuggestOpen(false);
+                      }}
+                      className="flex w-full items-center rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Label className="text-sm text-muted-foreground">地址</Label>
             <Input
               value={form.url}
