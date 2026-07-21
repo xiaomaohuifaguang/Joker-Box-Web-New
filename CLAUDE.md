@@ -36,7 +36,7 @@ app/
     layout.tsx          # Front layout (Server): Header + {children} + Footer
     loading.tsx / error.tsx
     page.tsx            # 首页 (Server, branding hero)
-    website/page.tsx    # 收藏网站（分组卡片，/website/group）
+    website/page.tsx    # 收藏网站（分组卡片 + 左侧分组导航跳转）
     file-server/        # 码头（云盘）：双视图/排序/拖拽上传/右键菜单
       page.tsx + _components/ (FileCard, FileRow, FileMenuItems, NameDialog)
     tools/
@@ -154,7 +154,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **邮件记录** `/console/mail-manager` - 只读日志（无 CRUD）。列表（收件人/主题/发送时间/查看）+ 分页 + 搜索。**签名**：详情弹窗把 `content`(HTML) 放隔离 iframe（`srcDoc` + `sandbox=""`，不跑脚本、不污染页面）渲染，`variable`(JSON) 美化成 `<pre>`。列表 `/mailInfo/queryPage`（摘要无 content/variable），详情 `/mailInfo/info`（body `{id}`，含 content+variable）；`useMailPage` 分页。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
-- **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。
+- **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（scroll 监听 + rAF，尊重 reduced-motion）。
 - **码头（云盘）** `/file-server`（`<RequireAuth>`）- 双视图（卡片/列表）+ 排序（名称/大小/时间，文件夹置顶）+ 拖拽上传（浮层）+ 右键菜单（项: 打开/下载/重命名/删除；空白区: 上传/新建）+ 面包屑导航。`/file/*`：list/createFolder/delete/rename 走 query 参数；upload 走 multipart（自定义 fetch）；download 走 GET blob+token（触发浏览器下载）。
 
 ## ⚠️ Next.js 16 is NOT the Next.js in your training data
