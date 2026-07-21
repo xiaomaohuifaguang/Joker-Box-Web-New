@@ -171,7 +171,7 @@ export function CodeItemFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editing ? "编辑码表项" : "新增码表项"}</DialogTitle>
           <DialogDescription>

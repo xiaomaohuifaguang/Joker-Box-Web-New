@@ -217,7 +217,7 @@ export function MenuFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isEdit ? "max-w-3xl" : "max-w-lg"}>
+      <DialogContent className={isEdit ? "sm:max-w-3xl" : "sm:max-w-lg"}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "编辑菜单" : "新增菜单"}</DialogTitle>
           <DialogDescription>

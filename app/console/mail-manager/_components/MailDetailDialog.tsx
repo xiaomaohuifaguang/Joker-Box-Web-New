@@ -75,7 +75,7 @@ export function MailDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] sm:max-w-6xl overflow-y-auto">
+      <DialogContent className="max-h-[85vh] sm:max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="truncate">{mail?.subject || "邮件详情"}</DialogTitle>
           <DialogDescription className="flex flex-wrap gap-x-4 gap-y-1">

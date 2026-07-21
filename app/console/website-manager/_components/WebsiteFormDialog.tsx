@@ -103,7 +103,7 @@ export function WebsiteFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editing ? "编辑收藏" : "新增收藏"}</DialogTitle>
           <DialogDescription>

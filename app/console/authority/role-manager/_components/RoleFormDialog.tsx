@@ -160,7 +160,7 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isEdit ? "max-w-2xl" : "max-w-md"}>
+      <DialogContent className={isEdit ? "sm:max-w-2xl" : "sm:max-w-md"}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "编辑角色" : "新增角色"}</DialogTitle>
           <DialogDescription>
