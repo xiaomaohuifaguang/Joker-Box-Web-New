@@ -102,7 +102,7 @@ export default function WebsitePage() {
           </aside>
 
           {/* 分组内容 */}
-          <main className="flex min-w-0 flex-1 flex-col gap-8">
+          <main className="flex min-w-0 flex-1 flex-col gap-8 pb-[calc(100vh-5rem)]">
             {(groups ?? []).map((g, i) => (
               <section key={g.groupName} id={`group-${i}`} className="scroll-mt-20">
                 <div className="mb-3 flex items-center gap-2">
