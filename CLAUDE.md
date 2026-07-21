@@ -68,7 +68,9 @@ app/
     process-manager /
     website-manager/             # 网址收藏管理（列表+分页+分组筛选，已实现）
       page.tsx + _components/ (WebsiteFormDialog)
-    displayBoard / mail-manager / crawler-task-manager / form/dynamicForm-manager /
+    displayBoard / crawler-task-manager / form/dynamicForm-manager /
+    mail-manager/               # 邮件记录（只读日志+详情，已实现）
+      page.tsx + _components/ (MailDetailDialog)
     ai/model-manager / system/system-prompt   # 占位
     system/code-table/             # 码表管理（列表↔项视图+拖拽，已实现）
       page.tsx + _components/ (CodeTableListPanel, CodeItemsView, CodeItemTreeTable, CodeTableFormDialog, CodeItemFormDialog)
@@ -88,7 +90,7 @@ components/
   ApiPathBindingTree.tsx # api 绑定树（服务/分组/apiPath 三级 checkbox，roleBind 回显、whiteList 禁用）；菜单/角色管理共用
   TriCheckbox.tsx       # 三态勾选框（all/some/none）；ApiPathBindingTree + MenuCheckboxTree 共用
 lib/
-  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage, codeTable, websiteManage
+  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage, codeTable, websiteManage, mail
   auth.ts               # Token in localStorage
   user.ts               # 当前用户缓存 (localStorage)
   credentials.ts        # 记住密码 (base64)
@@ -100,8 +102,8 @@ lib/
   codeTableTree.ts      # buildCodeItemTree（扁平码表项 -> 树；code-table 项视图组树用）
 hooks/
   useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
-  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage / useCodeTablePage / useCodeItems / useWebsitePage
-types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload, CodeTable/CodeItem/CodeOption, WebsiteRecord/WebsitePageParam
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage / useCodeTablePage / useCodeItems / useWebsitePage / useMailPage
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload, CodeTable/CodeItem/CodeOption, WebsiteRecord/WebsitePageParam, MailInfo/MailPageParam
 public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
@@ -149,6 +151,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **角色管理** `/console/authority/role-manager` - 列表 + 分页 + 搜索（角色无层级，扁平表）。行：角色名 / 后台管理（`admin=1` 显「后台管理」Badge）/ 更新时间 / 操作。新增仅 name（可选**复制权限自** `withRole` 继承源角色 apiPath+菜单权限）；编辑走 `/role/save`（role{name,admin} + apiPathTree + menuChoose 前后台合并）。编辑弹窗**三 tab 权限编辑器**：apiPath 权限（复用 `ApiPathBindingTree`，`roleBind` 预勾选、`whiteList` 禁用）/ 前台菜单 / 后台菜单（`MenuCheckboxTree` tri-state，`menuChoose(menuType)` 预勾选）。删除：软删 `/role/delete`（有绑定失败，toast 提示改用强删）+ 强制删 `/role/destroy`（级联，destructive）。接口 `/role/{queryPage,add,delete,destroy,info,apiPathTreeWithRole,save}` + `/menu/menuChoose`；`useRolePage` 分页。共享件 `ApiPathBindingTree` / `TriCheckbox`（`components/`）+ `buildApiPathSaveTree`（`lib/apiPathTree.ts`）从 menu-manager 提取。
 - **码表管理** `/console/system/code-table` - 两视图（`?tableId` 切换，`useSearchParams` + Suspense）：**列表视图**（无 tableId）分页 + 筛选（search/code/name/tree/status）+ 新增/编辑/删除 + 详情（跳项视图）；**项视图**（`?tableId=xxx`）头部（`/code-table/detail` 拉码表信息 + 编辑码表 + 返回）+ 码表项表。项表按码表 `tree` 标志**自适应扁平表/树形表**（`CodeItemTreeTable`），@dnd-kit 拖拽排序/改挂（同 menu-manager：active 成为 over 兄弟 = `newParentId=over.parentId`，防环，重算受影响兄弟 sort，乐观更新+回滚，逐个 `/code-item/update`）。项 CRUD：label/value(等宽)/parentId（仅树形，排除自身子孙防环）/sort/status/remark。`buildCodeItemTree`（`lib/codeTableTree.ts`）扁平组树。接口 `/code-table/{page,add,update,delete,detail}` + `/code-item/{list,add,update,delete}`；`useCodeTablePage` 分页、`useCodeItems` 按 tableId 拉项。
 - **网址收藏管理** `/console/website-manager` - 扁平列表 + 分页 + 筛选（search + groupName Select 带计数，分组复用前台 `/website/group` 派生）。**签名**：地址列渲染为可点击外链（mono + 外链图标，无协议补 https://）。分组无实体（`groupName` 是网站字段，表单自由文本默认"默认"，无分组 CRUD）。CRUD：groupName/url(等宽)/title/description(Textarea)。接口 `/website/{queryPage,add,delete,save}`（`/website/info` 不用，行数据已全且 info 缺 title）；`useWebsitePage` 分页。
+- **邮件记录** `/console/mail-manager` - 只读日志（无 CRUD）。列表（收件人/主题/发送时间/查看）+ 分页 + 搜索。**签名**：详情弹窗把 `content`(HTML) 放隔离 iframe（`srcDoc` + `sandbox=""`，不跑脚本、不污染页面）渲染，`variable`(JSON) 美化成 `<pre>`。列表 `/mailInfo/queryPage`（摘要无 content/variable），详情 `/mailInfo/info`（body `{id}`，含 content+variable）；`useMailPage` 分页。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
 - **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。
