@@ -14,6 +14,7 @@ A study project built on `create-next-app` (App Router). The frontend is a **sta
 - **UI kit**: shadcn/ui (`radix-ui`) in `components/ui/`, `lucide-react` icons, `sonner` toasts. In use: `NavigationMenu`, `Sidebar`, `Sheet`, `Collapsible`, `Tooltip`, `ContextMenu`, `Form`, `Table`, `Dialog`, `AlertDialog`, `Select`, `Sonner`.
 - **Drag & drop**: `@dnd-kit/core` + `sortable` + `utilities`（菜单管理树形拖拽排序/改挂）。
 - **Editors/parsers**: `@uiw/react-codemirror` + `@codemirror/lang-json` (JSON editor); `cronstrue` (cron→自然语言, zh_CN via `cronstrue/dist/cronstrue-i18n`) + `cron-parser` **v4** (cron 下次触发).
+- **Rich text**: TipTap (@tiptap/core react starter-kit extension-link extension-placeholder，headless 用主题 token 自定义) + @tailwindcss/typography (prose 排版) + DOMPurify (内容渲染防 XSS，typeof window 守卫避 SSR)。
 
 ## Commands
 
@@ -43,7 +44,8 @@ app/
       jsonFormat/page.tsx + _components/JsonTree   # JSON 编辑器 + 结构树（CodeMirror）
       cron/page.tsx                                 # cron 5 段 + 预设 + 描述 + 下次触发
       signInCard/page.tsx                           # 签到卡（占位）
-    ganDaShi/page.tsx   # 干大事论坛（占位）
+    ganDaShi/              # 干大事论坛（列表+详情+发帖+评论，TipTap 富文本，已实现）
+      page.tsx + _components/ (ForumInner, PostList, PostDetail, NewPost, CommentSection, CommentThread, RichTextEditor, RichContent)
     code-maker/page.tsx # 代码生成器（占位）
     process/page.tsx    # 就酱审（占位）
     _components/        # Header (NavigationMenu + mobile Sheet), Footer, UserMenu
@@ -90,7 +92,7 @@ components/
   ApiPathBindingTree.tsx # api 绑定树（服务/分组/apiPath 三级 checkbox，roleBind 回显、whiteList 禁用）；菜单/角色管理共用
   TriCheckbox.tsx       # 三态勾选框（all/some/none）；ApiPathBindingTree + MenuCheckboxTree 共用
 lib/
-  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage, codeTable, websiteManage, mail
+  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage, codeTable, websiteManage, mail, ganDaShi
   auth.ts               # Token in localStorage
   user.ts               # 当前用户缓存 (localStorage)
   credentials.ts        # 记住密码 (base64)
@@ -102,8 +104,8 @@ lib/
   codeTableTree.ts      # buildCodeItemTree（扁平码表项 -> 树；code-table 项视图组树用）
 hooks/
   useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
-  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage / useCodeTablePage / useCodeItems / useWebsitePage / useMailPage
-types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload, CodeTable/CodeItem/CodeOption, WebsiteRecord/WebsitePageParam, MailInfo/MailPageParam
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage / useCodeTablePage / useCodeItems / useWebsitePage / useMailPage / usePostPage / useComments
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload, CodeTable/CodeItem/CodeOption, WebsiteRecord/WebsitePageParam, MailInfo/MailPageParam, GanDaShiPost/GanDaShiComment
 public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
@@ -152,6 +154,7 @@ Two sections, unified login. Static export = no server-side route protection; th
 - **码表管理** `/console/system/code-table` - 两视图（`?tableId` 切换，`useSearchParams` + Suspense）：**列表视图**（无 tableId）分页 + 筛选（search/code/name/tree/status）+ 新增/编辑/删除 + 详情（跳项视图）；**项视图**（`?tableId=xxx`）头部（`/code-table/detail` 拉码表信息 + 编辑码表 + 返回）+ 码表项表。项表按码表 `tree` 标志**自适应扁平表/树形表**（`CodeItemTreeTable`），@dnd-kit 拖拽排序/改挂（同 menu-manager：active 成为 over 兄弟 = `newParentId=over.parentId`，防环，重算受影响兄弟 sort，乐观更新+回滚，逐个 `/code-item/update`）。项 CRUD：label/value(等宽)/parentId（仅树形，排除自身子孙防环）/sort/status/remark。`buildCodeItemTree`（`lib/codeTableTree.ts`）扁平组树。接口 `/code-table/{page,add,update,delete,detail}` + `/code-item/{list,add,update,delete}`；`useCodeTablePage` 分页、`useCodeItems` 按 tableId 拉项。
 - **网址收藏管理** `/console/website-manager` - 扁平列表 + 分页 + 筛选（search + groupName Select 带计数，分组复用前台 `/website/group` 派生）。**签名**：地址列渲染为可点击外链（mono + 外链图标，无协议补 https://）。分组无实体（`groupName` 是网站字段，表单自由文本默认"默认"，无分组 CRUD）。CRUD：groupName/url(等宽)/title/description(Textarea)。接口 `/website/{queryPage,add,delete,save}`（`/website/info` 不用，行数据已全且 info 缺 title）；`useWebsitePage` 分页。
 - **邮件记录** `/console/mail-manager` - 只读日志（无 CRUD）。列表（收件人/主题/发送时间/查看）+ 分页 + 搜索。**签名**：详情弹窗把 `content`(HTML) 放隔离 iframe（`srcDoc` + `sandbox=""`，不跑脚本、不污染页面）渲染，`variable`(JSON) 美化成 `<pre>`。列表 `/mailInfo/queryPage`（摘要无 content/variable），详情 `/mailInfo/info`（body `{id}`，含 content+variable）；`useMailPage` 分页。
+- **干大事论坛** `/ganDaShi`（`<RequirePermission>`）- 三视图（`?thread`/`?new`/列表，`useSearchParams`+Suspense）：**列表**（搜索+分页+帖子卡：标题/digest/作者/时间/浏览量）；**详情**（`?thread=id`，content 用 `prose`+`DOMPurify` 渲染 + 嵌套评论：根评论分页 + 展开 `replayCount` 条回复 + 回复表单）；**发帖**（`?new=1`，TipTap 编辑器 -> content(HTML)+text(纯文字)）。TipTap（headless+主题 token，starter-kit+link+placeholder，`compact` 评论用）+ `@tailwindcss/typography`（prose）+ `DOMPurify`（`typeof window` 守卫避 SSR）。删帖（作者/admin，`createBy`）；删评论（admin，评论无 createBy）。接口 `/ganDaShiPost/{queryPage,add,info,remove}` + `/ganDaShiComment/{queryPage,add,remove}`；`usePostPage`/`useComments`。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
 - **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（scroll 监听 + rAF，尊重 reduced-motion）。

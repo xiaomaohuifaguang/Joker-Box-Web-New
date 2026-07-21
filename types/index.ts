@@ -4,6 +4,7 @@ export * from "./api";
 export * from "./api-path";
 export * from "./code-table";
 export * from "./file";
+export * from "./ganDaShi";
 export * from "./mail";
 export * from "./menu";
 export * from "./menu-manager";
