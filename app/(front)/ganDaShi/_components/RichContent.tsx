@@ -22,7 +22,10 @@ export function RichContent({
   }, [html]);
   return (
     <div
-      className={cn("prose dark:prose-invert max-w-none", className)}
+      className={cn(
+        "prose dark:prose-invert max-w-none prose-img:rounded-lg prose-img:max-w-full prose-img:h-auto",
+        className,
+      )}
       dangerouslySetInnerHTML={{ __html: sanitized }}
     />
   );
