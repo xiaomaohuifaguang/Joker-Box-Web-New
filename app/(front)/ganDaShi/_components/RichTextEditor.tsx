@@ -157,6 +157,7 @@ export const RichTextEditor = forwardRef<
         HTMLAttributes: { class: "text-brand underline" },
       }),
       ResizableImage.configure({
+        inline: true,
         allowBase64: true,
       }),
       Placeholder.configure({ placeholder }),

@@ -12,6 +12,24 @@
   pointer-events: none;
 }
 
+/* 编辑器内可缩放图片：清掉 .prose img 的 2em 上下 margin（否则缩放手柄上下不贴图）。
+   .prose :where(img) 特异性 (0,1,1) 高于 my-0 等 utility，需用更高特异性的 (0,2,1) 覆盖。 */
+.prose [data-node-view-wrapper] img {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* 详情页富文本（RichContent）：行内图片与文字同行（图文混排）。
+   .prose img 默认上下 1.7em margin 会把行内图片撑出段落、视觉上换行/独占 -> 清掉；
+   display:inline-block + vertical-align:middle 让图片与文字基线对齐、同一行内展示。
+   用 [data-rich-content] 限定作用域，避免影响全站其它 prose 图片排版。 */
+.prose[data-rich-content] img {
+  display: inline-block;
+  vertical-align: middle;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 /* 让 Tailwind 的 dark: 工具类跟着 .dark 类走（v4 写法） */
 @custom-variant dark (&:where(.dark, .dark *));
 
