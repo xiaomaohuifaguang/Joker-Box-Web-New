@@ -63,17 +63,18 @@ function flattenVisible(
   return acc;
 }
 
-// 不可变替换某父级（-1=根）的子数组。
+// 不可变替换某父级的子数组。根判定：parentId 不是任何真实节点 id（-1/0 等根标记都不是真实 id）。
 function mapChildren(
   nodes: MenuNode[],
   parentId: number,
+  allIds: Set<number>,
   updater: (children: MenuNode[]) => MenuNode[],
 ): MenuNode[] {
-  if (parentId === -1) return updater(nodes);
+  if (!allIds.has(parentId)) return updater(nodes);
   return nodes.map((n) => {
     if (n.id === parentId) return { ...n, children: updater(n.children ?? []) };
     if (n.children?.length)
-      return { ...n, children: mapChildren(n.children, parentId, updater) };
+      return { ...n, children: mapChildren(n.children, parentId, allIds, updater) };
     return n;
   });
 }
@@ -137,9 +138,10 @@ function computeMove(
 
   let nextTree = insertActive(removeActive(tree));
 
-  // 重算受影响父级兄弟的 sort
+  // 重算受影响父级兄弟的 sort。allIds 用于判断根（parentId 非真实节点 id 即根）。
+  const allIds = collectAllIds(tree);
   for (const pid of new Set([oldParentId, newParentId])) {
-    nextTree = mapChildren(nextTree, pid, (children) =>
+    nextTree = mapChildren(nextTree, pid, allIds, (children) =>
       children.map((c, i) => ({ ...c, sort: i + 1 })),
     );
   }
