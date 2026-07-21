@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { addMenu, getMenuApiPathTree, saveMenuWithApi } from "@/lib/api/menuManage";
 import { ApiError } from "@/lib/api";
-import { MENU_TYPE } from "@/types";
-import { apiPathKey } from "@/types";
+import { apiPathKey, menuTypeLabel } from "@/types";
 import type { MenuApiPathServer, MenuNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,7 +159,7 @@ export function MenuFormDialog({
 
   const excludeIds = isEdit && editing ? collectSubtreeIds(editing) : new Set<number>();
   const parentOptions = flattenMenuOptions(tree, 0, [], excludeIds);
-  const typeLabel = menuType === MENU_TYPE.FRONT ? "前台菜单" : "后台菜单";
+  const typeLabel = menuTypeLabel(menuType);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));

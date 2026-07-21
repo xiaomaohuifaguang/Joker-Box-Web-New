@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useMenuTreeAll } from "@/hooks/useMenuTreeAll";
 import { removeMenu, updateMenu } from "@/lib/api/menuManage";
 import { ApiError } from "@/lib/api";
-import { MENU_TYPE } from "@/types";
+import { MENU_TYPE, MENU_TYPES } from "@/types";
 import type { MenuNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,18 +95,15 @@ export default function MenuManagerPage() {
           onValueChange={(v) => v && setMenuType(Number(v))}
           className="rounded-lg border bg-surface p-0.5"
         >
-          <ToggleGroupItem
-            value={String(MENU_TYPE.FRONT)}
-            className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-          >
-            前台菜单
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value={String(MENU_TYPE.CONSOLE)}
-            className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-          >
-            后台菜单
-          </ToggleGroupItem>
+          {MENU_TYPES.map((t) => (
+            <ToggleGroupItem
+              key={t.value}
+              value={String(t.value)}
+              className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
+            >
+              {t.label}
+            </ToggleGroupItem>
+          ))}
         </ToggleGroup>
         <Button onClick={openAddTop} size="sm" className="ml-auto">
           <Plus className="h-4 w-4" />

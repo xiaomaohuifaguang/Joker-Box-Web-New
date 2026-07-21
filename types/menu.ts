@@ -10,6 +10,17 @@ export const MENU_TYPE = {
 } as const;
 export type MenuType = (typeof MENU_TYPE)[keyof typeof MENU_TYPE];
 
+/** menuType 选项（配置驱动；未来加类型在此追加即可，UI 自动跟随）。 */
+export const MENU_TYPES: { value: MenuType; label: string }[] = [
+  { value: MENU_TYPE.FRONT, label: "前台菜单" },
+  { value: MENU_TYPE.CONSOLE, label: "后台菜单" },
+];
+
+/** 取 menuType 的显示标签（未知类型兜底"菜单"）。 */
+export function menuTypeLabel(value: number): string {
+  return MENU_TYPES.find((t) => t.value === value)?.label ?? "菜单";
+}
+
 export interface Menu {
   /** 路由地址 */
   path: string;
