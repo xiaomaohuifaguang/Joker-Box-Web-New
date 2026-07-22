@@ -70,7 +70,9 @@ app/
     process-manager /
     website-manager/             # 网址收藏管理（列表+分页+分组筛选，已实现）
       page.tsx + _components/ (WebsiteFormDialog)
-    displayBoard / crawler-task-manager / form/dynamicForm-manager /
+    displayBoard / crawler-task-manager /
+    form/dynamicForm-manager/    # 动态表单设计器（列表+设计器，已实现）
+      page.tsx + _components/ (FormListPanel, FormDesigner, FieldPalette, FormCanvas, GroupSection, FieldConfigPanel, OptionsEditor, FormPreviewDialog, designer-state, validate, fields/)
     mail-manager/               # 邮件记录（只读日志+详情，已实现）
       page.tsx + _components/ (MailDetailDialog)
     ai/model-manager / system/system-prompt   # 占位
@@ -92,7 +94,7 @@ components/
   ApiPathBindingTree.tsx # api 绑定树（服务/分组/apiPath 三级 checkbox，roleBind 回显、whiteList 禁用）；菜单/角色管理共用
   TriCheckbox.tsx       # 三态勾选框（all/some/none）；ApiPathBindingTree + MenuCheckboxTree 共用
 lib/
-  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage, codeTable, websiteManage, mail, ganDaShi
+  api/                  # client.ts (typed, auto-token) + auth, menu, menuManage, org, file, website, apiPath, user, roleManage, codeTable, websiteManage, mail, ganDaShi, dynamicForm, dynamicFormFile
   auth.ts               # Token in localStorage
   user.ts               # 当前用户缓存 (localStorage)
   credentials.ts        # 记住密码 (base64)
@@ -104,8 +106,8 @@ lib/
   codeTableTree.ts      # buildCodeItemTree（扁平码表项 -> 树；code-table 项视图组树用）
 hooks/
   useAuth / useUser / useTheme / useMenuTree / useMounted / useCredentials
-  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage / useCodeTablePage / useCodeItems / useWebsitePage / useMailPage / usePostPage / useComments
-types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload, CodeTable/CodeItem/CodeOption, WebsiteRecord/WebsitePageParam, MailInfo/MailPageParam, GanDaShiPost/GanDaShiComment
+  useOrgTree / useOrgPage / useFileList / useWebsiteGroups / useApiPathPage / useUserPage / useMenuTreeAll / useRolePage / useCodeTablePage / useCodeItems / useWebsitePage / useMailPage / usePostPage / useComments / useDynamicFormPage
+types/                  # ApiResponse<T>, Page<T>, User, Menu, Org/OrgTree/OrgDetail, FileItem, Website/WebsiteGroup, ApiPath/Cascade/SelectOption, UserRecord/UserRole/UserOrgItem, MenuNode/MenuApiPath/MenuApiPathServer/MenuPayload, RoleRecord/RoleSavePayload, CodeTable/CodeItem/CodeOption, WebsiteRecord/WebsitePageParam, MailInfo/MailPageParam, GanDaShiPost/GanDaShiComment, DynamicForm/DynamicFormField/DynamicFormFieldGroup/DynamicFormOption/FileInfo (dynamic-form.ts)
 public/                 # 静态资源
 next.config.ts          # output: 'export' + dev rewrites proxy /joker-box
 ```
@@ -158,6 +160,15 @@ Two sections, unified login. Static export = no server-side route protection; th
   - **ResizableImage**（`extension-image` extend，`inline:true` 图文混排 + `allowBase64`）：width/height 都存 **px 数值** attrs（拖拽/提交/回显统一单位）。**8 圆饼手柄**（NodeSelection 选中时显示，相对 `NodeViewWrapper as="span"` 定位）：4 角等比、E/W 边中点横向变形、N/S 边中点纵向变形。**拖拽走 PM 事务 `setNodeMarkup`（不直接改 DOM）-> 手柄与图片永远同步；`NodeSelection.create` 锚定 -> 选区/光标不跳、可反复缩放**。扩展级 `renderHTML` 把 width/height 合并进**单个 style**（避免各 attribute 的 style 互相覆盖丢失）+ 补 `display:inline-block; vertical-align:middle`（序列化出的 `<img>` 详情页图文同行、基线对齐）。
   - **`.prose img` 的 margin 特异性坑**：typography 给 `.prose img` 上下 ~2em 段距 margin，特异性 (0,1,1) **高于** Tailwind utility（0,1,0），`my-0` 等压不掉 -> 需在 `globals.css` 用更高特异性覆盖：`.prose [data-node-view-wrapper] img`（编辑器，否则缩放手柄上下不贴图）+ `.prose[data-rich-content] img{display:inline-block;vertical-align:middle;margin:0}`（详情页，否则图文换行）。
   - **RichContent 窄屏自适应**：缩放的图片存内联 px width/height（特异性高于 `prose-img:max-w-full/h-auto` utility）。宽屏按用户拖的 w/h（含变形）；容器窄于内联 width 时（`ResizeObserver` 检测 `渲染宽 < 内联宽`），JS 清内联 height 回等比 -> 不溢出不压扁；回宽屏从 `data-orig-height` 还原变形高度。
+- **动态表单设计器** `/console/form/dynamicForm-manager`（`<RequireAdmin>`）- 两视图（state 驱动 + pushState，同 ganDaShi 模式）：**列表**（搜索+分页+表格+CRUD，name/description/version/status 0草稿/1发布/-1停用，`FormListPanel`）；**设计器** `?design=id|new`（`FormDesigner`，h1 + 三栏：字段库 `FieldPalette` | 画布 `FormCanvas` | 配置 `FieldConfigPanel`）。`useDesignerState`（`designer-state.ts`）管 fields/groups，`toPayload` 存前剥 clientId；fieldId=`crypto.randomUUID()`。
+  - **字段库**：`FIELD_REGISTRY`（`fields/registry.tsx`，Record<type, FieldMeta{type/label/group/defaults/Control/hasOptions/hasLength/hasMinMax/hasPattern/hasPlaceholder}>）+ `createField(type,sort)`；18 类型分四组（基础/选择/日期时间/高级）：INPUT/TEXTAREA/NUMBER/SWITCH/SLIDER/RATE/COLOR/SELECT/MULTISELECT/RADIO/CHECKBOX/DATE/TIME/DATETIME/UPLOAD/CASCADER/MULTICASCADER。**v1 未做**：发布/版本切换、联动规则、optionSource 远程、TABLE/DATERANGE。
+  - **画布**：24 栅格（`grid-cols-[repeat(24,...)]` + `gridColumn: span X`），@dnd-kit **跨组拖拽排序/改挂**（多 SortableContext 容器 + `UNGROUPED_ID`，未分组恒在分组上方），`GroupSection` 可折叠/改名/删除（删组字段回未分组）。
+  - **配置面板**：按类型动态显通用/校验属性 + 选项编辑 + 默认值（复用该字段 Control 编辑）。选项统一**弹窗编辑**（`OptionsDialog`，级联带嵌套子级）；级联默认值也走宽 Dialog 内联面板（窄面板悬浮下拉被 overflow 裁剪）。选项 `visible?: boolean`（默认 true，false 预览/填表隐藏该选项，`visibleOptions()` 统一过滤；**隐藏不删已选值**）。
+  - **控件**（`fields/`）：`UploadControl`（上传块 + 附件网格 grid-cols-1 sm:grid-cols-2，值存 FileInfo/FileInfo[]，`max`=数量上限）；`CascaderControl`/`MultiCascaderControl`（值=路径数组/二维路径数组，`props.checkStrictly` true=任选层级/false=仅叶子；交互=**点 label 展开 + 圆圈选中**，已选 tag 填进触发框）；`MultiSelectControl`（真下拉多选，区别于 CHECKBOX 平铺组）。三者下拉**内联绝对定位面板（不 portal）**——预览 Dialog 内 Popover portal 会被 react-remove-scroll 挡滚轮。
+  - **清空按钮统一方案**：可清空控件末尾位互斥——**有值显 ×（点击清空）/ 无值显 chevron**，占同一位置（`Clearable` 包 shadcn 控件；级联/多选自写控件三元切换）。SELECT 隐藏 Radix 自带 chevron 自绘互斥。原生 input（text/number/time）自带清除不加。
+  - **空选项**：所有选项类控件在 `visibleOptions()` 过滤后为空时显「暂无可用选项」。**坑**：Radix SelectContent 默认 `position="item-aligned"`，仅禁用占位项时对齐计算跑飞到页面左上角 -> SelectControl 用 `position="popper"` 锚定触发器正下方。
+  - **预览**（`FormPreviewDialog`，`sm:max-w-6xl`）：按 24 栅格渲染真实控件，分组可折叠（组内有错强制展开），提交校验（`validate.ts`：必填/长度/minmax/正则），重置。「查看数据」嵌套 Dialog 显 fieldId->当前值 JSON（含未改默认值，跳过空值）+ 复制。
+  - 接口 `/dynamicForm/{queryPage,info,add,update,remove}`（`lib/api/dynamicForm.ts`，均 POST body）；文件 `/file/{uploadDynamicForm(multipart),downloadDynamicForm(GET blob)}`（`lib/api/dynamicFormFile.ts`）；`useDynamicFormPage` 分页。
 - **JSON 格式化** `/tools/jsonFormat` - CodeMirror 编辑器（JSON 高亮+校验，主题随 scheme）+ 自写 `JsonTree`（可折叠，类型色）+ 格式化/压缩/复制。
 - **cron** `/tools/cron` - 5 段输入（分时日月周）+ 常用预设 + `cronstrue` 中文描述 + `cron-parser` 下次 5 次触发（`date-fns` 格式化，zhCN 星期）。
 - **收藏网站** `/website` - `/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（scroll 监听 + rAF，尊重 reduced-motion）。

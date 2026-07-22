@@ -15,13 +15,26 @@ export type DynamicFormFieldType =
   | "DATETIME"
   | "SLIDER"
   | "RATE"
-  | "COLOR";
+  | "COLOR"
+  | "UPLOAD"
+  | "CASCADER"
+  | "MULTICASCADER";
 
-// 选项（label/value，children 预留给级联，第一版平铺不用）。
+// 选项（label/value，children 预留给级联，第一版平铺不用）。visible=false 时该选项在预览/填表时隐藏（默认 true）。
 export interface DynamicFormOption {
   label: string;
   value: string;
+  visible?: boolean;
   children?: DynamicFormOption[];
+}
+
+// 上传文件信息（/file/uploadDynamicForm 响应 data）。UPLOAD 字段值存整个 FileInfo 对象（单文件）
+// 或 FileInfo[]（多文件，max 控数量）。
+export interface FileInfo {
+  id: string;
+  contentType?: string;
+  filename?: string;
+  createTime?: string;
 }
 
 // 表单项。defaultValue 类型随 type 变（见设计器 defaultValue 约定）。

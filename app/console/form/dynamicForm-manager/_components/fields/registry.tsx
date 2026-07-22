@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarIcon, Star } from "lucide-react";
+import { CalendarIcon, ChevronDown, Star, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { UploadControl } from "./UploadControl";
+import { CascaderControl, MultiCascaderControl, visibleOptions } from "./CascaderControl";
+import { MultiSelectControl } from "./MultiSelectControl";
 import {
   Select,
   SelectContent,
@@ -35,6 +38,40 @@ export type FieldControlProps = {
   onChange: (v: unknown) => void;
   disabled?: boolean;
 };
+
+// ---- 清空按钮（统一方案）----
+// 原则：末尾位互斥——有值显 ×（点击清空），无值显 chevron，两者占同一位置（触发器右端）。
+// × 常驻（预览在 Dialog 内，hover 不可靠）。
+// Clearable 包外层：× 绝对定位 right-2（触发器最右端）。Radix Select 需同时隐藏其自带 chevron
+// 并自绘「无值时的 chevron」（见 SelectControl）。原生 input（text/number/time）自带清除，不用此组件。
+function Clearable({
+  show,
+  onClear,
+  children,
+}: {
+  show: boolean;
+  onClear: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative w-full">
+      {children}
+      {show && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClear();
+          }}
+          aria-label="清空"
+          className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ---- 通用小控件 ----
 
@@ -140,23 +177,41 @@ function ColorControl({ value, onChange, disabled }: FieldControlProps) {
 }
 
 function SelectControl({ value, onChange, disabled, field }: FieldControlProps) {
+  const str = toStr(value);
+  const clearable = !disabled && str !== "";
   return (
-    <Select value={toStr(value)} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger>
-        <SelectValue placeholder={field.placeholder ?? "请选择"} />
-      </SelectTrigger>
-      <SelectContent>
-        {(field.options ?? []).map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Clearable show={clearable} onClear={() => onChange(undefined)}>
+      <Select value={str} onValueChange={onChange} disabled={disabled}>
+        {/* 隐藏 Radix 自带 chevron；末尾位互斥——有值由 Clearable 显 ×，无值自绘 chevron。 */}
+        <SelectTrigger className="w-full [&>svg]:hidden">
+          <SelectValue placeholder={field.placeholder ?? "请选择"} />
+          {!clearable && <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />}
+        </SelectTrigger>
+        {/* position=popper：锚定触发器正下方。默认 item-aligned 在仅禁用占位项（空选项）时对齐计算会跑飞到页面左上角。 */}
+        <SelectContent position="popper">
+          {visibleOptions(field.options ?? []).length === 0 ? (
+            // 禁用 SelectItem 当占位（裸 <p> 会被 Radix 当 item 定位跑偏）。
+            <SelectItem value="__empty__" disabled>
+              暂无可用选项
+            </SelectItem>
+          ) : (
+            visibleOptions(field.options ?? []).map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+    </Clearable>
   );
 }
 
 function RadioControl({ value, onChange, disabled, field }: FieldControlProps) {
+  const opts = visibleOptions(field.options ?? []);
+  if (opts.length === 0) {
+    return <p className="text-xs text-muted-foreground">暂无可用选项</p>;
+  }
   return (
     <RadioGroup
       value={toStr(value)}
@@ -164,7 +219,7 @@ function RadioControl({ value, onChange, disabled, field }: FieldControlProps) {
       disabled={disabled}
       className="flex flex-row flex-wrap gap-x-4 gap-y-2"
     >
-      {(field.options ?? []).map((o) => (
+      {opts.map((o) => (
         <div key={o.value} className="flex items-center gap-2">
           <RadioGroupItem value={o.value} id={`${field.fieldId}-${o.value}`} />
           <Label htmlFor={`${field.fieldId}-${o.value}`} className="font-normal">
@@ -176,14 +231,18 @@ function RadioControl({ value, onChange, disabled, field }: FieldControlProps) {
   );
 }
 
-// 多选（MULTISELECT / CHECKBOX）：value 是 string[]。横向排列方便 span 布局。
+// 多选框（CHECKBOX）：value 是 string[]。平铺 checkbox 组，横向排列方便 span 布局。
 function CheckboxControl({ value, onChange, disabled, field }: FieldControlProps) {
   const arr = toArr(value);
   const toggle = (v: string, on: boolean) =>
     onChange(on ? [...arr, v] : arr.filter((x) => x !== v));
+  const opts = visibleOptions(field.options ?? []);
+  if (opts.length === 0) {
+    return <p className="text-xs text-muted-foreground">暂无可用选项</p>;
+  }
   return (
     <div className="flex flex-row flex-wrap gap-x-4 gap-y-2">
-      {(field.options ?? []).map((o) => (
+      {opts.map((o) => (
         <div key={o.value} className="flex items-center gap-2">
           <Checkbox
             id={`${field.fieldId}-${o.value}`}
@@ -207,7 +266,8 @@ function DateControl({ value, onChange, disabled, field }: FieldControlProps) {
   const date = str ? new Date(str.replace(" ", "T")) : undefined;
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Clearable show={!disabled && str !== ""} onClear={() => onChange(undefined)}>
+      <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -238,11 +298,13 @@ function DateControl({ value, onChange, disabled, field }: FieldControlProps) {
                 const base = str ? str.split(" ")[0] : format(new Date(), "yyyy-MM-dd");
                 onChange(`${base} ${e.target.value}`);
               }}
+              className="bg-background text-foreground dark:[color-scheme:dark]"
             />
           </div>
         )}
       </PopoverContent>
-    </Popover>
+      </Popover>
+    </Clearable>
   );
 }
 
@@ -253,6 +315,8 @@ function TimeControl({ value, onChange, disabled }: FieldControlProps) {
       value={toStr(value)}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
+      // 原生 time 选择器是浏览器控件，不吃 data-theme；补背景/文字色 + color-scheme 跟随明暗。
+      className="bg-background text-foreground dark:[color-scheme:dark]"
     />
   );
 }
@@ -348,7 +412,7 @@ export const FIELD_REGISTRY: Record<DynamicFormFieldType, FieldMeta> = {
     label: "下拉多选",
     group: "选择",
     defaults: () => ({ placeholder: "请选择", options: [], defaultValue: [] }),
-    Control: CheckboxControl, // 第一版多选统一用 checkbox 组
+    Control: MultiSelectControl, // 真正的下拉多选（收进下拉面板），区别于 CHECKBOX 的平铺 checkbox 组
     hasOptions: true,
     hasPlaceholder: true,
   },
@@ -390,6 +454,31 @@ export const FIELD_REGISTRY: Record<DynamicFormFieldType, FieldMeta> = {
     group: "日期时间",
     defaults: () => ({ placeholder: "选择日期时间" }),
     Control: DateControl,
+    hasPlaceholder: true,
+  },
+  UPLOAD: {
+    type: "UPLOAD",
+    label: "上传",
+    group: "高级",
+    defaults: () => ({ max: 1 }), // max = 最大上传数量
+    Control: UploadControl,
+  },
+  CASCADER: {
+    type: "CASCADER",
+    label: "级联选择",
+    group: "选择",
+    defaults: () => ({ placeholder: "请选择", options: [] }),
+    Control: CascaderControl,
+    hasOptions: true,
+    hasPlaceholder: true,
+  },
+  MULTICASCADER: {
+    type: "MULTICASCADER",
+    label: "级联多选",
+    group: "选择",
+    defaults: () => ({ placeholder: "请选择", options: [], defaultValue: [] }),
+    Control: MultiCascaderControl,
+    hasOptions: true,
     hasPlaceholder: true,
   },
 };

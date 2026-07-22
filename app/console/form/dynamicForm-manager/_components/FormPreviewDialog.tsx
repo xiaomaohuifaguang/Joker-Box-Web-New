@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { Braces, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -32,6 +32,8 @@ export function FormPreviewDialog({
   const [values, setValues] = useState<Record<string, unknown>>({});
   // 提交后显示的校验错误：fieldId -> 错误信息。
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // 「查看数据」弹层开关。
+  const [dataOpen, setDataOpen] = useState(false);
 
   const allFields = [
     ...state.fields,
@@ -72,9 +74,22 @@ export function FormPreviewDialog({
     setErrors({});
   }
 
+  // 收集当前表单数据：fieldId -> 当前值（用户改过的用 values，否则用 defaultValue）。
+  function collectData() {
+    const data: Record<string, unknown> = {};
+    for (const f of allFields) {
+      const v = valueOf(f);
+      // 跳过完全空的字段（undefined/null/空串），避免噪音；false/0/空数组保留。
+      if (v === undefined || v === null || v === "") continue;
+      data[f.fieldId] = v;
+    }
+    return data;
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-6xl">
         <DialogHeader>
           <DialogTitle>{state.name || "未命名表单"}</DialogTitle>
         </DialogHeader>
@@ -110,11 +125,42 @@ export function FormPreviewDialog({
             <Button variant="outline" onClick={reset}>
               重置
             </Button>
+            <Button variant="outline" onClick={() => setDataOpen(true)}>
+              <Braces className="h-4 w-4" />
+              查看数据
+            </Button>
             <Button onClick={submit}>提交</Button>
           </DialogFooter>
         )}
       </DialogContent>
     </Dialog>
+
+    {/* 查看数据：fieldId -> 当前值 的 JSON 结构。嵌套 Dialog，避免和预览同一层 z 冲突。 */}
+    <Dialog open={dataOpen} onOpenChange={setDataOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>表单数据</DialogTitle>
+        </DialogHeader>
+        <pre className="max-h-[60vh] overflow-auto rounded-md border bg-muted/50 p-3 text-xs leading-relaxed">
+          {JSON.stringify(collectData(), null, 2)}
+        </pre>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard
+                .writeText(JSON.stringify(collectData(), null, 2))
+                .then(() => toast.success("已复制"))
+                .catch(() => toast.error("复制失败"));
+            }}
+          >
+            复制
+          </Button>
+          <Button onClick={() => setDataOpen(false)}>关闭</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 }
 
