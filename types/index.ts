@@ -3,6 +3,7 @@
 export * from "./api";
 export * from "./api-path";
 export * from "./code-table";
+export * from "./dynamic-form";
 export * from "./file";
 export * from "./ganDaShi";
 export * from "./mail";
