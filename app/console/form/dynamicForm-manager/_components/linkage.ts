@@ -130,11 +130,10 @@ export function computeFieldState(
         if (hit) state.disabled = false;
         break;
       case "OPTION":
-        // actionValue = 可见选项的 value 列表（string[]）。命中时取字段原 options 的子集
-        //（按 value 过滤，保留原选项对象含 children/visible），渲染仍走 visibleOptions 过滤显隐。
+        // actionValue = 完整选项树（DynamicFormOption[]，字段配置的副本，每项带 visible）。
+        // 命中时整体替换目标字段 options；渲染仍走 visibleOptions 过滤 visible=false（含级联子级）。
         if (hit && Array.isArray(rule.actionValue)) {
-          const allow = rule.actionValue as unknown[];
-          state.options = (field.options ?? []).filter((o) => allow.includes(o.value));
+          state.options = rule.actionValue as DynamicFormOption[];
         }
         break;
       case "SET_PATTERN":

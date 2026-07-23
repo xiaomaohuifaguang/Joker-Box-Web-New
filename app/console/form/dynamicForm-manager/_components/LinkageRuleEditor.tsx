@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
@@ -24,6 +24,7 @@ import type {
 } from "@/types";
 import { FIELD_REGISTRY, createField } from "./fields/registry";
 import { visibleOptions } from "./fields/CascaderControl";
+import { OptionsEditor } from "./OptionsEditor";
 
 // 规则编辑器（宽弹窗）：条件区（递归条件树 AND/OR 可嵌套子组）+ 动作区（目标 + 动作 + 参数）。
 // 条件值输入按触发字段类型渲染对应控件；操作符按类型过滤。
@@ -261,15 +262,13 @@ export function LinkageRuleEditor({
             {rule.actionType === "OPTION" && (
               <div className="mt-3 flex flex-col gap-1.5">
                 <Label className="text-xs text-muted-foreground">
-                  命中时可见的选项（勾选目标字段已配选项的子集）
+                  命中时替换目标字段的选项（仅配置显隐，不可增删改）
                 </Label>
-                <div className="rounded-md border p-2">
-                  <OptionSubsetPicker
-                    field={targetField}
-                    value={rule.actionValue}
-                    onChange={(vals) => setRule((r) => ({ ...r, actionValue: vals }))}
-                  />
-                </div>
+                <OptionVisibilityEditor
+                  field={targetField}
+                  value={rule.actionValue}
+                  onChange={(opts) => setRule((r) => ({ ...r, actionValue: opts }))}
+                />
               </div>
             )}
           </div>
@@ -453,56 +452,43 @@ function ConditionRow({
 
 // OPTION 动作参数：勾选目标字段已配选项中「命中时可见」的子集（actionValue = string[]）。
 // 只勾选、不可增删改选项（选项维护在字段配置里）；级联字段只列根级选项，勾中整枝可见。
-function OptionSubsetPicker({
+// OPTION 动作编辑器：复用字段配置的选项弹窗，仅能切显隐（visibilityOnly），不可增删改。
+// 打开时若 actionValue 为空，带入目标字段当前 options 全量副本（含已有显隐）；保存即整体替换。
+function OptionVisibilityEditor({
   field, value, onChange,
 }: {
   field?: DynamicFormField;
   value: unknown;
-  onChange: (vals: string[]) => void;
+  onChange: (opts: DynamicFormOption[]) => void;
 }) {
-  if (!field) {
-    return <p className="text-xs text-muted-foreground">先选目标字段</p>;
-  }
+  const [open, setOpen] = useState(false);
+  if (!field) return <p className="text-xs text-muted-foreground">先选目标字段</p>;
   const isCascade = field.type === "CASCADER" || field.type === "MULTICASCADER";
-  // 可见子集（过滤 visible===false）；级联只取根级，不递归渲染 children。
-  const opts = visibleOptions(field.options ?? []);
-  if (opts.length === 0) {
-    return <p className="text-xs text-muted-foreground">目标字段无选项</p>;
-  }
-  const selected = Array.isArray(value)
-    ? value.filter((x): x is string => typeof x === "string")
-    : [];
-  const selectedSet = new Set(selected);
-
-  const toggle = (v: string, checked: boolean) => {
-    const next = new Set(selectedSet);
-    if (checked) next.add(v);
-    else next.delete(v);
-    // 保持 options 出现顺序回写勾中的 value 数组
-    onChange(opts.map((o) => o.value).filter((x) => next.has(x)));
-  };
-
+  // 编辑中的选项树：优先用已配的 actionValue（DynamicFormOption[]），否则带入字段当前 options 副本。
+  const current: DynamicFormOption[] = Array.isArray(value)
+    ? (value as DynamicFormOption[])
+    : (field.options ?? []);
+  if (current.length === 0) return <p className="text-xs text-muted-foreground">目标字段无选项</p>;
+  const hiddenCount = (list: DynamicFormOption[]): number =>
+    list.reduce((acc, o) => acc + (o.visible === false ? 1 : 0) + (o.children ? hiddenCount(o.children) : 0), 0);
+  const hidden = hiddenCount(current);
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-        {opts.map((o) => (
-          <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/50">
-            <Checkbox
-              checked={selectedSet.has(o.value)}
-              onCheckedChange={(c) => toggle(o.value, c === true)}
-            />
-            <span className="text-sm">{o.label}</span>
-            {isCascade && o.children && o.children.length > 0 && (
-              <span className="text-xs text-muted-foreground">（{o.children.length} 子项）</span>
-            )}
-          </label>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        已选 {selected.filter((v) => opts.some((o) => o.value === v)).length} / {opts.length}
-        {isCascade ? "（仅根级，勾中整枝可见）" : ""}
-      </p>
-    </div>
+    <>
+      <Button variant="outline" size="sm" className="w-full justify-between" onClick={() => setOpen(true)}>
+        <span className="text-muted-foreground">
+          {current.length} 个根选项{hidden > 0 ? `，命中后隐藏 ${hidden} 项` : "，全部可见"}
+        </span>
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isCascade ? "级联选项显隐" : "选项显隐"}（仅显隐，不可增删改）</DialogTitle>
+          </DialogHeader>
+          <OptionsEditor options={current} onChange={onChange} cascade={isCascade} visibilityOnly />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -530,10 +516,10 @@ function ConditionValueInput({
       );
     }
     return (
-      <Input
-        value={Array.isArray(value) ? value.join(",") : ""}
-        onChange={(e) => onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
-        placeholder="值1,值2" className="h-8 w-40"
+      <OptionMultiSelect
+        options={opts}
+        value={Array.isArray(value) ? (value as string[]) : []}
+        onChange={onChange}
       />
     );
   }
@@ -569,6 +555,90 @@ function ActionValueControl({
   return (
     <div className="rounded-md border bg-muted/30 p-2">
       <Control field={temp} value={value} onChange={onChange} />
+    </div>
+  );
+}
+
+// 条件「包含于/不包含于」的选项多选：触发框内平铺已选 tag + 点开内联面板 checkbox 多选。
+// 内联绝对定位面板（不 portal）：规则编辑 Dialog 内 Popover portal 会被 react-remove-scroll 挡滚轮。
+function OptionMultiSelect({
+  options, value, onChange,
+}: {
+  options: DynamicFormOption[];
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = new Set(value);
+  const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v;
+  const toggle = (v: string, on: boolean) =>
+    onChange(on ? [...value, v] : value.filter((x) => x !== v));
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-8 w-56 items-center gap-1 overflow-hidden rounded-md border bg-background px-2 text-left text-sm"
+      >
+        <span className="flex flex-1 flex-wrap items-center gap-1 truncate">
+          {value.length === 0 ? (
+            <span className="text-muted-foreground">选值</span>
+          ) : (
+            value.map((v) => (
+              <span key={v} className="inline-flex items-center gap-0.5 rounded bg-muted px-1 text-xs">
+                {labelOf(v)}
+                <span
+                  role="button"
+                  aria-label={`移除 ${labelOf(v)}`}
+                  className="cursor-pointer text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggle(v, false);
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </span>
+              </span>
+            ))
+          )}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-56 w-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+          {options.length === 0 ? (
+            <p className="px-2 py-1.5 text-xs text-muted-foreground">暂无可用选项</p>
+          ) : (
+            options.map((o) => (
+              <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                <Checkbox
+                  checked={selected.has(o.value)}
+                  onCheckedChange={(c) => toggle(o.value, c === true)}
+                />
+                {o.label}
+              </label>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

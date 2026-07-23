@@ -14,16 +14,19 @@ function genValue(): string {
 
 // 选项编辑器：选项类字段的 label/value 列表。cascade=true 时支持 children 嵌套（级联字段）。
 // 每项带 visible 眼睛切换：visible=false 时该选项在预览/填表时隐藏（编辑器内仍显示，划掉示意）。
+// visibilityOnly=true（联动规则 OPTION 用）：仅能切显隐，禁增/删/改 label/value。
 export function OptionsEditor({
   options,
   onChange,
   cascade = false,
   depth = 0,
+  visibilityOnly = false,
 }: {
   options: DynamicFormOption[];
   onChange: (options: DynamicFormOption[]) => void;
   cascade?: boolean;
   depth?: number;
+  visibilityOnly?: boolean;
 }) {
   function update(i: number, patch: Partial<DynamicFormOption>) {
     onChange(options.map((o, idx) => (idx === i ? { ...o, ...patch } : o)));
@@ -73,15 +76,17 @@ export function OptionsEditor({
                 value={o.label}
                 onChange={(e) => update(i, { label: e.target.value })}
                 placeholder="标签"
-                className={cn("h-8 flex-1", hidden && "text-muted-foreground line-through")}
+                readOnly={visibilityOnly}
+                className={cn("h-8 flex-1", hidden && "text-muted-foreground line-through", visibilityOnly && "pointer-events-none bg-muted/40")}
               />
               <Input
                 value={o.value}
                 onChange={(e) => update(i, { value: e.target.value })}
                 placeholder="值"
-                className={cn("h-8 flex-1 font-mono", hidden && "text-muted-foreground line-through")}
+                readOnly={visibilityOnly}
+                className={cn("h-8 flex-1 font-mono", hidden && "text-muted-foreground line-through", visibilityOnly && "pointer-events-none bg-muted/40")}
               />
-              {cascade && (
+              {cascade && !visibilityOnly && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -94,16 +99,18 @@ export function OptionsEditor({
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => remove(i)}
-                aria-label="删除选项"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              {!visibilityOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => remove(i)}
+                  aria-label="删除选项"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
             {/* 嵌套子级（级联）。层级多时减小缩进避免拥挤。 */}
             {cascade && o.children && o.children.length > 0 && (
@@ -113,18 +120,23 @@ export function OptionsEditor({
                   onChange={(children) => updateChildren(i, children)}
                   cascade
                   depth={depth + 1}
+                  visibilityOnly={visibilityOnly}
                 />
               </div>
             )}
           </div>
         );
       })}
-      <Button type="button" variant="outline" size="sm" onClick={add} className="mt-0.5">
-        <Plus className="h-3.5 w-3.5" />
-        添加{depth > 0 ? "子级" : "选项"}
-      </Button>
+      {!visibilityOnly && (
+        <Button type="button" variant="outline" size="sm" onClick={add} className="mt-0.5">
+          <Plus className="h-3.5 w-3.5" />
+          添加{depth > 0 ? "子级" : "选项"}
+        </Button>
+      )}
       {options.length === 0 && depth === 0 && (
-        <p className="text-xs text-muted-foreground">还没有选项，点上方按钮添加。</p>
+        <p className="text-xs text-muted-foreground">
+          {visibilityOnly ? "目标字段还没有选项。" : "还没有选项，点上方按钮添加。"}
+        </p>
       )}
     </div>
   );
