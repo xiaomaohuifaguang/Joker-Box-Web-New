@@ -125,5 +125,23 @@ export interface DynamicFormLinkageRule {
 复用现有 `/dynamicForm/{queryPage,info,add,update,remove}`，`linkageRules` 随 payload/详情 data 走。无需新接口。
 
 ## 不做（YAGNI）
-- 任意嵌套条件树 UI（扁平条件组已覆盖，conditionTree 结构仍兼容未来扩展）。
 - 跨表单联动、服务端联动求值、联动规则调试器/日志。
+
+---
+
+## 修订 v2（2026-07-23，OPTION 语义 + 任意嵌套）
+
+初版落地后用户反馈 3 点，本修订覆盖：
+
+### 1. OPTION 动作改为「勾选可见子集」（不再独立替换）
+- `actionValue` 改存 **`string[]`（可见选项的 value 列表）**，不再是一组独立选项。
+- 编辑器：OPTION 动作列出目标字段已配 options，**checkbox 勾选命中时哪些可见，不可增删改值**。
+- 求值 `computeFieldState` OPTION 分支：命中时 `options = field.options.filter(o => actionValue.includes(o.value))`，只按 value 过滤、保留原选项对象（含 children/visible）→ 渲染仍走 `visibleOptions()` 过滤 visible，**字段选项的显隐依然生效，且 OPTION 无法新增值**。
+- **级联字段按根级整枝显隐**：勾中的根选项整枝（含其所有子级）保留，未勾整枝隐藏。
+
+### 2. 条件树支持任意嵌套（放弃扁平限制）
+- 求值：新增 `evalNode(node, values)` 递归——CONDITION→evalCondition；AND→children.every(evalNode)；OR→children.some(evalNode)；空 children=恒真。`evalRule` 改为对根调 `evalNode`。
+- 编辑器：条件区改**递归 `ConditionGroup` 组件**——每组 = AND/OR 切换 + 行列表，每行可为单条件或嵌套子组（缩进渲染），组内可加条件/加子组/删除。数据直接用 `DynamicFormLinkageNode` 递归（AND/OR 的 children 含 CONDITION 或子 AND/OR），**类型无改动**。
+
+### 3. 级联/下拉的选项显隐不受联动 OPTION 影响以外场景
+（与 1 同一根因）OPTION 只产生字段 options 的子集，visible 过滤照旧，不存在「绕过显隐」的路径。
