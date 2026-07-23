@@ -103,6 +103,7 @@ export function FormPreviewDialog({
   function reset() {
     setValues({});
     setErrors({});
+    valueRulePrev.current.clear(); // 清空 VALUE 边沿记录，reset 后按初始态重新触发
   }
 
   // 收集当前表单数据：fieldId -> 当前值（用户改过的用 values，否则用 defaultValue）。
