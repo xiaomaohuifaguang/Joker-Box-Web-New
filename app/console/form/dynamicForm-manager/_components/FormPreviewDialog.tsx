@@ -70,15 +70,32 @@ export function FormPreviewDialog({
 
   // VALUE 规则边沿触发：条件由不满足→满足时赋一次。ref 记上次结果。
   const valueRulePrev = useRef<Map<string, boolean>>(new Map());
+  // 连续由 VALUE 赋值引发的 pass 计数（循环互指时熔断）+ 是否已提示。
+  const valueChainCount = useRef(0);
+  const valueChainWarned = useRef(false);
   useEffect(() => {
     const vals = currentValues();
+    let assigned = false;
     for (const rule of rules) {
       if (!findValueRule(rule)) continue;
       const key = rule.id ?? `${rule.targetFieldId}:${rule.name}`;
       const hit = evalRule(rule, vals);
       const prev = valueRulePrev.current.get(key) ?? false;
-      if (hit && !prev) setValue(rule.targetFieldId, rule.actionValue);
+      if (hit && !prev && valueChainCount.current < 10) {
+        setValue(rule.targetFieldId, rule.actionValue);
+        assigned = true;
+      }
       valueRulePrev.current.set(key, hit);
+    }
+    if (assigned) {
+      valueChainCount.current += 1;
+      if (valueChainCount.current >= 10 && !valueChainWarned.current) {
+        valueChainWarned.current = true;
+        toast.error("联动规则存在循环赋值，已停止");
+      }
+    } else {
+      valueChainCount.current = 0;
+      valueChainWarned.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values]);
@@ -104,6 +121,8 @@ export function FormPreviewDialog({
     setValues({});
     setErrors({});
     valueRulePrev.current.clear(); // 清空 VALUE 边沿记录，reset 后按初始态重新触发
+    valueChainCount.current = 0;
+    valueChainWarned.current = false;
   }
 
   // 收集当前表单数据：fieldId -> 当前值（用户改过的用 values，否则用 defaultValue）。

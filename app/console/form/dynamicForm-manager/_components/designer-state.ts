@@ -5,6 +5,7 @@ import type {
   DynamicForm,
   DynamicFormField,
   DynamicFormFieldGroup,
+  DynamicFormLinkageNode,
   DynamicFormLinkageRule,
   DynamicFormSavePayload,
 } from "@/types";
@@ -83,6 +84,22 @@ export function groupKey(g: DynamicFormFieldGroup): string {
   return g.clientId ?? g.id ?? g.name;
 }
 
+// 规则是否引用了某 fieldId（作为目标或触发字段）。
+function ruleReferencesField(
+  rule: DynamicFormLinkageRule,
+  fieldId: string,
+): boolean {
+  if (rule.targetFieldId === fieldId) return true;
+  const nodes = rule.conditionTree ?? [];
+  const walk = (list: DynamicFormLinkageNode[]): boolean =>
+    list.some(
+      (n) =>
+        (n.nodeType === "CONDITION" && n.triggerFieldId === fieldId) ||
+        (n.children ? walk(n.children) : false),
+    );
+  return walk(nodes);
+}
+
 // 设计器状态操作 hook：字段/分组的增删改 + 跨容器移动。
 export function useDesignerState(initial?: DynamicForm) {
   const [state, setState] = useState<DesignerState>(() =>
@@ -149,7 +166,7 @@ export function useDesignerState(initial?: DynamicForm) {
     [getContainer, writeContainer],
   );
 
-  // 删除字段。
+  // 删除字段。级联静默删除所有引用该字段的联动规则（目标或触发）。
   const removeField = useCallback(
     (fieldId: string) => {
       setState((s) => {
@@ -158,7 +175,13 @@ export function useDesignerState(initial?: DynamicForm) {
         const arr = getContainer(s, loc.containerId).filter(
           (f) => f.fieldId !== fieldId,
         );
-        return writeContainer(s, loc.containerId, arr);
+        const next = writeContainer(s, loc.containerId, arr);
+        return {
+          ...next,
+          linkageRules: s.linkageRules.filter(
+            (r) => !ruleReferencesField(r, fieldId),
+          ),
+        };
       });
     },
     [getContainer, writeContainer],
