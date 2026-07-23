@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { UploadControl } from "./UploadControl";
 import { CascaderControl, MultiCascaderControl, visibleOptions } from "./CascaderControl";
 import { MultiSelectControl } from "./MultiSelectControl";
+import DateRangeControl from "./DateRangeControl";
 import {
   Select,
   SelectContent,
@@ -44,7 +45,7 @@ export type FieldControlProps = {
 // × 常驻（预览在 Dialog 内，hover 不可靠）。
 // Clearable 包外层：× 绝对定位 right-2（触发器最右端）。Radix Select 需同时隐藏其自带 chevron
 // 并自绘「无值时的 chevron」（见 SelectControl）。原生 input（text/number/time）自带清除，不用此组件。
-function Clearable({
+export function Clearable({
   show,
   onClear,
   children,
@@ -460,6 +461,13 @@ export const FIELD_REGISTRY: Record<DynamicFormFieldType, FieldMeta> = {
     defaults: () => ({ placeholder: "选择日期时间" }),
     Control: DateControl,
     hasPlaceholder: true,
+  },
+  DATERANGE: {
+    type: "DATERANGE",
+    label: "日期范围",
+    group: "日期时间",
+    defaults: () => ({ props: { withTime: false } }),
+    Control: DateRangeControl,
   },
   UPLOAD: {
     type: "UPLOAD",
