@@ -60,10 +60,28 @@ function conditionsOf(field?: DynamicFormField): DynamicFormLinkageCondition[] {
   return ["EQ", "NE", "REGEX", "EMPTY", "NOT_EMPTY"]; // 文本/日期/时间等
 }
 
-// 递归收集条件树里的全部 CONDITION 节点（摘要用）。
+// 递归收集条件树里的全部 CONDITION 节点（自引用校验用）。
 function collectConds(node: DynamicFormLinkageNode): DynamicFormLinkageNode[] {
   if (node.nodeType === "CONDITION") return [node];
   return (node.children ?? []).flatMap(collectConds);
+}
+
+// 单条件摘要文本。
+function condText(c: DynamicFormLinkageNode, fieldTitle: (id: string) => string): string {
+  return `${fieldTitle(c.triggerFieldId ?? "")} ${COND_LABEL[c.triggerCondition ?? "EQ"]}${
+    NO_VALUE_CONDS.includes(c.triggerCondition ?? "EQ") ? "" : ` ${formatVal(c.triggerValue)}`
+  }`;
+}
+
+// 递归求条件树摘要：AND/OR 组用各自连接符 join，子组加括号（与 evalNode 求值结构一致）。
+function groupSummary(node: DynamicFormLinkageNode, fieldTitle: (id: string) => string): string {
+  if (node.nodeType === "CONDITION") return condText(node, fieldTitle);
+  const children = node.children ?? [];
+  if (children.length === 0) return "总是";
+  const sep = node.nodeType === "OR" ? " 或 " : " 且 ";
+  const inner = children.map((c) => groupSummary(c, fieldTitle)).join(sep);
+  // 根组不加括号；嵌套子组加括号以区分优先级。
+  return `(${inner})`;
 }
 
 // 人类可读规则摘要（规则卡片用）。
@@ -72,20 +90,12 @@ export function ruleSummary(
   fieldTitle: (fieldId: string) => string,
 ): string {
   const root = rule.conditionTree?.[0];
-  const conds = root ? collectConds(root) : [];
-  const condText = conds.length === 0
-    ? "总是"
-    : conds
-        .map((c) =>
-          `${fieldTitle(c.triggerFieldId ?? "")} ${COND_LABEL[c.triggerCondition ?? "EQ"]}${
-            NO_VALUE_CONDS.includes(c.triggerCondition ?? "EQ")
-              ? ""
-              : ` ${formatVal(c.triggerValue)}`
-          }`,
-        )
-        .join(root?.nodeType === "OR" ? " 或 " : " 且 ");
+  if (!root) return `若 总是 → ${ACTION_LABEL[rule.actionType]} ${fieldTitle(rule.targetFieldId)}`;
+  const raw = groupSummary(root, fieldTitle);
+  // 剥掉根组最外层括号（嵌套子组的括号保留）。
+  const text = raw.startsWith("(") && raw.endsWith(")") ? raw.slice(1, -1) : raw;
   const val = actionNeedsValue(rule.actionType) ? ` ${formatVal(rule.actionValue)}` : "";
-  return `若 ${condText} → ${ACTION_LABEL[rule.actionType]} ${fieldTitle(rule.targetFieldId)}${val}`;
+  return `若 ${text} → ${ACTION_LABEL[rule.actionType]} ${fieldTitle(rule.targetFieldId)}${val}`;
 }
 
 function formatVal(v: unknown): string {

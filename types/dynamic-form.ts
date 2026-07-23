@@ -123,7 +123,7 @@ export type DynamicFormLinkageCondition =
   | "EMPTY" | "NOT_EMPTY" // 为空/非空
   | "REGEX"; // 正则匹配
 
-// 条件节点。扁平条件组：1 个 AND/OR 根 + N 个 CONDITION 子（嵌套 children，不读 id/parentId）。
+// 条件节点。任意嵌套：AND/OR 节点的 children 可含 CONDITION 或子 AND/OR 组（不读 id/parentId，后端自动算 id）。
 export interface DynamicFormLinkageNode {
   id?: string; // 后端返回（编辑回显原样带回）
   nodeType: "AND" | "OR" | "CONDITION";
@@ -143,5 +143,5 @@ export interface DynamicFormLinkageRule {
   actionValue?: unknown; // OPTION=可见选项 value 的 string[] / VALUE=值 / SET_PATTERN=正则串 / SET_SPAN=1-24
   enable: boolean; // true=启用 / false=禁用
   sortOrder?: number;
-  conditionTree: DynamicFormLinkageNode[]; // 扁平：[AND/OR根]
+  conditionTree: DynamicFormLinkageNode[]; // [AND/OR根]，根.children 可嵌套子组
 }
