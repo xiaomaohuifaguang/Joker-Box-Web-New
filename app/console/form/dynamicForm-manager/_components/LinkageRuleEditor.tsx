@@ -54,7 +54,7 @@ function conditionsOf(field?: DynamicFormField): DynamicFormLinkageCondition[] {
   if (t === "NUMBER" || t === "SLIDER" || t === "RATE") {
     return ["EQ", "NE", "GT", "LT", "GE", "LE", "EMPTY", "NOT_EMPTY"];
   }
-  if (t === "SELECT" || t === "MULTISELECT" || t === "RADIO" || t === "CHECKBOX") {
+  if (t === "SELECT" || t === "MULTISELECT" || t === "RADIO" || t === "CHECKBOX" || t === "CASCADER" || t === "MULTICASCADER") {
     return ["EQ", "NE", "IN", "NOT_IN", "EMPTY", "NOT_EMPTY"];
   }
   return ["EQ", "NE", "REGEX", "EMPTY", "NOT_EMPTY"]; // 文本/日期/时间等
@@ -425,49 +425,60 @@ function ConditionRow({
   const noVal = NO_VALUE_CONDS.includes(node.triggerCondition ?? "EQ");
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Select
-        value={node.triggerFieldId}
-        onValueChange={(v) => {
-          // 切触发字段：操作符若不在新字段可用列表内则重置为首项，并清空值
-          const nextAvail = conditionsOf(fields.find((f) => f.fieldId === v));
-          const cur = node.triggerCondition ?? "EQ";
-          onChange({
-            ...node,
-            triggerFieldId: v,
-            triggerCondition: nextAvail.includes(cur) ? cur : nextAvail[0],
-            triggerValue: "",
-          });
-        }}
-      >
-        <SelectTrigger className="h-8 w-40">
-          <SelectValue placeholder="触发字段" />
-        </SelectTrigger>
-        <SelectContent>
-          {fields.map((f) => (
-            <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={node.triggerCondition}
-        onValueChange={(v) => {
-          const cd = v as DynamicFormLinkageCondition;
-          // 无值操作符（EMPTY/NOT_EMPTY）清掉残留 triggerValue
-          onChange(NO_VALUE_CONDS.includes(cd)
-            ? { ...node, triggerCondition: cd, triggerValue: undefined }
-            : { ...node, triggerCondition: cd });
-        }}
-      >
-        <SelectTrigger className="h-8 w-32">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {avail.map((cd) => (
-            <SelectItem key={cd} value={cd}>{COND_LABEL[cd]}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex flex-col gap-1.5 rounded-md border bg-surface p-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Select
+          value={node.triggerFieldId}
+          onValueChange={(v) => {
+            // 切触发字段：操作符若不在新字段可用列表内则重置为首项，并清空值
+            const nextAvail = conditionsOf(fields.find((f) => f.fieldId === v));
+            const cur = node.triggerCondition ?? "EQ";
+            onChange({
+              ...node,
+              triggerFieldId: v,
+              triggerCondition: nextAvail.includes(cur) ? cur : nextAvail[0],
+              triggerValue: "",
+            });
+          }}
+        >
+          <SelectTrigger className="h-8 w-40">
+            <SelectValue placeholder="触发字段" />
+          </SelectTrigger>
+          <SelectContent>
+            {fields.map((f) => (
+              <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={node.triggerCondition}
+          onValueChange={(v) => {
+            const cd = v as DynamicFormLinkageCondition;
+            // 无值操作符（EMPTY/NOT_EMPTY）清掉残留 triggerValue
+            onChange(NO_VALUE_CONDS.includes(cd)
+              ? { ...node, triggerCondition: cd, triggerValue: undefined }
+              : { ...node, triggerCondition: cd });
+          }}
+        >
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {avail.map((cd) => (
+              <SelectItem key={cd} value={cd}>{COND_LABEL[cd]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button" variant="ghost" size="icon"
+          className="ml-auto h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={onRemove}
+          aria-label="删除条件"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {/* 条件值：复用触发字段真实控件（REGEX 用文本框）。无值操作符不渲染。 */}
       {!noVal && (
         <ConditionValueInput
           field={tf}
@@ -476,14 +487,6 @@ function ConditionRow({
           onChange={(v) => onChange({ ...node, triggerValue: v })}
         />
       )}
-      <Button
-        type="button" variant="ghost" size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-        onClick={onRemove}
-        aria-label="删除条件"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
     </div>
   );
 }
@@ -540,19 +543,11 @@ function ConditionValueInput({
   onChange: (v: unknown) => void;
 }) {
   if (!field) return <Input value="" disabled placeholder="先选触发字段" className="h-8 w-40" />;
-  // 选项类：单选 EQ/NE 用选项下拉，IN/NOT_IN 用选项多选。
-  // 规则选值列全部选项（含 visible=false）——显隐是预览/填表运行态的事，规则配置需能引用任意选项。
-  if (["SELECT", "MULTISELECT", "RADIO", "CHECKBOX"].includes(field.type)) {
+  // 选项类（含级联）的 IN/NOT_IN：多选值（标签式多选 / 多选级联），列全部选项。
+  if (condition === "IN" || condition === "NOT_IN") {
     const opts = field.options ?? [];
-    if (condition === "EQ" || condition === "NE") {
-      return (
-        <Select value={typeof value === "string" ? value : ""} onValueChange={onChange}>
-          <SelectTrigger className="h-8 w-40"><SelectValue placeholder="选值" /></SelectTrigger>
-          <SelectContent>
-            {opts.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      );
+    if (field.type === "CASCADER" || field.type === "MULTICASCADER") {
+      return <ConditionFieldControl field={field} value={value} onChange={onChange} multiCascader />;
     }
     return (
       <OptionMultiSelect
@@ -562,22 +557,44 @@ function ConditionValueInput({
       />
     );
   }
-  if (field.type === "NUMBER" || field.type === "SLIDER" || field.type === "RATE") {
+  // REGEX：正则串，保留文本框（不是字段值）。
+  if (condition === "REGEX") {
     return (
       <Input
-        type="number" value={value == null ? "" : String(value)}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        className="h-8 w-32"
+        value={typeof value === "string" ? value : ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="^\\d+$"
+        className="h-8 w-40 font-mono"
       />
     );
   }
+  // 其余单值操作符（EQ/NE/GT/LT/GE/LE）：复用触发字段的真实控件（同 VALUE 动作）。
+  return <ConditionFieldControl field={field} value={value} onChange={onChange} />;
+}
+
+// 条件值用触发字段类型的真实控件渲染（借 createField 造临时字段），与 VALUE 动作一致。
+// 列全部选项（含 visible=false）：显隐是预览运行态的事，规则配置需能引用任意选项。
+function ConditionFieldControl({
+  field, value, onChange, multiCascader = false,
+}: {
+  field: DynamicFormField;
+  value: unknown;
+  onChange: (v: unknown) => void;
+  multiCascader?: boolean; // IN/NOT_IN 级联用多选级联
+}) {
+  const type = multiCascader && field.type === "CASCADER" ? "MULTICASCADER" : field.type;
+  const Control = FIELD_REGISTRY[type].Control;
+  const temp = {
+    ...createField(type, 0),
+    ...field,
+    type,
+    fieldId: field.fieldId,
+    props: { ...field.props, showAllOptions: true },
+  };
   return (
-    <Input
-      value={typeof value === "string" ? value : ""}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={condition === "REGEX" ? "^\\d+$" : "值"}
-      className={`h-8 w-40 ${condition === "REGEX" ? "font-mono" : ""}`}
-    />
+    <div className="min-w-0 flex-1 rounded-md border bg-muted/30 p-2">
+      <Control field={temp} value={value} onChange={onChange} />
+    </div>
   );
 }
 
