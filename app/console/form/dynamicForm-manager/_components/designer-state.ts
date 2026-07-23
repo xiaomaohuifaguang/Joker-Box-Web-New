@@ -5,6 +5,8 @@ import type {
   DynamicForm,
   DynamicFormField,
   DynamicFormFieldGroup,
+  DynamicFormLinkageNode,
+  DynamicFormLinkageRule,
   DynamicFormSavePayload,
 } from "@/types";
 
@@ -17,10 +19,11 @@ export interface DesignerState {
   description: string;
   fields: DynamicFormField[]; // 未分组
   groups: DynamicFormFieldGroup[];
+  linkageRules: DynamicFormLinkageRule[]; // 联动规则
 }
 
 export function emptyState(): DesignerState {
-  return { name: "", description: "", fields: [], groups: [] };
+  return { name: "", description: "", fields: [], groups: [], linkageRules: [] };
 }
 
 // 从详情 DynamicForm 初始化编辑态（未分组字段 + 分组，分组补 clientId）。
@@ -34,6 +37,7 @@ export function stateFromForm(form: DynamicForm): DesignerState {
       clientId: g.id ?? crypto.randomUUID(),
       fields: (g.fields ?? []).map((f) => ({ ...f })),
     })),
+    linkageRules: (form.linkageRules ?? []).map((r) => ({ ...r })),
   };
 }
 
@@ -52,6 +56,7 @@ export function toPayload(s: DesignerState, id?: string): DynamicFormSavePayload
       collapsed: g.collapsed ?? "0",
       fields: g.fields.map(stripClient),
     })),
+    linkageRules: s.linkageRules,
   };
 }
 
@@ -77,6 +82,22 @@ export function locateField(
 
 export function groupKey(g: DynamicFormFieldGroup): string {
   return g.clientId ?? g.id ?? g.name;
+}
+
+// 规则是否引用了某 fieldId（作为目标或触发字段）。
+function ruleReferencesField(
+  rule: DynamicFormLinkageRule,
+  fieldId: string,
+): boolean {
+  if (rule.targetFieldId === fieldId) return true;
+  const nodes = rule.conditionTree ?? [];
+  const walk = (list: DynamicFormLinkageNode[]): boolean =>
+    list.some(
+      (n) =>
+        (n.nodeType === "CONDITION" && n.triggerFieldId === fieldId) ||
+        (n.children ? walk(n.children) : false),
+    );
+  return walk(nodes);
 }
 
 // 设计器状态操作 hook：字段/分组的增删改 + 跨容器移动。
@@ -145,7 +166,7 @@ export function useDesignerState(initial?: DynamicForm) {
     [getContainer, writeContainer],
   );
 
-  // 删除字段。
+  // 删除字段。级联静默删除所有引用该字段的联动规则（目标或触发）。
   const removeField = useCallback(
     (fieldId: string) => {
       setState((s) => {
@@ -154,7 +175,13 @@ export function useDesignerState(initial?: DynamicForm) {
         const arr = getContainer(s, loc.containerId).filter(
           (f) => f.fieldId !== fieldId,
         );
-        return writeContainer(s, loc.containerId, arr);
+        const next = writeContainer(s, loc.containerId, arr);
+        return {
+          ...next,
+          linkageRules: s.linkageRules.filter(
+            (r) => !ruleReferencesField(r, fieldId),
+          ),
+        };
       });
     },
     [getContainer, writeContainer],
@@ -244,6 +271,34 @@ export function useDesignerState(initial?: DynamicForm) {
     });
   }, []);
 
+  // ---- 联动规则 ----
+  const addRule = useCallback((rule: DynamicFormLinkageRule) => {
+    setState((s) => ({ ...s, linkageRules: [...s.linkageRules, rule] }));
+  }, []);
+
+  const updateRule = useCallback((index: number, rule: DynamicFormLinkageRule) => {
+    setState((s) => ({
+      ...s,
+      linkageRules: s.linkageRules.map((r, i) => (i === index ? rule : r)),
+    }));
+  }, []);
+
+  const removeRule = useCallback((index: number) => {
+    setState((s) => ({
+      ...s,
+      linkageRules: s.linkageRules.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  const moveRule = useCallback((from: number, to: number) => {
+    setState((s) => {
+      const arr = [...s.linkageRules];
+      const [r] = arr.splice(from, 1);
+      arr.splice(Math.max(0, Math.min(arr.length, to)), 0, r);
+      return { ...s, linkageRules: arr.map((x, i) => ({ ...x, sortOrder: i })) };
+    });
+  }, []);
+
   const allGroupNames = useMemo(
     () => state.groups.map((g) => g.name),
     [state.groups],
@@ -261,6 +316,10 @@ export function useDesignerState(initial?: DynamicForm) {
     updateGroup,
     removeGroup,
     moveGroup,
+    addRule,
+    updateRule,
+    removeRule,
+    moveRule,
     allGroupNames,
   };
 }

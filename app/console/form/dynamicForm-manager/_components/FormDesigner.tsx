@@ -8,12 +8,14 @@ import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DynamicFormFieldType } from "@/types";
 import { useDesignerState, toPayload, stateFromForm, UNGROUPED_ID, groupKey } from "./designer-state";
 import { createField } from "./fields/registry";
 import { FieldPalette } from "./FieldPalette";
 import { FormCanvas } from "./FormCanvas";
 import { FieldConfigPanel } from "./FieldConfigPanel";
+import { LinkagePanel } from "./LinkagePanel";
 import { FormPreviewDialog } from "./FormPreviewDialog";
 
 // 表单设计器：顶栏（返回/名称/描述/预览/保存）+ 三栏（字段库 | 画布 | 配置）。
@@ -175,11 +177,22 @@ export function FormDesigner({
         <div className="min-w-0 flex-1 overflow-hidden bg-muted/30">
           <FormCanvas designer={designer} selectedId={selectedId} onSelect={setSelectedId} />
         </div>
-        <div className="w-72 shrink-0 overflow-y-auto border-l bg-surface">
-          <FieldConfigPanel
-            field={selectedField}
-            onChange={(patch) => selectedId && designer.updateField(selectedId, patch)}
-          />
+        <div className="flex w-80 shrink-0 flex-col overflow-hidden border-l bg-surface">
+          <Tabs defaultValue="field" className="flex h-full flex-col">
+            <TabsList className="mx-3 mt-3 grid w-auto grid-cols-2">
+              <TabsTrigger value="field">字段配置</TabsTrigger>
+              <TabsTrigger value="linkage">联动规则</TabsTrigger>
+            </TabsList>
+            <TabsContent value="field" className="min-h-0 flex-1 overflow-y-auto">
+              <FieldConfigPanel
+                field={selectedField}
+                onChange={(patch) => selectedId && designer.updateField(selectedId, patch)}
+              />
+            </TabsContent>
+            <TabsContent value="linkage" className="min-h-0 flex-1 overflow-hidden">
+              <LinkagePanel designer={designer} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
