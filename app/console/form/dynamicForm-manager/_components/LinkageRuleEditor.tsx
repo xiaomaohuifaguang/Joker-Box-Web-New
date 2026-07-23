@@ -57,6 +57,8 @@ function conditionsOf(field?: DynamicFormField): DynamicFormLinkageCondition[] {
   if (t === "SELECT" || t === "MULTISELECT" || t === "RADIO" || t === "CHECKBOX" || t === "CASCADER" || t === "MULTICASCADER") {
     return ["EQ", "NE", "IN", "NOT_IN", "EMPTY", "NOT_EMPTY"];
   }
+  // 表格/日期范围值为数组，EQ/IN 意义不明，「是否填写」最实用。
+  if (t === "TABLE" || t === "DATERANGE") return ["EMPTY", "NOT_EMPTY"];
   return ["EQ", "NE", "REGEX", "EMPTY", "NOT_EMPTY"]; // 文本/日期/时间等
 }
 

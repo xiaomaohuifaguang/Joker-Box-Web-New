@@ -46,6 +46,14 @@ export function validateField(field: DynamicFormField, value: unknown): string |
     }
   }
 
+  // 日期范围：结束不能早于开始（格式固定 yyyy-MM-dd / yyyy-MM-dd HH:mm，字符串比较即可）。
+  if (field.type === "DATERANGE" && Array.isArray(value)) {
+    const [start, end] = value as [unknown, unknown];
+    if (typeof start === "string" && typeof end === "string" && start !== "" && end !== "" && end < start) {
+      return `${field.title}结束日期不能早于开始日期`;
+    }
+  }
+
   return null;
 }
 
