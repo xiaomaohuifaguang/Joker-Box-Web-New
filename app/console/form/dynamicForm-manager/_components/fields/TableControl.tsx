@@ -57,6 +57,7 @@ export default function TableControl({ value, onChange, disabled, field }: Field
                     value={row[col.key] ?? ""}
                     onChange={(e) => setCell(r, col.key, e.target.value)}
                     disabled={disabled}
+                    aria-label={`${col.title} 第${r + 1}行`}
                     className="h-8 bg-background"
                   />
                 </td>

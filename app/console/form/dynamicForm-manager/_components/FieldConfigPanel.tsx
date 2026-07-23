@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import type { DynamicFormField, DynamicFormOption } from "@/types";
+import type { DynamicFormField, DynamicFormOption, DynamicFormTableColumn } from "@/types";
 import { cn } from "@/lib/utils";
 import { FIELD_REGISTRY } from "./fields/registry";
 import {
@@ -44,6 +44,8 @@ export function FieldConfigPanel({
   const num = (v: string) => (v === "" ? undefined : Number(v));
   const isCascader = field.type === "CASCADER" || field.type === "MULTICASCADER";
   const isUpload = field.type === "UPLOAD";
+  const isTable = field.type === "TABLE";
+  const isDateRange = field.type === "DATERANGE";
   // checkStrictly 存 props.checkStrictly（true=可任选层级，默认 false=仅叶子）。
   const checkStrictly = field.props?.checkStrictly === true;
 
@@ -128,6 +130,33 @@ export function FieldConfigPanel({
             />
             <span className="text-xs text-muted-foreground">
               {checkStrictly ? "可选任意层级" : "仅可选叶子节点"}
+            </span>
+          </div>
+        </Field>
+      )}
+
+      {/* 动态表格专属：列定义（key/title 列表，弹窗编辑）。 */}
+      {isTable && (
+        <Field label="表格列">
+          <TableColumnsDialog
+            columns={field.tableColumns ?? []}
+            onChange={(tableColumns) => onChange({ tableColumns })}
+          />
+        </Field>
+      )}
+
+      {/* 日期范围专属：withTime（值带时分 vs 仅日期）。 */}
+      {isDateRange && (
+        <Field label="包含时间">
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={field.props?.withTime === true}
+              onCheckedChange={(c) =>
+                onChange({ props: { ...field.props, withTime: c } })
+              }
+            />
+            <span className="text-xs text-muted-foreground">
+              {field.props?.withTime === true ? "精确到时分" : "仅日期"}
             </span>
           </div>
         </Field>
@@ -240,6 +269,14 @@ function DefaultValueEditor({
     return (
       <p className="rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
         上传字段不支持默认值
+      </p>
+    );
+  }
+  // 动态表格默认值无意义（设计器里预填表格行不合理）。
+  if (field.type === "TABLE") {
+    return (
+      <p className="rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
+        动态表格不支持默认值
       </p>
     );
   }
@@ -359,6 +396,125 @@ function OptionsDialog({
             <DialogTitle>{cascade ? "级联选项" : "选项"}</DialogTitle>
           </DialogHeader>
           <OptionsEditor options={options} onChange={onChange} cascade={cascade} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// 表格列编辑弹窗（TABLE 专属）：列 = {key, title} 列表。仿 OptionsDialog「按钮 + 宽 Dialog」壳。
+// 列编辑走本地草稿、「完成」才提交——key 是存值键 & React key，重复/为空会撞单元格值，
+// 校验（查重 + 非空）不通过时禁用「完成」并内联标红提示。
+function TableColumnsDialog({
+  columns,
+  onChange,
+}: {
+  columns: DynamicFormTableColumn[];
+  onChange: (columns: DynamicFormTableColumn[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<DynamicFormTableColumn[]>([]);
+
+  // 打开时快照当前列为草稿；取消（关闭）不提交。
+  function openDialog() {
+    setDraft(columns.map((c) => ({ ...c })));
+    setOpen(true);
+  }
+  function update(i: number, patch: Partial<DynamicFormTableColumn>) {
+    setDraft((d) => d.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  }
+  function remove(i: number) {
+    setDraft((d) => d.filter((_, idx) => idx !== i));
+  }
+  function add() {
+    // key 用短 UUID 保证唯一（用户可改）；title 给可读默认值。
+    setDraft((d) => [
+      ...d,
+      { key: `col_${crypto.randomUUID().slice(0, 6)}`, title: `列${d.length + 1}` },
+    ]);
+  }
+
+  // key 查重：出现两次及以上的 key 集合。
+  const dupKeys = new Set(
+    draft.map((c) => c.key).filter((k, i, arr) => arr.indexOf(k) !== i),
+  );
+  const hasEmptyKey = draft.some((c) => c.key.trim() === "");
+  const invalid = dupKeys.size > 0 || hasEmptyKey;
+
+  const summary = columns.length ? `${columns.length} 列` : "配置表格列";
+
+  return (
+    <>
+      <Button variant="outline" size="sm" className="w-full justify-between" onClick={openDialog}>
+        <span className="text-muted-foreground">{summary}</span>
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>表格列</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-1.5">
+            {draft.map((c, i) => {
+              const dup = dupKeys.has(c.key);
+              const empty = c.key.trim() === "";
+              return (
+                <div key={i} className="flex items-center gap-1.5">
+                  <Input
+                    value={c.key}
+                    onChange={(e) => update(i, { key: e.target.value })}
+                    placeholder="列标识 key"
+                    aria-invalid={dup || empty}
+                    className={cn("h-8 flex-1 font-mono", (dup || empty) && "border-destructive")}
+                  />
+                  <Input
+                    value={c.title}
+                    onChange={(e) => update(i, { title: e.target.value })}
+                    placeholder="列名"
+                    className="h-8 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => remove(i)}
+                    aria-label="删除列"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+            <Button type="button" variant="outline" size="sm" onClick={add} className="mt-0.5 self-start">
+              <Plus className="h-3.5 w-3.5" />
+              添加列
+            </Button>
+            {draft.length === 0 && (
+              <p className="text-xs text-muted-foreground">还没有列，点上方按钮添加。</p>
+            )}
+            {dupKeys.size > 0 && (
+              <p className="text-xs text-destructive">列标识 key 重复，请修改后再保存。</p>
+            )}
+            {hasEmptyKey && (
+              <p className="text-xs text-destructive">列标识 key 不能为空。</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              取消
+            </Button>
+            <Button
+              size="sm"
+              disabled={invalid}
+              onClick={() => {
+                onChange(draft);
+                setOpen(false);
+              }}
+            >
+              完成
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
