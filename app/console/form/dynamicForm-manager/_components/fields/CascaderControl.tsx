@@ -187,7 +187,11 @@ function DrillColumns({
 
 // ---- CASCADER（单选级联，值=路径数组）----
 export function CascaderControl({ field, value, onChange, disabled }: FieldControlProps) {
-  const options = useMemo(() => visibleOptions(field.options ?? []), [field.options]);
+  // showAllOptions：联动 VALUE 赋值场景列全部选项（含 visible=false），显隐不生效。
+  const options = useMemo(
+    () => (field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? [])),
+    [field.options, field.props?.showAllOptions],
+  );
   const strict = isStrict(field);
   const path = Array.isArray(value) ? (value as string[]) : [];
   const [open, setOpen] = useState(false);
@@ -251,7 +255,10 @@ export function CascaderControl({ field, value, onChange, disabled }: FieldContr
 
 // ---- MULTICASCADER（多选级联，值=二维路径数组；已选显示在框内）----
 export function MultiCascaderControl({ field, value, onChange, disabled }: FieldControlProps) {
-  const options = useMemo(() => visibleOptions(field.options ?? []), [field.options]);
+  const options = useMemo(
+    () => (field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? [])),
+    [field.options, field.props?.showAllOptions],
+  );
   const strict = isStrict(field);
   const paths: string[][] = useMemo(
     () => (Array.isArray(value) ? (value as string[][]) : []),

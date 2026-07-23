@@ -7,8 +7,14 @@ import type {
   DynamicFormFieldGroup,
   DynamicFormLinkageNode,
   DynamicFormLinkageRule,
+  DynamicFormOption,
   DynamicFormSavePayload,
 } from "@/types";
+import {
+  filterValueByOptions,
+  pruneConditionTree,
+  reconcileOptionTree,
+} from "./linkage";
 
 // 未分组容器 id（dnd-kit droppable）。
 export const UNGROUPED_ID = "__ungrouped__";
@@ -100,6 +106,46 @@ function ruleReferencesField(
   return walk(nodes);
 }
 
+// 收集选项树所有 value（含级联子级）。
+function collectOptionValues(list: DynamicFormOption[], into: Set<string>): Set<string> {
+  for (const o of list) {
+    into.add(o.value);
+    if (o.children) collectOptionValues(o.children, into);
+  }
+  return into;
+}
+
+// 选项变更后同步所有引用该字段的规则（清理失效 value + OPTION 树对齐）。
+// - 作为触发字段：条件值引用已删 value -> 剔除该条件。
+// - 作为目标字段：VALUE 的值失效 -> 清 undefined；OPTION 树以最新 options 为骨架对齐（label 同步/新增默认可见/删失效）。
+function syncRulesOnOptionsChange(
+  rules: DynamicFormLinkageRule[],
+  fieldId: string,
+  freshOptions: DynamicFormOption[],
+): DynamicFormLinkageRule[] {
+  const valid = collectOptionValues(freshOptions, new Set());
+  return rules.map((rule) => {
+    let next = rule;
+    // 触发条件引用该字段。
+    next = {
+      ...next,
+      conditionTree: pruneConditionTree(next.conditionTree ?? [], fieldId, valid),
+    };
+    // 目标为该字段：VALUE / OPTION 适配。
+    if (next.targetFieldId === fieldId) {
+      if (next.actionType === "VALUE" && next.actionValue !== undefined) {
+        next = { ...next, actionValue: filterValueByOptions(next.actionValue, valid) };
+      } else if (next.actionType === "OPTION" && Array.isArray(next.actionValue)) {
+        next = {
+          ...next,
+          actionValue: reconcileOptionTree(freshOptions, next.actionValue as DynamicFormOption[]),
+        };
+      }
+    }
+    return next;
+  });
+}
+
 // 设计器状态操作 hook：字段/分组的增删改 + 跨容器移动。
 export function useDesignerState(initial?: DynamicForm) {
   const [state, setState] = useState<DesignerState>(() =>
@@ -151,7 +197,7 @@ export function useDesignerState(initial?: DynamicForm) {
     [getContainer, writeContainer],
   );
 
-  // 更新字段属性。
+  // 更新字段属性。patch 含 options 时同步引用该字段的联动规则（清理失效 value + OPTION 树对齐）。
   const updateField = useCallback(
     (fieldId: string, patch: Partial<DynamicFormField>) => {
       setState((s) => {
@@ -160,7 +206,14 @@ export function useDesignerState(initial?: DynamicForm) {
         const arr = getContainer(s, loc.containerId).map((f) =>
           f.fieldId === fieldId ? { ...f, ...patch } : f,
         );
-        return writeContainer(s, loc.containerId, arr);
+        const next = writeContainer(s, loc.containerId, arr);
+        if (patch.options) {
+          return {
+            ...next,
+            linkageRules: syncRulesOnOptionsChange(s.linkageRules, fieldId, patch.options),
+          };
+        }
+        return next;
       });
     },
     [getContainer, writeContainer],

@@ -13,7 +13,10 @@ import type { FieldControlProps } from "./registry";
 // 下拉用内联绝对定位面板（不 portal），不用 Popover：预览 Dialog 内 PopoverContent portal 到 body
 // 会落在 Dialog 的 react-remove-scroll 拦截区外 -> 滚轮失效（同级联，见 CascaderControl）。
 export function MultiSelectControl({ field, value, onChange, disabled }: FieldControlProps) {
-  const options = useMemo(() => visibleOptions(field.options ?? []), [field.options]);
+  const options = useMemo(
+    () => (field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? [])),
+    [field.options, field.props?.showAllOptions],
+  );
   const arr: string[] = useMemo(() => (Array.isArray(value) ? (value as string[]) : []), [value]);
   const selected = useMemo(() => new Set(arr), [arr]);
   const [open, setOpen] = useState(false);

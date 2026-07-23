@@ -23,7 +23,6 @@ import type {
   DynamicFormOption,
 } from "@/types";
 import { FIELD_REGISTRY, createField } from "./fields/registry";
-import { visibleOptions } from "./fields/CascaderControl";
 import { OptionsEditor } from "./OptionsEditor";
 
 // 规则编辑器（宽弹窗）：条件区（递归条件树 AND/OR 可嵌套子组）+ 动作区（目标 + 动作 + 参数）。
@@ -502,9 +501,10 @@ function ConditionValueInput({
   onChange: (v: unknown) => void;
 }) {
   if (!field) return <Input value="" disabled placeholder="先选触发字段" className="h-8 w-40" />;
-  // 选项类：单选 EQ/NE 用选项下拉，IN/NOT_IN 用逗号分隔文本。
+  // 选项类：单选 EQ/NE 用选项下拉，IN/NOT_IN 用选项多选。
+  // 规则选值列全部选项（含 visible=false）——显隐是预览/填表运行态的事，规则配置需能引用任意选项。
   if (["SELECT", "MULTISELECT", "RADIO", "CHECKBOX"].includes(field.type)) {
-    const opts = visibleOptions(field.options ?? []);
+    const opts = field.options ?? [];
     if (condition === "EQ" || condition === "NE") {
       return (
         <Select value={typeof value === "string" ? value : ""} onValueChange={onChange}>
@@ -551,7 +551,13 @@ function ActionValueControl({
   onChange: (v: unknown) => void;
 }) {
   const Control = FIELD_REGISTRY[field.type].Control;
-  const temp = { ...createField(field.type, 0), ...field, fieldId: field.fieldId };
+  // VALUE 赋值列全部选项（含 visible=false）：显隐是预览运行态的事，赋值需能引用任意选项。
+  const temp = {
+    ...createField(field.type, 0),
+    ...field,
+    fieldId: field.fieldId,
+    props: { ...field.props, showAllOptions: true },
+  };
   return (
     <div className="rounded-md border bg-muted/30 p-2">
       <Control field={temp} value={value} onChange={onChange} />

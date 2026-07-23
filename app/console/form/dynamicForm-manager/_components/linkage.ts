@@ -153,3 +153,57 @@ export function computeFieldState(
 export function findValueRule(rule: DynamicFormLinkageRule): boolean {
   return rule.enable && rule.actionType === "VALUE";
 }
+
+// ---- 选项变更时的规则同步（宽松匹配，仅用于清理失效 value，不做精确类型判断）----
+
+// 从值里剔除失效选项 value：字符串 -> undefined（失效时），数组 -> 过滤（空则 undefined），其他原样。
+export function filterValueByOptions(v: unknown, valid: Set<string>): unknown {
+  if (typeof v === "string") return valid.has(v) ? v : undefined;
+  if (Array.isArray(v)) {
+    const kept = v.filter((x) => typeof x !== "string" || valid.has(x));
+    return kept.length ? kept : undefined;
+  }
+  return v;
+}
+
+// 递归过滤条件树里引用失效选项 value 的 CONDITION 节点（返回新树）。
+export function pruneConditionTree(
+  nodes: DynamicFormLinkageNode[],
+  triggerFieldId: string,
+  valid: Set<string>,
+): DynamicFormLinkageNode[] {
+  return nodes
+    .map((n) => {
+      if (n.nodeType === "CONDITION") {
+        if (n.triggerFieldId !== triggerFieldId) return n;
+        // 该条件引用了被改的字段：若其值引用了失效 value 则剔除整条条件。
+        return referencesGone(n.triggerValue, valid) ? null : n;
+      }
+      return { ...n, children: n.children ? pruneConditionTree(n.children, triggerFieldId, valid) : n.children };
+    })
+    .filter((n): n is DynamicFormLinkageNode => n !== null);
+}
+
+// triggerValue 是否引用了任一已失效的 value。
+function referencesGone(v: unknown, valid: Set<string>): boolean {
+  if (typeof v === "string") return v !== "" && !valid.has(v);
+  if (Array.isArray(v)) return v.some((x) => typeof x === "string" && !valid.has(x));
+  return false;
+}
+
+// OPTION 树对齐：以字段最新 options 为骨架（同步 label/结构/增删），叠加旧树里的 visible 状态。
+// 新增选项默认 visible=true；已删 value 被剔除；label 跟随字段最新。
+export function reconcileOptionTree(
+  fresh: DynamicFormOption[],
+  oldTree: DynamicFormOption[] | undefined,
+): DynamicFormOption[] {
+  return fresh.map((f) => {
+    const old = oldTree?.find((o) => o.value === f.value);
+    return {
+      label: f.label,
+      value: f.value,
+      visible: old?.visible ?? true, // 已有选项保留旧显隐；新增默认可见
+      children: f.children ? reconcileOptionTree(f.children, old?.children) : undefined,
+    };
+  });
+}

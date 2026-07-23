@@ -176,6 +176,11 @@ function ColorControl({ value, onChange, disabled }: FieldControlProps) {
   );
 }
 
+// 渲染用选项：默认过滤 visible=false；field.props.showAllOptions（联动 VALUE 赋值）时列全部。
+function renderOptions(field: DynamicFormField): DynamicFormOption[] {
+  return field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? []);
+}
+
 function SelectControl({ value, onChange, disabled, field }: FieldControlProps) {
   const str = toStr(value);
   const clearable = !disabled && str !== "";
@@ -189,13 +194,13 @@ function SelectControl({ value, onChange, disabled, field }: FieldControlProps) 
         </SelectTrigger>
         {/* position=popper：锚定触发器正下方。默认 item-aligned 在仅禁用占位项（空选项）时对齐计算会跑飞到页面左上角。 */}
         <SelectContent position="popper">
-          {visibleOptions(field.options ?? []).length === 0 ? (
+          {renderOptions(field).length === 0 ? (
             // 禁用 SelectItem 当占位（裸 <p> 会被 Radix 当 item 定位跑偏）。
             <SelectItem value="__empty__" disabled>
               暂无可用选项
             </SelectItem>
           ) : (
-            visibleOptions(field.options ?? []).map((o) => (
+            renderOptions(field).map((o) => (
               <SelectItem key={o.value} value={o.value}>
                 {o.label}
               </SelectItem>
@@ -208,7 +213,7 @@ function SelectControl({ value, onChange, disabled, field }: FieldControlProps) 
 }
 
 function RadioControl({ value, onChange, disabled, field }: FieldControlProps) {
-  const opts = visibleOptions(field.options ?? []);
+  const opts = renderOptions(field);
   if (opts.length === 0) {
     return <p className="text-xs text-muted-foreground">暂无可用选项</p>;
   }
@@ -236,7 +241,7 @@ function CheckboxControl({ value, onChange, disabled, field }: FieldControlProps
   const arr = toArr(value);
   const toggle = (v: string, on: boolean) =>
     onChange(on ? [...arr, v] : arr.filter((x) => x !== v));
-  const opts = visibleOptions(field.options ?? []);
+  const opts = renderOptions(field);
   if (opts.length === 0) {
     return <p className="text-xs text-muted-foreground">暂无可用选项</p>;
   }
