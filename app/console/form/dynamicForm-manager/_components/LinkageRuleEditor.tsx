@@ -185,10 +185,19 @@ export function LinkageRuleEditor({
                 const avail = conditionsOf(tf);
                 const noVal = NO_VALUE_CONDS.includes(c.triggerCondition ?? "EQ");
                 return (
-                  <div key={i} className="flex flex-wrap items-center gap-1.5">
+                  <div key={`${c.triggerFieldId}-${i}`} className="flex flex-wrap items-center gap-1.5">
                     <Select
                       value={c.triggerFieldId}
-                      onValueChange={(v) => patchCondition(i, { triggerFieldId: v, triggerValue: "" })}
+                      onValueChange={(v) => {
+                        // 切触发字段：操作符若不在新字段可用列表内则重置为首项，并清空值
+                        const nextAvail = conditionsOf(fieldOf(v));
+                        const cur = c.triggerCondition ?? "EQ";
+                        patchCondition(i, {
+                          triggerFieldId: v,
+                          triggerCondition: nextAvail.includes(cur) ? cur : nextAvail[0],
+                          triggerValue: "",
+                        });
+                      }}
                     >
                       <SelectTrigger className="h-8 w-40">
                         <SelectValue placeholder="触发字段" />
@@ -201,7 +210,13 @@ export function LinkageRuleEditor({
                     </Select>
                     <Select
                       value={c.triggerCondition}
-                      onValueChange={(v) => patchCondition(i, { triggerCondition: v as DynamicFormLinkageCondition })}
+                      onValueChange={(v) => {
+                        const cd = v as DynamicFormLinkageCondition;
+                        // 无值操作符（EMPTY/NOT_EMPTY）清掉残留 triggerValue
+                        patchCondition(i, NO_VALUE_CONDS.includes(cd)
+                          ? { triggerCondition: cd, triggerValue: undefined }
+                          : { triggerCondition: cd });
+                      }}
                     >
                       <SelectTrigger className="h-8 w-32">
                         <SelectValue />
