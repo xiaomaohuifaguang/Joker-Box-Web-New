@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Braces, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import type { DynamicFormField } from "@/types";
 import { FIELD_REGISTRY } from "./fields/registry";
 import { groupKey, type DesignerState } from "./designer-state";
-import { validateField } from "./validate";
+import { computeFieldState, evalRule, findValueRule, type EffectiveFieldState } from "./linkage";
+import { validateFieldState } from "./validate";
 
 // 预览：把设计数据用真实表单控件按 24 栅格渲染（可交互 + 提交校验 + 分组可折叠）。
 export function FormPreviewDialog({
@@ -54,10 +55,40 @@ export function FormPreviewDialog({
     });
   }
 
+  const rules = state.linkageRules ?? [];
+
+  // 字段当前值（含 defaultValue 回退），供联动求值。
+  function currentValues(): Record<string, unknown> {
+    const v: Record<string, unknown> = {};
+    for (const f of allFields) v[f.fieldId] = valueOf(f);
+    return v;
+  }
+  // 每字段有效状态（每次渲染重算，值变即变）。
+  const effState = new Map<string, EffectiveFieldState>(
+    allFields.map((f) => [f.fieldId, computeFieldState(f, rules, currentValues())]),
+  );
+
+  // VALUE 规则边沿触发：条件由不满足→满足时赋一次。ref 记上次结果。
+  const valueRulePrev = useRef<Map<string, boolean>>(new Map());
+  useEffect(() => {
+    const vals = currentValues();
+    for (const rule of rules) {
+      if (!findValueRule(rule)) continue;
+      const key = rule.id ?? `${rule.targetFieldId}:${rule.name}`;
+      const hit = evalRule(rule, vals);
+      const prev = valueRulePrev.current.get(key) ?? false;
+      if (hit && !prev) setValue(rule.targetFieldId, rule.actionValue);
+      valueRulePrev.current.set(key, hit);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values]);
+
   function submit() {
     const nextErrors: Record<string, string> = {};
     for (const f of allFields) {
-      const msg = validateField(f, valueOf(f));
+      const st = effState.get(f.fieldId);
+      if (!st || !st.visible || st.disabled) continue; // 隐藏/禁用不校验
+      const msg = validateFieldState(f, st, valueOf(f));
       if (msg) nextErrors[f.fieldId] = msg;
     }
     setErrors(nextErrors);
@@ -75,9 +106,12 @@ export function FormPreviewDialog({
   }
 
   // 收集当前表单数据：fieldId -> 当前值（用户改过的用 values，否则用 defaultValue）。
+  // 隐藏/禁用字段不进数据。
   function collectData() {
     const data: Record<string, unknown> = {};
     for (const f of allFields) {
+      const st = effState.get(f.fieldId);
+      if (!st || !st.visible || st.disabled) continue; // 隐藏/禁用不进数据
       const v = valueOf(f);
       // 跳过完全空的字段（undefined/null/空串），避免噪音；false/0/空数组保留。
       if (v === undefined || v === null || v === "") continue;
@@ -103,6 +137,7 @@ export function FormPreviewDialog({
               valueOf={valueOf}
               errors={errors}
               onChange={setValue}
+              effState={effState}
             />
           )}
           {state.groups.map((g) => (
@@ -114,6 +149,7 @@ export function FormPreviewDialog({
               valueOf={valueOf}
               errors={errors}
               onChange={setValue}
+              effState={effState}
             />
           ))}
           {allFields.length === 0 && (
@@ -171,6 +207,7 @@ function PreviewGroup({
   valueOf,
   errors,
   onChange,
+  effState,
 }: {
   title?: string;
   collapsed?: boolean;
@@ -178,6 +215,7 @@ function PreviewGroup({
   valueOf: (f: DynamicFormField) => unknown;
   errors: Record<string, string>;
   onChange: (fieldId: string, v: unknown) => void;
+  effState: Map<string, EffectiveFieldState>;
 }) {
   const [collapsed, setCollapsed] = useState(!!initCollapsed);
   // 组内有校验错误时强制展开（否则用户看不到折叠组里的报错）。
@@ -198,15 +236,20 @@ function PreviewGroup({
       )}
       {isOpen && (
         <div className={cn("grid grid-cols-[repeat(24,minmax(0,1fr))] gap-x-3 gap-y-4", title && "p-3")}>
-          {fields.map((f) => (
-            <PreviewField
-              key={f.fieldId}
-              field={f}
-              value={valueOf(f)}
-              error={errors[f.fieldId]}
-              onChange={(v) => onChange(f.fieldId, v)}
-            />
-          ))}
+          {fields.map((f) => {
+            const st = effState.get(f.fieldId);
+            if (!st || !st.visible) return null; // 联动隐藏：不渲染（值保留、不校验、不进数据）
+            return (
+              <PreviewField
+                key={f.fieldId}
+                field={{ ...f, options: st.options, pattern: st.pattern, span: st.span, required: st.required }}
+                value={valueOf(f)}
+                error={errors[f.fieldId]}
+                onChange={(v) => onChange(f.fieldId, v)}
+                disabled={st.disabled}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -218,11 +261,13 @@ function PreviewField({
   value,
   error,
   onChange,
+  disabled,
 }: {
   field: DynamicFormField;
   value: unknown;
   error?: string;
   onChange: (v: unknown) => void;
+  disabled?: boolean;
 }) {
   const meta = FIELD_REGISTRY[field.type];
   const span = field.span ?? 24;
@@ -234,7 +279,7 @@ function PreviewField({
         {field.required === "1" && <span className="ml-0.5 text-destructive">*</span>}
       </Label>
       <div className={cn(error && "[&_input]:border-destructive [&_button]:border-destructive")}>
-        <Control field={field} value={value} onChange={onChange} />
+        <Control field={field} value={value} onChange={onChange} disabled={disabled} />
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

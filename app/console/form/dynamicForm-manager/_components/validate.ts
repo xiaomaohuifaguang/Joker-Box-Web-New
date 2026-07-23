@@ -1,4 +1,5 @@
 import type { DynamicFormField } from "@/types";
+import type { EffectiveFieldState } from "./linkage";
 import { FIELD_REGISTRY } from "./fields/registry";
 
 // 预览用前端校验：必填 / 长度 / 数值范围 / 正则。返回错误信息（null=通过）。
@@ -46,4 +47,13 @@ export function validateField(field: DynamicFormField, value: unknown): string |
   }
 
   return null;
+}
+
+// 按联动后的有效状态校验：required/pattern 取有效状态（覆盖字段原配置）。
+export function validateFieldState(
+  field: DynamicFormField,
+  state: EffectiveFieldState,
+  value: unknown,
+): string | null {
+  return validateField({ ...field, required: state.required, pattern: state.pattern }, value);
 }
