@@ -140,7 +140,7 @@ export interface DynamicFormLinkageRule {
   name: string;
   targetFieldId: string;
   actionType: DynamicFormLinkageActionType;
-  actionValue?: unknown; // OPTION=DynamicFormOption[] / VALUE=值 / SET_PATTERN=正则串 / SET_SPAN=1-24
+  actionValue?: unknown; // OPTION=可见选项 value 的 string[] / VALUE=值 / SET_PATTERN=正则串 / SET_SPAN=1-24
   enable: boolean; // true=启用 / false=禁用
   sortOrder?: number;
   conditionTree: DynamicFormLinkageNode[]; // 扁平：[AND/OR根]
