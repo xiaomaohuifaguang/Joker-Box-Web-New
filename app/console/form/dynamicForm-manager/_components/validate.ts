@@ -46,10 +46,15 @@ export function validateField(field: DynamicFormField, value: unknown): string |
     }
   }
 
-  // 日期范围：结束不能早于开始（格式固定 yyyy-MM-dd / yyyy-MM-dd HH:mm，字符串比较即可）。
+  // 日期范围：必填时两端都要填（控件允许只选一端）；结束不能早于开始（格式固定，字符串比较即可）。
   if (field.type === "DATERANGE" && Array.isArray(value)) {
     const [start, end] = value as [unknown, unknown];
-    if (typeof start === "string" && typeof end === "string" && start !== "" && end !== "" && end < start) {
+    const s = typeof start === "string" ? start : "";
+    const e = typeof end === "string" ? end : "";
+    if (field.required === "1" && (s === "" || e === "")) {
+      return `请完整填写${field.title}（起止日期）`;
+    }
+    if (s !== "" && e !== "" && e < s) {
       return `${field.title}结束日期不能早于开始日期`;
     }
   }
