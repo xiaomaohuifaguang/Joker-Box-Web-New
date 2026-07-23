@@ -43,6 +43,7 @@ export interface DynamicFormField {
   title: string;
   type: DynamicFormFieldType;
   required?: string; // "1" / "0"
+  visible?: boolean; // 字段默认可见（默认 true）。false=默认隐藏，配合联动 SHOW 满足时才显示
   defaultValue?: unknown;
   placeholder?: string;
   options?: DynamicFormOption[]; // 单选/多选用

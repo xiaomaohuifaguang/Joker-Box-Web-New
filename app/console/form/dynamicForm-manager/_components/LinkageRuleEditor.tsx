@@ -66,43 +66,83 @@ function collectConds(node: DynamicFormLinkageNode): DynamicFormLinkageNode[] {
   return (node.children ?? []).flatMap(collectConds);
 }
 
+// 建 value->label 映射（字段 options 含级联子级），规则摘要尽量显 label 而非 value。
+function buildLabelMap(fields: DynamicFormField[]): Map<string, string> {
+  const map = new Map<string, string>();
+  const walk = (opts?: DynamicFormOption[]) => {
+    for (const o of opts ?? []) {
+      if (!map.has(o.value)) map.set(o.value, o.label);
+      if (o.children) walk(o.children);
+    }
+  };
+  for (const f of fields) walk(f.options);
+  return map;
+}
+
+// 值转可读文本：能映射到选项 label 用 label，否则原样。
+function valLabel(v: unknown, labels: Map<string, string>): string {
+  if (typeof v === "string") return labels.get(v) ?? v;
+  if (Array.isArray(v)) return `[${v.map((x) => valLabel(x, labels)).join(",")}]`;
+  if (typeof v === "object" && v) return JSON.stringify(v);
+  return String(v ?? "");
+}
+
 // 单条件摘要文本。
-function condText(c: DynamicFormLinkageNode, fieldTitle: (id: string) => string): string {
-  return `${fieldTitle(c.triggerFieldId ?? "")} ${COND_LABEL[c.triggerCondition ?? "EQ"]}${
-    NO_VALUE_CONDS.includes(c.triggerCondition ?? "EQ") ? "" : ` ${formatVal(c.triggerValue)}`
+function condText(c: DynamicFormLinkageNode, fields: DynamicFormField[], labels: Map<string, string>): string {
+  const title = fieldTitleOf(fields, c.triggerFieldId);
+  return `${title} ${COND_LABEL[c.triggerCondition ?? "EQ"]}${
+    NO_VALUE_CONDS.includes(c.triggerCondition ?? "EQ") ? "" : ` ${valLabel(c.triggerValue, labels)}`
   }`;
 }
 
 // 递归求条件树摘要：AND/OR 组用各自连接符 join，子组加括号（与 evalNode 求值结构一致）。
-function groupSummary(node: DynamicFormLinkageNode, fieldTitle: (id: string) => string): string {
-  if (node.nodeType === "CONDITION") return condText(node, fieldTitle);
+function groupSummary(node: DynamicFormLinkageNode, fields: DynamicFormField[], labels: Map<string, string>): string {
+  if (node.nodeType === "CONDITION") return condText(node, fields, labels);
   const children = node.children ?? [];
   if (children.length === 0) return "总是";
   const sep = node.nodeType === "OR" ? " 或 " : " 且 ";
-  const inner = children.map((c) => groupSummary(c, fieldTitle)).join(sep);
+  const inner = children.map((c) => groupSummary(c, fields, labels)).join(sep);
   // 根组不加括号；嵌套子组加括号以区分优先级。
   return `(${inner})`;
 }
 
-// 人类可读规则摘要（规则卡片用）。
-export function ruleSummary(
-  rule: DynamicFormLinkageRule,
-  fieldTitle: (fieldId: string) => string,
-): string {
-  const root = rule.conditionTree?.[0];
-  if (!root) return `若 总是 → ${ACTION_LABEL[rule.actionType]} ${fieldTitle(rule.targetFieldId)}`;
-  const raw = groupSummary(root, fieldTitle);
-  // 剥掉根组最外层括号（嵌套子组的括号保留）。
-  const text = raw.startsWith("(") && raw.endsWith(")") ? raw.slice(1, -1) : raw;
-  const val = actionNeedsValue(rule.actionType) ? ` ${formatVal(rule.actionValue)}` : "";
-  return `若 ${text} → ${ACTION_LABEL[rule.actionType]} ${fieldTitle(rule.targetFieldId)}${val}`;
+function fieldTitleOf(fields: DynamicFormField[], fieldId?: string): string {
+  return fields.find((f) => f.fieldId === fieldId)?.title ?? fieldId ?? "";
 }
 
-function formatVal(v: unknown): string {
-  // OPTION 的 actionValue 是纯 string[]（value 列表），直接拼；旧对象数组兜底取 label。
-  if (Array.isArray(v)) return `[${v.map((x) => (typeof x === "object" && x && "label" in x ? (x as DynamicFormOption).label : String(x))).join(",")}]`;
-  if (typeof v === "object" && v) return JSON.stringify(v);
-  return String(v ?? "");
+// OPTION 摘要：列出 actionValue 树里 visible!==false 的选项 label（命中后要显示的项）。
+function optionSummary(actionValue: unknown): string {
+  if (!Array.isArray(actionValue)) return "";
+  const shown: string[] = [];
+  const walk = (opts: DynamicFormOption[]) => {
+    for (const o of opts) {
+      if (o.visible !== false) shown.push(o.label);
+      if (o.children) walk(o.children);
+    }
+  };
+  walk(actionValue as DynamicFormOption[]);
+  return shown.length ? ` [${shown.join(",")}]` : "（全部隐藏）";
+}
+
+// 人类可读规则摘要（规则卡片用）。值尽量显 label。
+export function ruleSummary(
+  rule: DynamicFormLinkageRule,
+  fields: DynamicFormField[],
+): string {
+  const labels = buildLabelMap(fields);
+  const target = fieldTitleOf(fields, rule.targetFieldId);
+  const root = rule.conditionTree?.[0];
+  const text = !root
+    ? "总是"
+    : (() => {
+        const raw = groupSummary(root, fields, labels);
+        return raw.startsWith("(") && raw.endsWith(")") ? raw.slice(1, -1) : raw;
+      })();
+  // 动作值：OPTION 显可见项 label；其他需要值的显 label 化值。
+  let val = "";
+  if (rule.actionType === "OPTION") val = optionSummary(rule.actionValue);
+  else if (actionNeedsValue(rule.actionType)) val = ` ${valLabel(rule.actionValue, labels)}`;
+  return `若 ${text} → ${ACTION_LABEL[rule.actionType]} ${target}${val}`;
 }
 
 function newCondition(fields: DynamicFormField[]): DynamicFormLinkageNode {
@@ -151,7 +191,6 @@ export function LinkageRuleEditor({
   const targetField = fieldOf(rule.targetFieldId);
 
   function save() {
-    if (!rule.name.trim()) return;
     if (!rule.targetFieldId) return;
     // 自引用校验：目标字段不能同时是任一条件的触发字段（含嵌套子组）。
     const triggerIds = new Set(
@@ -176,7 +215,7 @@ export function LinkageRuleEditor({
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">规则名称</Label>
+            <Label className="text-xs text-muted-foreground">规则名称（可空）</Label>
             <Input
               value={rule.name}
               onChange={(e) => setRule((r) => ({ ...r, name: e.target.value }))}
@@ -275,7 +314,7 @@ export function LinkageRuleEditor({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button onClick={save} disabled={!rule.name.trim() || !rule.targetFieldId}>保存规则</Button>
+          <Button onClick={save} disabled={!rule.targetFieldId}>保存规则</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

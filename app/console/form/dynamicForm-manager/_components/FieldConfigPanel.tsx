@@ -69,6 +69,17 @@ export function FieldConfigPanel({
         </div>
       </Field>
 
+      {/* 默认显隐：false=默认隐藏，配合联动 SHOW 满足条件时才显示（SHOW/HIDE 不满足回此配置）。 */}
+      <Field label="默认显示">
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={field.visible !== false}
+            onCheckedChange={(c) => onChange({ visible: c })}
+          />
+          <span className="text-xs text-muted-foreground">{field.visible !== false ? "显示" : "隐藏（可被联动显示）"}</span>
+        </div>
+      </Field>
+
       {meta.hasPlaceholder && (
         <Field label="占位提示">
           <Input

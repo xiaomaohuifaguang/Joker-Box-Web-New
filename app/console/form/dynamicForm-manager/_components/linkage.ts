@@ -7,7 +7,7 @@ import type {
 
 // 联动规则求值引擎（纯函数，无 React 依赖，可独立校验）。
 // 条件树任意嵌套：AND/OR 节点的 children 可含 CONDITION 或子 AND/OR（evalNode 递归）。
-// 语义：条件满足才执行动作，不满足按字段原配置（SHOW/HIDE 反义例外）。
+// 语义：条件满足才执行动作；不满足一律回字段原配置（含字段默认 visible）。SHOW/HIDE 不再反义。
 
 // 字段当前值（外部已做 defaultValue 回退）。
 type Values = Record<string, unknown>;
@@ -101,7 +101,7 @@ export function computeFieldState(
   values: Values,
 ): EffectiveFieldState {
   const state: EffectiveFieldState = {
-    visible: true,
+    visible: field.visible !== false, // 字段配置的默认显隐（默认 true）
     required: field.required === "1" ? "1" : "0",
     disabled: false,
     options: field.options,
@@ -115,10 +115,10 @@ export function computeFieldState(
     const hit = evalRule(rule, values);
     switch (rule.actionType) {
       case "SHOW":
-        state.visible = hit;
+        if (hit) state.visible = true; // 仅命中时显示；不满足回字段原配置 visible
         break;
       case "HIDE":
-        state.visible = !hit;
+        if (hit) state.visible = false; // 仅命中时隐藏；不满足回字段原配置 visible
         break;
       case "REQUIRED":
         if (hit) state.required = "1";

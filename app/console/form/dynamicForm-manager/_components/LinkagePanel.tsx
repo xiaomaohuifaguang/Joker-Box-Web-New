@@ -20,7 +20,6 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
   const { state, addRule, updateRule, removeRule, moveRule } = designer;
   const rules = state.linkageRules;
   const allFields = [...state.fields, ...state.groups.flatMap((g) => g.fields)];
-  const fieldTitle = (id: string) => allFields.find((f) => f.fieldId === id)?.title ?? id;
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<{ index: number; rule: DynamicFormLinkageRule } | null>(null);
@@ -69,7 +68,7 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
               />
             </div>
             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-              {ruleSummary(r, fieldTitle)}
+              {ruleSummary(r, allFields)}
             </p>
             <div className="mt-2 flex items-center gap-1">
               <Button
@@ -116,7 +115,7 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
           <AlertDialogHeader>
             <AlertDialogTitle>删除规则</AlertDialogTitle>
             <AlertDialogDescription>
-              确定删除规则「{deleting != null ? rules[deleting]?.name : ""}」吗？
+              确定删除规则「{deleting != null ? rules[deleting]?.name || "未命名规则" : ""}」吗？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
