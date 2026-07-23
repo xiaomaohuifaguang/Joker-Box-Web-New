@@ -6,7 +6,7 @@ import type {
 } from "@/types";
 
 // 联动规则求值引擎（纯函数，无 React 依赖，可独立校验）。
-// 扁平条件组：conditionTree = [AND/OR 根]，根.children = CONDITION 子节点。
+// 条件树任意嵌套：AND/OR 节点的 children 可含 CONDITION 或子 AND/OR（evalNode 递归）。
 // 语义：条件满足才执行动作，不满足按字段原配置（SHOW/HIDE 反义例外）。
 
 // 字段当前值（外部已做 defaultValue 回退）。
@@ -69,13 +69,20 @@ function num(v: unknown): number | null {
   return v == null || v === "" || Number.isNaN(n) ? null : n;
 }
 
-// 规则求值：根 AND（全真）/OR（任一真）聚合 children；空 children=恒真。
+// 节点求值（递归）：CONDITION→evalCondition；AND→children 全真；OR→children 任一真。空 children=恒真。
+export function evalNode(node: DynamicFormLinkageNode, values: Values): boolean {
+  if (node.nodeType === "CONDITION") return evalCondition(node, values);
+  const children = node.children ?? [];
+  if (children.length === 0) return true;
+  const results = children.map((c) => evalNode(c, values));
+  return node.nodeType === "OR" ? results.some(Boolean) : results.every(Boolean);
+}
+
+// 规则求值：对 conditionTree 根节点递归求值。无根=恒真。
 export function evalRule(rule: DynamicFormLinkageRule, values: Values): boolean {
   const root = rule.conditionTree?.[0];
-  const conds = (root?.children ?? []).filter((n) => n.nodeType === "CONDITION");
-  if (!root || conds.length === 0) return true; // 无条件=恒真
-  const results = conds.map((n) => evalCondition(n, values));
-  return root.nodeType === "OR" ? results.some(Boolean) : results.every(Boolean);
+  if (!root) return true;
+  return evalNode(root, values);
 }
 
 // 字段有效状态：汇总所有作用于该字段的启用规则叠加（sortOrder 升序，后命中覆盖先命中）。
@@ -123,8 +130,11 @@ export function computeFieldState(
         if (hit) state.disabled = false;
         break;
       case "OPTION":
+        // actionValue = 可见选项的 value 列表（string[]）。命中时取字段原 options 的子集
+        //（按 value 过滤，保留原选项对象含 children/visible），渲染仍走 visibleOptions 过滤显隐。
         if (hit && Array.isArray(rule.actionValue)) {
-          state.options = rule.actionValue as DynamicFormOption[];
+          const allow = rule.actionValue as unknown[];
+          state.options = (field.options ?? []).filter((o) => allow.includes(o.value));
         }
         break;
       case "SET_PATTERN":
