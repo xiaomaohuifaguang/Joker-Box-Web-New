@@ -17,6 +17,7 @@ import { UploadControl } from "./UploadControl";
 import { CascaderControl, MultiCascaderControl, visibleOptions } from "./CascaderControl";
 import { MultiSelectControl } from "./MultiSelectControl";
 import DateRangeControl from "./DateRangeControl";
+import TableControl from "./TableControl";
 import {
   Select,
   SelectContent,
@@ -468,6 +469,13 @@ export const FIELD_REGISTRY: Record<DynamicFormFieldType, FieldMeta> = {
     group: "日期时间",
     defaults: () => ({ props: { withTime: false } }),
     Control: DateRangeControl,
+  },
+  TABLE: {
+    type: "TABLE",
+    label: "动态表格",
+    group: "高级",
+    defaults: () => ({ tableColumns: [] }),
+    Control: TableControl,
   },
   UPLOAD: {
     type: "UPLOAD",
