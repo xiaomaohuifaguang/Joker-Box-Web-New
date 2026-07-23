@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -21,11 +23,11 @@ import type {
   DynamicFormOption,
 } from "@/types";
 import { FIELD_REGISTRY, createField } from "./fields/registry";
-import { OptionsEditor } from "./OptionsEditor";
 import { visibleOptions } from "./fields/CascaderControl";
 
-// 规则编辑器（宽弹窗）：条件区（AND/OR + 条件行）+ 动作区（目标 + 动作 + 参数）。
+// 规则编辑器（宽弹窗）：条件区（递归条件树 AND/OR 可嵌套子组）+ 动作区（目标 + 动作 + 参数）。
 // 条件值输入按触发字段类型渲染对应控件；操作符按类型过滤。
+// OPTION 动作 = 勾选目标字段已配选项中命中时可见的子集（actionValue = string[]，不可增删改选项）。
 
 export const ACTION_LABEL: Record<DynamicFormLinkageActionType, string> = {
   SHOW: "显示", HIDE: "隐藏", REQUIRED: "设为必填", OPTION: "设置选项",
@@ -58,13 +60,19 @@ function conditionsOf(field?: DynamicFormField): DynamicFormLinkageCondition[] {
   return ["EQ", "NE", "REGEX", "EMPTY", "NOT_EMPTY"]; // 文本/日期/时间等
 }
 
+// 递归收集条件树里的全部 CONDITION 节点（摘要用）。
+function collectConds(node: DynamicFormLinkageNode): DynamicFormLinkageNode[] {
+  if (node.nodeType === "CONDITION") return [node];
+  return (node.children ?? []).flatMap(collectConds);
+}
+
 // 人类可读规则摘要（规则卡片用）。
 export function ruleSummary(
   rule: DynamicFormLinkageRule,
   fieldTitle: (fieldId: string) => string,
 ): string {
   const root = rule.conditionTree?.[0];
-  const conds = (root?.children ?? []).filter((n) => n.nodeType === "CONDITION");
+  const conds = root ? collectConds(root) : [];
   const condText = conds.length === 0
     ? "总是"
     : conds
@@ -81,6 +89,7 @@ export function ruleSummary(
 }
 
 function formatVal(v: unknown): string {
+  // OPTION 的 actionValue 是纯 string[]（value 列表），直接拼；旧对象数组兜底取 label。
   if (Array.isArray(v)) return `[${v.map((x) => (typeof x === "object" && x && "label" in x ? (x as DynamicFormOption).label : String(x))).join(",")}]`;
   if (typeof v === "object" && v) return JSON.stringify(v);
   return String(v ?? "");
@@ -88,6 +97,10 @@ function formatVal(v: unknown): string {
 
 function newCondition(fields: DynamicFormField[]): DynamicFormLinkageNode {
   return { nodeType: "CONDITION", triggerFieldId: fields[0]?.fieldId, triggerCondition: "EQ", triggerValue: "" };
+}
+
+function newGroup(): DynamicFormLinkageNode {
+  return { nodeType: "AND", children: [] };
 }
 
 export function emptyRule(targetFieldId = ""): DynamicFormLinkageRule {
@@ -125,22 +138,21 @@ export function LinkageRuleEditor({
   const fieldOf = (id?: string) => fields.find((f) => f.fieldId === id);
 
   const root = rule.conditionTree?.[0] ?? { nodeType: "AND" as const, children: [] };
-  const conds = (root.children ?? []).filter((n) => n.nodeType === "CONDITION");
-
-  function patchRoot(children: DynamicFormLinkageNode[], nodeType?: "AND" | "OR") {
-    setRule((r) => ({
-      ...r,
-      conditionTree: [{ nodeType: nodeType ?? root.nodeType as "AND" | "OR", children }],
-    }));
-  }
-  function patchCondition(i: number, patch: Partial<DynamicFormLinkageNode>) {
-    patchRoot(conds.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
-  }
   const targetField = fieldOf(rule.targetFieldId);
 
   function save() {
     if (!rule.name.trim()) return;
     if (!rule.targetFieldId) return;
+    // 自引用校验：目标字段不能同时是任一条件的触发字段（含嵌套子组）。
+    const triggerIds = new Set(
+      (rule.conditionTree ?? []).flatMap((n) =>
+        collectConds(n).map((c) => c.triggerFieldId).filter((x): x is string => Boolean(x)),
+      ),
+    );
+    if (triggerIds.has(rule.targetFieldId)) {
+      toast.error("目标字段不能同时是触发字段（自引用）");
+      return;
+    }
     onSave(initial?.index ?? null, { ...rule, name: rule.name.trim() });
     onClose();
   }
@@ -162,98 +174,14 @@ export function LinkageRuleEditor({
             />
           </div>
 
-          {/* 条件区 */}
+          {/* 条件区（递归条件树，不可变更新向上冒泡） */}
           <div className="rounded-md border p-3">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-sm font-medium">当满足</span>
-              <Select
-                value={root.nodeType}
-                onValueChange={(v) => patchRoot(conds, v as "AND" | "OR")}
-              >
-                <SelectTrigger className="h-8 w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="AND">全部满足（AND）</SelectItem>
-                  <SelectItem value="OR">任一满足（OR）</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              {conds.map((c, i) => {
-                const tf = fieldOf(c.triggerFieldId);
-                const avail = conditionsOf(tf);
-                const noVal = NO_VALUE_CONDS.includes(c.triggerCondition ?? "EQ");
-                return (
-                  <div key={`${c.triggerFieldId}-${i}`} className="flex flex-wrap items-center gap-1.5">
-                    <Select
-                      value={c.triggerFieldId}
-                      onValueChange={(v) => {
-                        // 切触发字段：操作符若不在新字段可用列表内则重置为首项，并清空值
-                        const nextAvail = conditionsOf(fieldOf(v));
-                        const cur = c.triggerCondition ?? "EQ";
-                        patchCondition(i, {
-                          triggerFieldId: v,
-                          triggerCondition: nextAvail.includes(cur) ? cur : nextAvail[0],
-                          triggerValue: "",
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-40">
-                        <SelectValue placeholder="触发字段" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fields.map((f) => (
-                          <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={c.triggerCondition}
-                      onValueChange={(v) => {
-                        const cd = v as DynamicFormLinkageCondition;
-                        // 无值操作符（EMPTY/NOT_EMPTY）清掉残留 triggerValue
-                        patchCondition(i, NO_VALUE_CONDS.includes(cd)
-                          ? { triggerCondition: cd, triggerValue: undefined }
-                          : { triggerCondition: cd });
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {avail.map((cd) => (
-                          <SelectItem key={cd} value={cd}>{COND_LABEL[cd]}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {!noVal && (
-                      <ConditionValueInput
-                        field={tf}
-                        condition={c.triggerCondition ?? "EQ"}
-                        value={c.triggerValue}
-                        onChange={(v) => patchCondition(i, { triggerValue: v })}
-                      />
-                    )}
-                    <Button
-                      type="button" variant="ghost" size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => patchRoot(conds.filter((_, idx) => idx !== i))}
-                      aria-label="删除条件"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                );
-              })}
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => patchRoot([...conds, newCondition(fields)])}
-                className="self-start"
-              >
-                <Plus className="h-3.5 w-3.5" /> 添加条件
-              </Button>
-            </div>
+            <ConditionGroupNode
+              node={root}
+              fields={fields}
+              depth={0}
+              onChange={(newRoot) => setRule((r) => ({ ...r, conditionTree: [newRoot] }))}
+            />
           </div>
 
           {/* 动作区 */}
@@ -322,12 +250,14 @@ export function LinkageRuleEditor({
             )}
             {rule.actionType === "OPTION" && (
               <div className="mt-3 flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">选项（替换目标字段选项）</Label>
+                <Label className="text-xs text-muted-foreground">
+                  命中时可见的选项（勾选目标字段已配选项的子集）
+                </Label>
                 <div className="rounded-md border p-2">
-                  <OptionsEditor
-                    options={Array.isArray(rule.actionValue) ? (rule.actionValue as DynamicFormOption[]) : []}
-                    onChange={(opts) => setRule((r) => ({ ...r, actionValue: opts }))}
-                    cascade={targetField?.type === "CASCADER" || targetField?.type === "MULTICASCADER"}
+                  <OptionSubsetPicker
+                    field={targetField}
+                    value={rule.actionValue}
+                    onChange={(vals) => setRule((r) => ({ ...r, actionValue: vals }))}
                   />
                 </div>
               </div>
@@ -341,6 +271,228 @@ export function LinkageRuleEditor({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// 递归条件组（AND/OR 节点）：头部 = 文案 + AND/OR 切换 + （非根）删除本组；
+// 主体 = children（CONDITION 条件行 / AND/OR 递归子组，缩进）；底部 = 添加条件 / 添加子组。
+// 不可变更新：每层 onChange(newNode) 向上冒泡，由根统一 setRule。
+function ConditionGroupNode({
+  node, fields, depth, onChange, onRemove,
+}: {
+  node: DynamicFormLinkageNode; // nodeType 为 AND / OR
+  fields: DynamicFormField[];
+  depth: number;
+  onChange: (n: DynamicFormLinkageNode) => void;
+  onRemove?: () => void;
+}) {
+  const children = node.children ?? [];
+  const groupType = (node.nodeType === "OR" ? "OR" : "AND") as "AND" | "OR";
+
+  const patchChild = (i: number, child: DynamicFormLinkageNode) =>
+    onChange({ ...node, children: children.map((c, idx) => (idx === i ? child : c)) });
+  const removeChild = (i: number) =>
+    onChange({ ...node, children: children.filter((_, idx) => idx !== i) });
+
+  return (
+    <div className={depth > 0 ? "ml-1 border-l-2 border-border pl-3" : undefined}>
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-sm font-medium">{depth === 0 ? "当满足" : "满足以下"}</span>
+        <Select
+          value={groupType}
+          onValueChange={(v) => onChange({ ...node, nodeType: v as "AND" | "OR" })}
+        >
+          <SelectTrigger className="h-8 w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="AND">全部满足（AND）</SelectItem>
+            <SelectItem value="OR">任一满足（OR）</SelectItem>
+          </SelectContent>
+        </Select>
+        {onRemove && (
+          <Button
+            type="button" variant="ghost" size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+            aria-label="删除本组"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+      <div className="flex flex-col gap-2">
+        {children.length === 0 && (
+          <p className="text-xs text-muted-foreground">暂无条件（视为恒真）</p>
+        )}
+        {children.map((child, i) =>
+          child.nodeType === "CONDITION" ? (
+            <ConditionRow
+              key={`${child.triggerFieldId ?? "cond"}-${i}`}
+              node={child}
+              fields={fields}
+              onChange={(n) => patchChild(i, n)}
+              onRemove={() => removeChild(i)}
+            />
+          ) : (
+            <ConditionGroupNode
+              key={`group-${i}`}
+              node={child}
+              fields={fields}
+              depth={depth + 1}
+              onChange={(n) => patchChild(i, n)}
+              onRemove={() => removeChild(i)}
+            />
+          ),
+        )}
+        <div className="flex gap-2 self-start">
+          <Button
+            type="button" variant="outline" size="sm"
+            onClick={() => onChange({ ...node, children: [...children, newCondition(fields)] })}
+          >
+            <Plus className="h-3.5 w-3.5" /> 添加条件
+          </Button>
+          <Button
+            type="button" variant="outline" size="sm"
+            onClick={() => onChange({ ...node, children: [...children, newGroup()] })}
+          >
+            <Plus className="h-3.5 w-3.5" /> 添加子组
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 单个条件行：触发字段 + 操作符 + 条件值输入 + 删除。
+function ConditionRow({
+  node, fields, onChange, onRemove,
+}: {
+  node: DynamicFormLinkageNode; // nodeType 为 CONDITION
+  fields: DynamicFormField[];
+  onChange: (n: DynamicFormLinkageNode) => void;
+  onRemove: () => void;
+}) {
+  const tf = fields.find((f) => f.fieldId === node.triggerFieldId);
+  const avail = conditionsOf(tf);
+  const noVal = NO_VALUE_CONDS.includes(node.triggerCondition ?? "EQ");
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select
+        value={node.triggerFieldId}
+        onValueChange={(v) => {
+          // 切触发字段：操作符若不在新字段可用列表内则重置为首项，并清空值
+          const nextAvail = conditionsOf(fields.find((f) => f.fieldId === v));
+          const cur = node.triggerCondition ?? "EQ";
+          onChange({
+            ...node,
+            triggerFieldId: v,
+            triggerCondition: nextAvail.includes(cur) ? cur : nextAvail[0],
+            triggerValue: "",
+          });
+        }}
+      >
+        <SelectTrigger className="h-8 w-40">
+          <SelectValue placeholder="触发字段" />
+        </SelectTrigger>
+        <SelectContent>
+          {fields.map((f) => (
+            <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={node.triggerCondition}
+        onValueChange={(v) => {
+          const cd = v as DynamicFormLinkageCondition;
+          // 无值操作符（EMPTY/NOT_EMPTY）清掉残留 triggerValue
+          onChange(NO_VALUE_CONDS.includes(cd)
+            ? { ...node, triggerCondition: cd, triggerValue: undefined }
+            : { ...node, triggerCondition: cd });
+        }}
+      >
+        <SelectTrigger className="h-8 w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {avail.map((cd) => (
+            <SelectItem key={cd} value={cd}>{COND_LABEL[cd]}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {!noVal && (
+        <ConditionValueInput
+          field={tf}
+          condition={node.triggerCondition ?? "EQ"}
+          value={node.triggerValue}
+          onChange={(v) => onChange({ ...node, triggerValue: v })}
+        />
+      )}
+      <Button
+        type="button" variant="ghost" size="icon"
+        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        onClick={onRemove}
+        aria-label="删除条件"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+// OPTION 动作参数：勾选目标字段已配选项中「命中时可见」的子集（actionValue = string[]）。
+// 只勾选、不可增删改选项（选项维护在字段配置里）；级联字段只列根级选项，勾中整枝可见。
+function OptionSubsetPicker({
+  field, value, onChange,
+}: {
+  field?: DynamicFormField;
+  value: unknown;
+  onChange: (vals: string[]) => void;
+}) {
+  if (!field) {
+    return <p className="text-xs text-muted-foreground">先选目标字段</p>;
+  }
+  const isCascade = field.type === "CASCADER" || field.type === "MULTICASCADER";
+  // 可见子集（过滤 visible===false）；级联只取根级，不递归渲染 children。
+  const opts = visibleOptions(field.options ?? []);
+  if (opts.length === 0) {
+    return <p className="text-xs text-muted-foreground">目标字段无选项</p>;
+  }
+  const selected = Array.isArray(value)
+    ? value.filter((x): x is string => typeof x === "string")
+    : [];
+  const selectedSet = new Set(selected);
+
+  const toggle = (v: string, checked: boolean) => {
+    const next = new Set(selectedSet);
+    if (checked) next.add(v);
+    else next.delete(v);
+    // 保持 options 出现顺序回写勾中的 value 数组
+    onChange(opts.map((o) => o.value).filter((x) => next.has(x)));
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        {opts.map((o) => (
+          <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/50">
+            <Checkbox
+              checked={selectedSet.has(o.value)}
+              onCheckedChange={(c) => toggle(o.value, c === true)}
+            />
+            <span className="text-sm">{o.label}</span>
+            {isCascade && o.children && o.children.length > 0 && (
+              <span className="text-xs text-muted-foreground">（{o.children.length} 子项）</span>
+            )}
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        已选 {selected.filter((v) => opts.some((o) => o.value === v)).length} / {opts.length}
+        {isCascade ? "（仅根级，勾中整枝可见）" : ""}
+      </p>
+    </div>
   );
 }
 
