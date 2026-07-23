@@ -58,7 +58,7 @@ function RangeEndpointPicker({
             const base = format(d, "yyyy-MM-dd");
             // 保留已输入的时间：Calendar onSelect 给的是当日 0 点 Date，
             // 直接 format(d,"HH:mm") 会把已选时间冲成 00:00。
-            const keep = withTime && value.includes(" ") ? value.split(" ")[1] : "00:00";
+            const keep = (withTime && value.includes(" ") ? value.split(" ")[1] : "") || "00:00";
             onChange(withTime ? `${base} ${keep}` : base);
             if (!withTime) setOpen(false);
           }}
