@@ -1,6 +1,6 @@
 // 动态表单（/dynamicForm/*）类型定义。第一版：基础字段 + 未分组/分组，不含发布/版本/联动/远程数据源。
 
-// 字段类型（第一版 15 种；UPLOAD/CASCADER/MULTICASCADER/TABLE/DATERANGE 后续）。
+// 字段类型（19 种）。
 export type DynamicFormFieldType =
   | "INPUT"
   | "TEXTAREA"
@@ -18,7 +18,9 @@ export type DynamicFormFieldType =
   | "COLOR"
   | "UPLOAD"
   | "CASCADER"
-  | "MULTICASCADER";
+  | "MULTICASCADER"
+  | "TABLE"
+  | "DATERANGE";
 
 // 选项（label/value，children 预留给级联，第一版平铺不用）。visible=false 时该选项在预览/填表时隐藏（默认 true）。
 export interface DynamicFormOption {
@@ -26,6 +28,12 @@ export interface DynamicFormOption {
   value: string;
   visible?: boolean;
   children?: DynamicFormOption[];
+}
+
+// 动态表格列定义（仅 TABLE 类型字段使用）。
+export interface DynamicFormTableColumn {
+  key: string; // 列标识（存值用的键）
+  title: string; // 列名（显示）
 }
 
 // 上传文件信息（/file/uploadDynamicForm 响应 data）。UPLOAD 字段值存整个 FileInfo 对象（单文件）
@@ -47,6 +55,7 @@ export interface DynamicFormField {
   defaultValue?: unknown;
   placeholder?: string;
   options?: DynamicFormOption[]; // 单选/多选用
+  tableColumns?: DynamicFormTableColumn[]; // 动态表格列定义（仅 TABLE）
   minLength?: number;
   maxLength?: number;
   min?: number;
