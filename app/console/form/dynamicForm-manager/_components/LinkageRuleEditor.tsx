@@ -69,8 +69,7 @@ function collectConds(node: DynamicFormLinkageNode): DynamicFormLinkageNode[] {
 }
 
 // 建 value->label 映射（字段 options 含级联子级），规则摘要尽量显 label 而非 value。
-// fields 可传「生效选项」版（API 字段 options 已换成远程），让摘要 label 映射吃远程。
-export function buildLabelMap(fields: DynamicFormField[]): Map<string, string> {
+function buildLabelMap(fields: DynamicFormField[]): Map<string, string> {
   const map = new Map<string, string>();
   const walk = (opts?: DynamicFormOption[]) => {
     for (const o of opts ?? []) {
@@ -127,25 +126,24 @@ function optionSummary(actionValue: unknown): string {
   return shown.length ? ` [${shown.join(",")}]` : "（全部隐藏）";
 }
 
-// 人类可读规则摘要（规则卡片用）。值尽量显 label。labels 由调用方建（含远程选项映射）。
+// 人类可读规则摘要（规则卡片用）。值尽量显 label。
 export function ruleSummary(
   rule: DynamicFormLinkageRule,
   fields: DynamicFormField[],
-  labels?: Map<string, string>,
 ): string {
-  const labelMap = labels ?? buildLabelMap(fields);
+  const labels = buildLabelMap(fields);
   const target = fieldTitleOf(fields, rule.targetFieldId);
   const root = rule.conditionTree?.[0];
   const text = !root
     ? "总是"
     : (() => {
-        const raw = groupSummary(root, fields, labelMap);
+        const raw = groupSummary(root, fields, labels);
         return raw.startsWith("(") && raw.endsWith(")") ? raw.slice(1, -1) : raw;
       })();
   // 动作值：OPTION 显可见项 label；其他需要值的显 label 化值。
   let val = "";
   if (rule.actionType === "OPTION") val = optionSummary(rule.actionValue);
-  else if (actionNeedsValue(rule.actionType)) val = ` ${valLabel(rule.actionValue, labelMap)}`;
+  else if (actionNeedsValue(rule.actionType)) val = ` ${valLabel(rule.actionValue, labels)}`;
   return `若 ${text} → ${ACTION_LABEL[rule.actionType]} ${target}${val}`;
 }
 
@@ -171,15 +169,12 @@ export function LinkageRuleEditor({
   open,
   onClose,
   fields,
-  effOptionsOf,
   initial,
   onSave,
 }: {
   open: boolean;
   onClose: () => void;
   fields: DynamicFormField[];
-  // 字段在规则配置里生效的 options（API 字段远程优先）；由调用方（LinkagePanel）单点拉取传入。
-  effOptionsOf: (f?: DynamicFormField) => DynamicFormOption[];
   initial: { index: number; rule: DynamicFormLinkageRule } | null;
   onSave: (index: number | null, rule: DynamicFormLinkageRule) => void;
 }) {
@@ -235,7 +230,6 @@ export function LinkageRuleEditor({
             <ConditionGroupNode
               node={root}
               fields={fields}
-              effOptionsOf={effOptionsOf}
               depth={0}
               onChange={(newRoot) => setRule((r) => ({ ...r, conditionTree: [newRoot] }))}
             />
@@ -300,7 +294,6 @@ export function LinkageRuleEditor({
                 <Label className="text-xs text-muted-foreground">值</Label>
                 <ActionValueControl
                   field={targetField}
-                  options={effOptionsOf(targetField)}
                   value={rule.actionValue}
                   onChange={(v) => setRule((r) => ({ ...r, actionValue: v }))}
                 />
@@ -313,7 +306,6 @@ export function LinkageRuleEditor({
                 </Label>
                 <OptionVisibilityEditor
                   field={targetField}
-                  options={effOptionsOf(targetField)}
                   value={rule.actionValue}
                   onChange={(opts) => setRule((r) => ({ ...r, actionValue: opts }))}
                 />
@@ -335,11 +327,10 @@ export function LinkageRuleEditor({
 // 主体 = children（CONDITION 条件行 / AND/OR 递归子组，缩进）；底部 = 添加条件 / 添加子组。
 // 不可变更新：每层 onChange(newNode) 向上冒泡，由根统一 setRule。
 function ConditionGroupNode({
-  node, fields, effOptionsOf, depth, onChange, onRemove,
+  node, fields, depth, onChange, onRemove,
 }: {
   node: DynamicFormLinkageNode; // nodeType 为 AND / OR
   fields: DynamicFormField[];
-  effOptionsOf: (f?: DynamicFormField) => DynamicFormOption[];
   depth: number;
   onChange: (n: DynamicFormLinkageNode) => void;
   onRemove?: () => void;
@@ -389,7 +380,6 @@ function ConditionGroupNode({
               key={`${child.triggerFieldId ?? "cond"}-${i}`}
               node={child}
               fields={fields}
-              effOptionsOf={effOptionsOf}
               onChange={(n) => patchChild(i, n)}
               onRemove={() => removeChild(i)}
             />
@@ -398,7 +388,6 @@ function ConditionGroupNode({
               key={`group-${i}`}
               node={child}
               fields={fields}
-              effOptionsOf={effOptionsOf}
               depth={depth + 1}
               onChange={(n) => patchChild(i, n)}
               onRemove={() => removeChild(i)}
@@ -426,11 +415,10 @@ function ConditionGroupNode({
 
 // 单个条件行：触发字段 + 操作符 + 条件值输入 + 删除。
 function ConditionRow({
-  node, fields, effOptionsOf, onChange, onRemove,
+  node, fields, onChange, onRemove,
 }: {
   node: DynamicFormLinkageNode; // nodeType 为 CONDITION
   fields: DynamicFormField[];
-  effOptionsOf: (f?: DynamicFormField) => DynamicFormOption[];
   onChange: (n: DynamicFormLinkageNode) => void;
   onRemove: () => void;
 }) {
@@ -496,7 +484,6 @@ function ConditionRow({
       {!noVal && (
         <ConditionValueInput
           field={tf}
-          options={effOptionsOf(tf)}
           condition={node.triggerCondition ?? "EQ"}
           value={node.triggerValue}
           onChange={(v) => onChange({ ...node, triggerValue: v })}
@@ -509,24 +496,22 @@ function ConditionRow({
 // OPTION 动作参数：勾选目标字段已配选项中「命中时可见」的子集（actionValue = string[]）。
 // 只勾选、不可增删改选项（选项维护在字段配置里）；级联字段只列根级选项，勾中整枝可见。
 // OPTION 动作编辑器：复用字段配置的选项弹窗，仅能切显隐（visibilityOnly），不可增删改。
-// 打开时若 actionValue 为空，带入目标字段当前生效选项（远程优先）全量副本（含已有显隐）；保存即整体替换。
+// 打开时若 actionValue 为空，带入目标字段当前 options 全量副本（含已有显隐）；保存即整体替换。
 function OptionVisibilityEditor({
-  field, options, value, onChange,
+  field, value, onChange,
 }: {
   field?: DynamicFormField;
-  options: DynamicFormOption[]; // 目标字段生效选项（API 远程优先）
   value: unknown;
   onChange: (opts: DynamicFormOption[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   if (!field) return <p className="text-xs text-muted-foreground">先选目标字段</p>;
   const isCascade = field.type === "CASCADER" || field.type === "MULTICASCADER";
-  // 编辑中的选项树：优先用已配的 actionValue（DynamicFormOption[]），否则带入生效选项副本。
+  // 编辑中的选项树：优先用已配的 actionValue（DynamicFormOption[]），否则带入字段当前 options 副本。
   const current: DynamicFormOption[] = Array.isArray(value)
     ? (value as DynamicFormOption[])
-    : options;
-  if (current.length === 0)
-    return <p className="text-xs text-muted-foreground">目标字段无选项（远程未拉到或为空）</p>;
+    : (field.options ?? []);
+  if (current.length === 0) return <p className="text-xs text-muted-foreground">目标字段无选项</p>;
   const hiddenCount = (list: DynamicFormOption[]): number =>
     list.reduce((acc, o) => acc + (o.visible === false ? 1 : 0) + (o.children ? hiddenCount(o.children) : 0), 0);
   const hidden = hiddenCount(current);
@@ -550,12 +535,11 @@ function OptionVisibilityEditor({
   );
 }
 
-// 条件值输入：按触发字段类型 + 操作符渲染。options = 触发字段生效选项（API 远程优先）。
+// 条件值输入：按触发字段类型 + 操作符渲染。
 function ConditionValueInput({
-  field, options, condition, value, onChange,
+  field, condition, value, onChange,
 }: {
   field?: DynamicFormField;
-  options: DynamicFormOption[];
   condition: DynamicFormLinkageCondition;
   value: unknown;
   onChange: (v: unknown) => void;
@@ -563,12 +547,13 @@ function ConditionValueInput({
   if (!field) return <Input value="" disabled placeholder="先选触发字段" className="h-8 w-40" />;
   // 选项类（含级联）的 IN/NOT_IN：多选值（标签式多选 / 多选级联），列全部选项。
   if (condition === "IN" || condition === "NOT_IN") {
+    const opts = field.options ?? [];
     if (field.type === "CASCADER" || field.type === "MULTICASCADER") {
-      return <ConditionFieldControl field={field} options={options} value={value} onChange={onChange} multiCascader />;
+      return <ConditionFieldControl field={field} value={value} onChange={onChange} multiCascader />;
     }
     return (
       <OptionMultiSelect
-        options={options}
+        options={opts}
         value={Array.isArray(value) ? (value as string[]) : []}
         onChange={onChange}
       />
@@ -586,16 +571,15 @@ function ConditionValueInput({
     );
   }
   // 其余单值操作符（EQ/NE/GT/LT/GE/LE）：复用触发字段的真实控件（同 VALUE 动作）。
-  return <ConditionFieldControl field={field} options={options} value={value} onChange={onChange} />;
+  return <ConditionFieldControl field={field} value={value} onChange={onChange} />;
 }
 
 // 条件值用触发字段类型的真实控件渲染（借 createField 造临时字段），与 VALUE 动作一致。
-// options = 触发字段生效选项（API 远程优先）；列全部（含 visible=false）：显隐是预览运行态的事，规则配置需能引用任意选项。
+// 列全部选项（含 visible=false）：显隐是预览运行态的事，规则配置需能引用任意选项。
 function ConditionFieldControl({
-  field, options, value, onChange, multiCascader = false,
+  field, value, onChange, multiCascader = false,
 }: {
   field: DynamicFormField;
-  options: DynamicFormOption[];
   value: unknown;
   onChange: (v: unknown) => void;
   multiCascader?: boolean; // IN/NOT_IN 级联用多选级联
@@ -607,7 +591,6 @@ function ConditionFieldControl({
     ...field,
     type,
     fieldId: field.fieldId,
-    options,
     props: { ...field.props, showAllOptions: true },
   };
   return (
@@ -618,21 +601,19 @@ function ConditionFieldControl({
 }
 
 // VALUE 动作的值输入：用目标字段类型的真实控件（借 createField 造临时字段渲染）。
-// options = 目标字段生效选项（API 远程优先）；列全部（含 visible=false）：赋值需能引用任意选项。
 function ActionValueControl({
-  field, options, value, onChange,
+  field, value, onChange,
 }: {
   field: DynamicFormField;
-  options: DynamicFormOption[];
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
   const Control = FIELD_REGISTRY[field.type].Control;
+  // VALUE 赋值列全部选项（含 visible=false）：显隐是预览运行态的事，赋值需能引用任意选项。
   const temp = {
     ...createField(field.type, 0),
     ...field,
     fieldId: field.fieldId,
-    options,
     props: { ...field.props, showAllOptions: true },
   };
   return (

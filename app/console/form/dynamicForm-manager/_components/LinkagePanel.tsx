@@ -10,9 +10,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import type { DynamicFormField, DynamicFormLinkageRule } from "@/types";
-import { LinkageRuleEditor, ruleSummary, buildLabelMap } from "./LinkageRuleEditor";
-import { useRemoteOptions } from "./useRemoteOptions";
+import type { DynamicFormLinkageRule } from "@/types";
+import { LinkageRuleEditor, ruleSummary } from "./LinkageRuleEditor";
 import type { DesignerApi } from "./designer-state";
 
 // 联动规则面板：规则卡片列表（摘要 + 启用开关 + 上下排序 + 编辑/删除）+ 新建。
@@ -21,21 +20,6 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
   const { state, addRule, updateRule, removeRule, moveRule } = designer;
   const rules = state.linkageRules;
   const allFields = [...state.fields, ...state.groups.flatMap((g) => g.fields)];
-
-  // 远程选项（设计态拉取）：API 字段的条件值/VALUE/OPTION 按远程选项配置；摘要 label 映射吃远程。
-  // 设计态无表单值：无依赖的 API（如码表）可拉到；含 ${fieldId} 依赖的拉不到 -> 回退手动 options。
-  const { optionsOf } = useRemoteOptions(allFields, {});
-  const effOptionsOf = (f?: DynamicFormField) => {
-    if (!f) return [];
-    if (f.optionSource?.type === "API") return optionsOf(f) ?? f.options ?? [];
-    return f.options ?? [];
-  };
-  // 摘要 label 映射用生效选项（远程优先）。
-  const labels = buildLabelMap(
-    allFields.map((f) =>
-      f.optionSource?.type === "API" ? { ...f, options: effOptionsOf(f) } : f,
-    ),
-  );
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<{ index: number; rule: DynamicFormLinkageRule } | null>(null);
@@ -84,7 +68,7 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
               />
             </div>
             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-              {ruleSummary(r, allFields, labels)}
+              {ruleSummary(r, allFields)}
             </p>
             <div className="mt-2 flex items-center gap-1">
               <Button
@@ -122,7 +106,6 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         fields={allFields}
-        effOptionsOf={effOptionsOf}
         initial={editing}
         onSave={handleSave}
       />

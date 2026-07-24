@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import type {
   DynamicForm,
   DynamicFormField,
@@ -155,6 +156,12 @@ export function useDesignerState(initial?: DynamicForm) {
   const [state, setState] = useState<DesignerState>(() =>
     initial ? stateFromForm(initial) : emptyState(),
   );
+  // state 的 ref 镜像：updateField 需在 setState 外读最新 prev 字段（检测数据源变化 + toast）。
+  // effect 同步（render 期写 ref 会被 react-hooks/refs 禁止）；事件回调里读 = 最近一次提交的 state。
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // 一次性初始化/重置整个状态（编辑回显用）。
   const reset = useCallback((next: DesignerState) => setState(next), []);
@@ -201,11 +208,34 @@ export function useDesignerState(initial?: DynamicForm) {
     [getContainer, writeContainer],
   );
 
-  // 更新字段属性。patch 含 options 时同步引用该字段的联动规则（清理失效 value + OPTION 树对齐）。
-  // 数据源类型切换（STATIC<->API）不清规则：B 方案「远程选项进联动 + 清理最小化」--远程选项可在规则里配置，
-  // 切换/修改数据源不静默删用户配的规则（失效与否由运行态判定）。
+  // 更新字段属性。
+  // - patch 含 options（手动选项编辑）：syncRulesOnOptionsChange 精准同步（清理失效 value + OPTION 树对齐）。
+  // - patch 的 optionSource 实质变化（手动<->远程切换 / 远程 url/method/params/mapping 改）：
+  //   选项 value 集合可能变了 -> 清空所有涉及该字段的联动规则 + toast 提示（保证一致性，避免失效规则残留）。
+  //   SHOW/HIDE 等不涉 value 的规则也会被清（一致性代价）；API 字段当触发条件时手动 options 空本就配不了 value。
   const updateField = useCallback(
     (fieldId: string, patch: Partial<DynamicFormField>) => {
+      // 在 setState 外读最新 prev（ref 镜像），判定数据源变化 + 提前 toast（非 render 期）。
+      const s0 = stateRef.current;
+      const loc0 = locateField(s0, fieldId);
+      const prev = loc0
+        ? getContainer(s0, loc0.containerId).find((f) => f.fieldId === fieldId)
+        : undefined;
+      // optionSource 实质变化（含切到 STATIC：patch.optionSource=undefined，用 'in' 判定键存在）。
+      const osChanged =
+        "optionSource" in patch &&
+        JSON.stringify(patch.optionSource) !== JSON.stringify(prev?.optionSource);
+      let clearedCount = 0;
+      if (osChanged) {
+        clearedCount = s0.linkageRules.filter((r) =>
+          ruleReferencesField(r, fieldId),
+        ).length;
+        if (clearedCount > 0) {
+          toast.info(
+            `字段「${prev?.title ?? ""}」数据源变更，已清理 ${clearedCount} 条相关联动规则`,
+          );
+        }
+      }
       setState((s) => {
         const loc = locateField(s, fieldId);
         if (!loc) return s;
@@ -213,6 +243,16 @@ export function useDesignerState(initial?: DynamicForm) {
           f.fieldId === fieldId ? { ...f, ...patch } : f,
         );
         const next = writeContainer(s, loc.containerId, arr);
+        // 数据源变化：清空涉及该字段的规则（目标或触发）。
+        if (osChanged && clearedCount > 0) {
+          return {
+            ...next,
+            linkageRules: s.linkageRules.filter(
+              (r) => !ruleReferencesField(r, fieldId),
+            ),
+          };
+        }
+        // 手动 options 编辑：精准同步失效 value + OPTION 树对齐。
         if (patch.options) {
           return {
             ...next,
