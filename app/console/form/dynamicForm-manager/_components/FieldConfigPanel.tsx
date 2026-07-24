@@ -630,8 +630,13 @@ function ApiSourceForm({
 
   function applyPreset(p: string) {
     if (p === "codeTable") {
-      // 码表选项：固定 url/method，用户只需补 params.code。
-      onChange({ url: CODE_TABLE_OPTIONS_URL, method: "POST", params: { code: "" }, mapping: {} });
+      // 码表选项：GET /code-table/options?code=，响应列表在 data 字段下（listPath=$.data），用户补 code。
+      onChange({
+        url: CODE_TABLE_OPTIONS_URL,
+        method: "GET",
+        params: { code: "" },
+        mapping: { listPath: "$.data" },
+      });
     } else {
       onChange({ url: "", method: "POST", params: {}, mapping: {} });
     }
@@ -780,7 +785,7 @@ function ApiSourceForm({
         </div>
       </div>
       <p className="pl-16 text-xs text-muted-foreground">
-        依次为列表路径 / 标签 / 值 / 子级字段，留空用默认。
+        依次为列表路径 / 标签 / 值 / 子级字段；$ 为根，$.data 取 data 字段，留空用默认。
       </p>
     </div>
   );

@@ -9,11 +9,18 @@ import type {
 // ${fieldId} 占位符（全局匹配，注意 exec 场景需重置 lastIndex，本项目统一用 matchAll/replace 规避）。
 const PLACEHOLDER_RE = /\$\{([^}]+)\}/g;
 
-// 按点路径逐层取值。path 为 undefined / 空串 / "$" 时返回 obj 本身；中途缺失返回 undefined。
+// 按点路径逐层取值。path 支持：
+// - undefined / 空串 / "$" -> obj 本身；
+// - "$.data" -> obj.data（JSONPath 风格，$ 为根）；
+// - "data" / "a.b" -> 逐层取。
+// 中途缺失返回 undefined。
 export function resolvePath(obj: unknown, path?: string): unknown {
-  if (path === undefined || path === "" || path === "$") return obj;
+  if (path === undefined || path === "") return obj;
+  if (path === "$") return obj;
+  // 去掉 JSONPath 风格的前导 "$."（$.data -> data），其余按点路径逐层取。
+  const p = path.startsWith("$.") ? path.slice(2) : path;
   let cur: unknown = obj;
-  for (const seg of path.split(".")) {
+  for (const seg of p.split(".")) {
     if (cur === null || typeof cur !== "object") return undefined;
     cur = (cur as Record<string, unknown>)[seg];
     if (cur === undefined) return undefined;
