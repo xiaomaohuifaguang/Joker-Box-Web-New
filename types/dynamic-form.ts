@@ -30,6 +30,23 @@ export interface DynamicFormOption {
   children?: DynamicFormOption[];
 }
 
+// 远程选项的字段映射路径（点路径，如 "data.list"；不填走默认 label/value/children）。
+export interface DynamicFormOptionMapping {
+  listPath?: string; // 选项数组所在路径（响应整体或数组本身时可省略）
+  labelPath?: string; // 显示文案路径（默认 "label"）
+  valuePath?: string; // 值路径（默认 "value"）
+  childrenPath?: string; // 子选项路径（默认 "children"，级联递归用）
+}
+
+// 选项数据源：STATIC=手工录入的 options；API=远程拉取（params 支持 ${fieldId} 占位联动）。
+export interface DynamicFormOptionSource {
+  type: "STATIC" | "API";
+  url?: string; // API 必填
+  method?: "GET" | "POST"; // 默认 GET
+  params?: Record<string, unknown>; // 请求参数，value 支持 ${fieldId} 占位
+  mapping?: DynamicFormOptionMapping; // 响应映射
+}
+
 // 动态表格列定义（仅 TABLE 类型字段使用）。
 export interface DynamicFormTableColumn {
   key: string; // 列标识（存值用的键）
@@ -55,6 +72,7 @@ export interface DynamicFormField {
   defaultValue?: unknown;
   placeholder?: string;
   options?: DynamicFormOption[]; // 单选/多选用
+  optionSource?: DynamicFormOptionSource; // 选项数据源（STATIC=用 options / API=远程拉取）
   tableColumns?: DynamicFormTableColumn[]; // 动态表格列定义（仅 TABLE）
   minLength?: number;
   maxLength?: number;
