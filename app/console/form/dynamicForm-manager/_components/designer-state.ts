@@ -150,44 +150,6 @@ function syncRulesOnOptionsChange(
   });
 }
 
-// 切到 API 数据源时，剔除引用该字段手动选项 value 的联动规则/条件（远程选项设计态拉不到，原 value 已失效）：
-// - 目标为该字段的 VALUE 规则（actionValue 是手动 value）-> 删整条。
-// - 目标为该字段的 OPTION 规则（actionValue 是手动选项树）-> 删整条。
-// - 触发条件引用该字段的 CONDITION（triggerValue 是手动 value）-> 剔除该条件。
-// 其余动作（SHOW/HIDE/REQUIRED/DISABLED/ENABLED/SET_PATTERN/SET_SPAN）不涉选项 value，保留。
-function pruneRulesOnApiSource(
-  rules: DynamicFormLinkageRule[],
-  fieldId: string,
-): DynamicFormLinkageRule[] {
-  return rules
-    .filter(
-      (r) =>
-        !(
-          r.targetFieldId === fieldId &&
-          (r.actionType === "VALUE" || r.actionType === "OPTION")
-        ),
-    )
-    .map((r) => ({
-      ...r,
-      conditionTree: (r.conditionTree ?? [])
-        .map((n) => pruneNodeOnApiSource(n, fieldId))
-        .filter((n): n is DynamicFormLinkageNode => n !== null),
-    }));
-}
-
-function pruneNodeOnApiSource(
-  node: DynamicFormLinkageNode,
-  fieldId: string,
-): DynamicFormLinkageNode | null {
-  if (node.nodeType === "CONDITION") {
-    return node.triggerFieldId === fieldId ? null : node;
-  }
-  const children = (node.children ?? [])
-    .map((c) => pruneNodeOnApiSource(c, fieldId))
-    .filter((c): c is DynamicFormLinkageNode => c !== null);
-  return { ...node, children };
-}
-
 // 设计器状态操作 hook：字段/分组的增删改 + 跨容器移动。
 export function useDesignerState(initial?: DynamicForm) {
   const [state, setState] = useState<DesignerState>(() =>
@@ -239,28 +201,18 @@ export function useDesignerState(initial?: DynamicForm) {
     [getContainer, writeContainer],
   );
 
-  // 更新字段属性。patch 含 options 时同步引用该字段的联动规则（清理失效 value + OPTION 树对齐）；
-  // patch 把 optionSource 从非 API 切成 API 时，剔除引用手动选项 value 的规则/条件（远程 value 设计态未知）。
+  // 更新字段属性。patch 含 options 时同步引用该字段的联动规则（清理失效 value + OPTION 树对齐）。
+  // 数据源类型切换（STATIC<->API）不清规则：B 方案「远程选项进联动 + 清理最小化」--远程选项可在规则里配置，
+  // 切换/修改数据源不静默删用户配的规则（失效与否由运行态判定）。
   const updateField = useCallback(
     (fieldId: string, patch: Partial<DynamicFormField>) => {
       setState((s) => {
         const loc = locateField(s, fieldId);
         if (!loc) return s;
-        const prev = getContainer(s, loc.containerId).find(
-          (f) => f.fieldId === fieldId,
-        );
         const arr = getContainer(s, loc.containerId).map((f) =>
           f.fieldId === fieldId ? { ...f, ...patch } : f,
         );
         const next = writeContainer(s, loc.containerId, arr);
-        // STATIC/无 -> API：清理失效规则。
-        const switchedToApi =
-          patch.optionSource !== undefined &&
-          patch.optionSource?.type === "API" &&
-          prev?.optionSource?.type !== "API";
-        if (switchedToApi) {
-          return { ...next, linkageRules: pruneRulesOnApiSource(s.linkageRules, fieldId) };
-        }
         if (patch.options) {
           return {
             ...next,
