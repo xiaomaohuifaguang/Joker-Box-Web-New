@@ -36,7 +36,7 @@ function buildRequest(
   const deps = collectDeps(src.params);
   if (deps.some((d) => values[d] === undefined || values[d] === "")) return null;
   const params = substituteParams(src.params, values);
-  const method = src.method ?? "GET";
+  const method = src.method ?? "POST";
   // key 含替换后的完整参数：依赖值变 -> key 变 -> 重拉。
   const key = JSON.stringify([src.url, method, params]);
   return {

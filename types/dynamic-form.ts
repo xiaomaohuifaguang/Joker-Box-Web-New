@@ -42,7 +42,7 @@ export interface DynamicFormOptionMapping {
 export interface DynamicFormOptionSource {
   type: "STATIC" | "API";
   url?: string; // API 必填
-  method?: "GET" | "POST"; // 默认 GET
+  method?: "GET" | "POST"; // 默认 POST
   params?: Record<string, unknown>; // 请求参数，value 支持 ${fieldId} 占位
   mapping?: DynamicFormOptionMapping; // 响应映射
 }
