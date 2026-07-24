@@ -12,10 +12,24 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import type { DynamicFormField, DynamicFormOption, DynamicFormTableColumn } from "@/types";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type {
+  DynamicFormField,
+  DynamicFormOption,
+  DynamicFormOptionMapping,
+  DynamicFormOptionSource,
+  DynamicFormTableColumn,
+} from "@/types";
 import { cn } from "@/lib/utils";
 import { FIELD_REGISTRY } from "./fields/registry";
 import {
@@ -26,11 +40,14 @@ import {
 import { OptionsEditor } from "./OptionsEditor";
 
 // 右侧配置面板：按选中字段的 type 动态显示通用属性 + 校验属性 + 选项编辑。
+// allFields = 全部字段（未分组 + 分组内），供远程选项 params 的「插入字段引用」下拉用。
 export function FieldConfigPanel({
   field,
+  allFields = [],
   onChange,
 }: {
   field: DynamicFormField | null;
+  allFields?: DynamicFormField[];
   onChange: (patch: Partial<DynamicFormField>) => void;
 }) {
   if (!field) {
@@ -112,8 +129,9 @@ export function FieldConfigPanel({
           {/* 选项统一弹窗编辑：窄面板内联编辑拥挤，单开宽 Dialog 配置（级联带嵌套子级）。 */}
           <OptionsDialog
             cascade={isCascader}
-            options={field.options ?? []}
-            onChange={(options) => onChange({ options })}
+            field={field}
+            allFields={allFields}
+            onChange={onChange}
           />
         </Field>
       )}
@@ -359,17 +377,28 @@ function CascaderDefaultEditor({
   );
 }
 
-// 选项编辑弹窗：窄面板内联编辑拥挤，单开宽 Dialog 全宽配置。cascade=true 时支持嵌套子级（级联）。
+// 码表选项预设的固定 url（摘要文案与预设识别都靠它判断）。
+const CODE_TABLE_OPTIONS_URL = "/code-table/options";
+
+// 选项编辑弹窗：窄面板内联编辑拥挤，单开宽 Dialog 全宽配置。
+// 顶部「数据来源」切换：STATIC=手动选项（OptionsEditor，cascade 支持嵌套子级）；API=远程拉取配置。
+// 手动 options 两种来源下都保留：API 时仅作兜底（远程拉取失败/未配置时用）。
 function OptionsDialog({
   cascade,
-  options,
+  field,
+  allFields,
   onChange,
 }: {
   cascade?: boolean;
-  options: DynamicFormOption[];
-  onChange: (options: DynamicFormOption[]) => void;
+  field: DynamicFormField;
+  allFields: DynamicFormField[];
+  onChange: (patch: Partial<DynamicFormField>) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const options = field.options ?? [];
+  const source = field.optionSource;
+  const isApi = source?.type === "API";
+
   // 统计叶子节点数（粗略反映选项规模）。
   function countLeaf(list: DynamicFormOption[]): number {
     return list.reduce(
@@ -377,28 +406,322 @@ function OptionsDialog({
       0,
     );
   }
-  const summary = cascade
-    ? options.length
-      ? `${options.length} 个根选项 / ${countLeaf(options)} 个叶子`
-      : "配置级联选项"
-    : options.length
-      ? `${options.length} 个选项`
-      : "配置选项";
+
+  // 摘要按钮文案：API 显示远程来源，STATIC 显示选项个数。
+  let summary: string;
+  if (isApi) {
+    const code = source?.params?.code;
+    summary =
+      source?.url === CODE_TABLE_OPTIONS_URL
+        ? `码表：${typeof code === "string" && code ? code : "未配置"}`
+        : `远程：${source?.url || "未配置"}`;
+  } else {
+    summary = cascade
+      ? options.length
+        ? `${options.length} 个根选项 / ${countLeaf(options)} 个叶子`
+        : "配置级联选项"
+      : options.length
+        ? `${options.length} 个选项`
+        : "配置选项";
+  }
+
+  // 切换数据来源：STATIC 清空 optionSource（手动 options 保留）；API 给一份空配置。
+  function switchSource(v: string) {
+    if (!v) return; // 单选 ToggleGroup 点已选项会回空串，忽略
+    if (v === "API") {
+      onChange({
+        optionSource: { type: "API", url: "", method: "POST", params: {}, mapping: {} },
+      });
+    } else {
+      onChange({ optionSource: undefined });
+    }
+  }
+
+  // 局部更新 optionSource（保持 type:"API"，未配置的键给默认）。
+  function setSource(patch: Partial<Omit<DynamicFormOptionSource, "type">>) {
+    onChange({
+      optionSource: {
+        type: "API",
+        url: source?.url ?? "",
+        method: source?.method ?? "POST",
+        params: source?.params ?? {},
+        mapping: source?.mapping ?? {},
+        ...patch,
+      },
+    });
+  }
+
   return (
     <>
       <Button variant="outline" size="sm" className="w-full justify-between" onClick={() => setOpen(true)}>
-        <span className="text-muted-foreground">{summary}</span>
-        <Pencil className="h-3.5 w-3.5" />
+        <span className="truncate text-muted-foreground">{summary}</span>
+        <Pencil className="h-3.5 w-3.5 shrink-0" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{cascade ? "级联选项" : "选项"}</DialogTitle>
           </DialogHeader>
-          <OptionsEditor options={options} onChange={onChange} cascade={cascade} />
+
+          {/* 数据来源切换：STATIC 手动 / API 远程 */}
+          <div className="flex items-center gap-3">
+            <Label className="text-xs text-muted-foreground">数据来源</Label>
+            <ToggleGroup
+              type="single"
+              size="sm"
+              variant="outline"
+              value={isApi ? "API" : "STATIC"}
+              onValueChange={switchSource}
+            >
+              <ToggleGroupItem value="STATIC">手动选项</ToggleGroupItem>
+              <ToggleGroupItem value="API">远程</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {isApi ? (
+            <ApiSourceForm
+              source={source ?? { type: "API" }}
+              onChange={setSource}
+              // 字段引用下拉排除自身（引用自己无意义）
+              otherFields={allFields.filter((f) => f.fieldId !== field.fieldId)}
+            />
+          ) : (
+            <OptionsEditor
+              options={options}
+              onChange={(opts) => onChange({ options: opts })}
+              cascade={cascade}
+            />
+          )}
+
+          {isApi && (
+            <p className="text-xs text-muted-foreground">
+              远程选项运行时拉取，优先生效；手动选项仅兜底
+              {options.length > 0 && `（已配置 ${options.length} 个手动选项作为兜底）`}
+            </p>
+          )}
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// API 远程选项配置表单：预设 / url / method / params（支持 ${fieldId} 字段引用）/ mapping。
+function ApiSourceForm({
+  source,
+  otherFields,
+  onChange,
+}: {
+  source: DynamicFormOptionSource;
+  otherFields: DynamicFormField[];
+  onChange: (patch: Partial<Omit<DynamicFormOptionSource, "type">>) => void;
+}) {
+  const url = source.url ?? "";
+  const method = source.method ?? "POST";
+  const mapping = source.mapping ?? {};
+  // 预设识别：url 命中码表固定地址即「码表选项」，否则「自定义」。
+  const preset = url === CODE_TABLE_OPTIONS_URL ? "codeTable" : "custom";
+  // url 校验：必须 / 开头的站内相对路径（不含 ://，禁外部绝对地址）；空值不提示（未配置态）。
+  const urlInvalid = url !== "" && (!url.startsWith("/") || url.includes("://"));
+
+  // params 键值对 -> 行（value 统一转 string 编辑，支持手输 ${fieldId}）。
+  const paramRows = Object.entries(source.params ?? {}).map(([key, value]) => ({
+    key,
+    value: value == null ? "" : String(value),
+  }));
+
+  function applyPreset(p: string) {
+    if (p === "codeTable") {
+      // 码表选项：固定 url/method，用户只需补 params.code。
+      onChange({ url: CODE_TABLE_OPTIONS_URL, method: "POST", params: { code: "" }, mapping: {} });
+    } else {
+      onChange({ url: "", method: "POST", params: {}, mapping: {} });
+    }
+  }
+
+  function setParams(rows: { key: string; value: string }[]) {
+    const params: Record<string, unknown> = {};
+    for (const r of rows) params[r.key] = r.value;
+    onChange({ params });
+  }
+  function updateParam(i: number, patch: Partial<{ key: string; value: string }>) {
+    setParams(paramRows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  }
+  function removeParam(i: number) {
+    setParams(paramRows.filter((_, idx) => idx !== i));
+  }
+  function addParam() {
+    setParams([...paramRows, { key: `param${paramRows.length + 1}`, value: "" }]);
+  }
+
+  // mapping 局部更新：空串转 undefined（留空走默认 label/value/children）。
+  function setMapping(patch: Partial<DynamicFormOptionMapping>) {
+    const next: DynamicFormOptionMapping = { ...mapping, ...patch };
+    for (const k of ["listPath", "labelPath", "valuePath", "childrenPath"] as const) {
+      if (next[k] === "") next[k] = undefined;
+    }
+    onChange({ mapping: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border p-3">
+      {/* 预设：码表选项 = 固定 /code-table/options，自定义 = 全手填 */}
+      <div className="flex items-center gap-2">
+        <Label className="w-14 shrink-0 text-xs text-muted-foreground">预设</Label>
+        <Select value={preset} onValueChange={applyPreset}>
+          <SelectTrigger className="h-8 flex-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            <SelectItem value="codeTable">码表选项</SelectItem>
+            <SelectItem value="custom">自定义</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* url + method */}
+      <div className="flex items-start gap-2">
+        <Label className="w-14 shrink-0 pt-2 text-xs text-muted-foreground">地址</Label>
+        <div className="flex flex-1 flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={url}
+              onChange={(e) => onChange({ url: e.target.value })}
+              placeholder="/code-table/options"
+              aria-invalid={urlInvalid}
+              className={cn("h-8 flex-1 font-mono", urlInvalid && "border-destructive")}
+            />
+            <Select value={method} onValueChange={(m) => onChange({ method: m as "GET" | "POST" })}>
+              <SelectTrigger className="h-8 w-24 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="POST">POST</SelectItem>
+                <SelectItem value="GET">GET</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {urlInvalid && (
+            <p className="text-xs text-destructive">地址需以 / 开头的站内相对路径，且不能包含 ://</p>
+          )}
+        </div>
+      </div>
+
+      {/* params 键值对编辑器：value 支持 ${fieldId} 占位，可下拉插入其他字段引用 */}
+      <div className="flex items-start gap-2">
+        <Label className="w-14 shrink-0 pt-2 text-xs text-muted-foreground">参数</Label>
+        <div className="flex flex-1 flex-col gap-1.5">
+          {paramRows.map((r, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <Input
+                value={r.key}
+                onChange={(e) => updateParam(i, { key: e.target.value })}
+                placeholder="参数名"
+                className="h-8 w-28 shrink-0 font-mono"
+              />
+              <Input
+                value={r.value}
+                onChange={(e) => updateParam(i, { value: e.target.value })}
+                placeholder="值，支持 ${fieldId}"
+                className="h-8 min-w-0 flex-1 font-mono"
+              />
+              <FieldRefSelect
+                fields={otherFields}
+                onPick={(fid) => updateParam(i, { value: `${r.value}\${${fid}}` })}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeParam(i)}
+                aria-label="删除参数"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addParam} className="self-start">
+            <Plus className="h-3.5 w-3.5" />
+            添加参数
+          </Button>
+          {paramRows.length === 0 && (
+            <p className="text-xs text-muted-foreground">无请求参数。</p>
+          )}
+        </div>
+      </div>
+
+      {/* mapping：响应字段映射，留空走默认 label/value/children */}
+      <div className="flex items-start gap-2">
+        <Label className="w-14 shrink-0 pt-2 text-xs text-muted-foreground">映射</Label>
+        <div className="grid flex-1 grid-cols-2 gap-1.5">
+          <Input
+            value={mapping.listPath ?? ""}
+            onChange={(e) => setMapping({ listPath: e.target.value })}
+            placeholder="$"
+            className="h-8 font-mono"
+          />
+          <Input
+            value={mapping.labelPath ?? ""}
+            onChange={(e) => setMapping({ labelPath: e.target.value })}
+            placeholder="label"
+            className="h-8 font-mono"
+          />
+          <Input
+            value={mapping.valuePath ?? ""}
+            onChange={(e) => setMapping({ valuePath: e.target.value })}
+            placeholder="value"
+            className="h-8 font-mono"
+          />
+          <Input
+            value={mapping.childrenPath ?? ""}
+            onChange={(e) => setMapping({ childrenPath: e.target.value })}
+            placeholder="children"
+            className="h-8 font-mono"
+          />
+        </div>
+      </div>
+      <p className="pl-16 text-xs text-muted-foreground">
+        依次为列表路径 / 标签 / 值 / 子级字段，留空用默认。
+      </p>
+    </div>
+  );
+}
+
+// 插入字段引用下拉：列出其他字段 title，选中回调 fieldId（由调用方拼 ${fieldId}）。
+// 选完立即复位回占位，可反复插入；值本身不进 Select（value 恒为 ""）。
+function FieldRefSelect({
+  fields,
+  onPick,
+}: {
+  fields: DynamicFormField[];
+  onPick: (fieldId: string) => void;
+}) {
+  const [v, setV] = useState("");
+  return (
+    <Select
+      value={v}
+      onValueChange={(fid) => {
+        if (fid === "__none__") return;
+        onPick(fid);
+        setV(""); // 复位，允许连续插入同一个字段
+      }}
+    >
+      <SelectTrigger className="h-8 w-24 shrink-0" aria-label="插入字段引用">
+        <SelectValue placeholder="插入引用" />
+      </SelectTrigger>
+      <SelectContent position="popper">
+        {fields.length === 0 && (
+          <SelectItem value="__none__" disabled>
+            无其他字段
+          </SelectItem>
+        )}
+        {fields.map((f) => (
+          <SelectItem key={f.fieldId} value={f.fieldId}>
+            {f.title || f.fieldId}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

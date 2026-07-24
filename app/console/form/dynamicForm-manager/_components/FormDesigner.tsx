@@ -51,14 +51,16 @@ export function FormDesigner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // 全部字段（未分组 + 各分组内），供字段配置面板「插入字段引用」下拉用（同 LinkagePanel 的算法）。
+  const allFields = useMemo(
+    () => [...designer.state.fields, ...designer.state.groups.flatMap((g) => g.fields)],
+    [designer.state],
+  );
+
   const selectedField = useMemo(() => {
     if (!selectedId) return null;
-    return (
-      designer.state.fields.find((f) => f.fieldId === selectedId) ??
-      designer.state.groups.flatMap((g) => g.fields).find((f) => f.fieldId === selectedId) ??
-      null
-    );
-  }, [designer.state, selectedId]);
+    return allFields.find((f) => f.fieldId === selectedId) ?? null;
+  }, [allFields, selectedId]);
 
   function handleAddField(
     type: DynamicFormFieldType,
@@ -186,6 +188,7 @@ export function FormDesigner({
             <TabsContent value="field" className="min-h-0 flex-1 overflow-y-auto">
               <FieldConfigPanel
                 field={selectedField}
+                allFields={allFields}
                 onChange={(patch) => selectedId && designer.updateField(selectedId, patch)}
               />
             </TabsContent>
