@@ -477,8 +477,9 @@ function OptionsDialog({
     if (!v) return; // 单选 ToggleGroup 点已选项回空串，忽略
     const nextType = v === "API";
     if (nextType === isApi) return; // 同类型不重复
+    // 切到 API 默认填码表预设（GET + $.data），用户只需补 code；切到 STATIC 清空 optionSource。
     const newSource: DynamicFormOptionSource | undefined = nextType
-      ? { type: "API", url: "", method: "POST", params: {}, mapping: {} }
+      ? { type: "API", url: CODE_TABLE_OPTIONS_URL, method: "GET", params: { code: "" }, mapping: { listPath: "$.data" } }
       : undefined;
     const count = countReferencing();
     if (count > 0) {
