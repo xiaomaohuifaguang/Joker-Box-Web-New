@@ -117,19 +117,27 @@ export function MultiSelectControl({ field, value, onChange, disabled }: FieldCo
             {options.map((o) => {
               const on = selected.has(o.value);
               return (
-                <button
+                // div role=button（非 button）：Checkbox 是 Radix button，button 套 button 非法 HTML。
+                <div
                   key={o.value}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggle(o.value, !on)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggle(o.value, !on);
+                    }
+                  }}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
+                    "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
                     on && "bg-accent/60",
                   )}
                 >
                   <Checkbox checked={on} className="pointer-events-none shrink-0" />
                   <span className="min-w-0 flex-1 truncate">{o.label}</span>
                   {on && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
-                </button>
+                </div>
               );
             })}
           </div>
