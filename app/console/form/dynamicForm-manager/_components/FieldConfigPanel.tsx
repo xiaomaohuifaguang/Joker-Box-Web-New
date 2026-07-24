@@ -4,6 +4,16 @@ import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -25,6 +35,7 @@ import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type {
   DynamicFormField,
+  DynamicFormLinkageRule,
   DynamicFormOption,
   DynamicFormOptionMapping,
   DynamicFormOptionSource,
@@ -32,6 +43,7 @@ import type {
 } from "@/types";
 import { cn } from "@/lib/utils";
 import { FIELD_REGISTRY } from "./fields/registry";
+import { ruleReferencesField } from "./designer-state";
 import {
   CascaderInline,
   MultiCascaderInline,
@@ -44,10 +56,12 @@ import { OptionsEditor } from "./OptionsEditor";
 export function FieldConfigPanel({
   field,
   allFields = [],
+  linkageRules = [],
   onChange,
 }: {
   field: DynamicFormField | null;
   allFields?: DynamicFormField[];
+  linkageRules?: DynamicFormLinkageRule[];
   onChange: (patch: Partial<DynamicFormField>) => void;
 }) {
   if (!field) {
@@ -131,6 +145,7 @@ export function FieldConfigPanel({
             cascade={isCascader}
             field={field}
             allFields={allFields}
+            linkageRules={linkageRules}
             onChange={onChange}
           />
         </Field>
@@ -390,16 +405,19 @@ const CODE_TABLE_OPTIONS_URL = "/code-table/options";
 
 // 选项编辑弹窗：窄面板内联编辑拥挤，单开宽 Dialog 全宽配置。
 // 顶部「数据来源」切换：STATIC=手动选项（OptionsEditor，cascade 支持嵌套子级）；API=远程拉取配置。
-// 手动 options 两种来源下都保留：API 时仅作兜底（远程拉取失败/未配置时用）。
+// STATIC 选项编辑即时应用；API 配置用 draft 暂存，点「确定」才应用。
+// optionSource 实质变化（切换 / API 配置改）若涉及联动规则 -> 二级确认：确认=应用+清规则，取消=还原。
 function OptionsDialog({
   cascade,
   field,
   allFields,
+  linkageRules,
   onChange,
 }: {
   cascade?: boolean;
   field: DynamicFormField;
   allFields: DynamicFormField[];
+  linkageRules: DynamicFormLinkageRule[];
   onChange: (patch: Partial<DynamicFormField>) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -407,7 +425,28 @@ function OptionsDialog({
   const source = field.optionSource;
   const isApi = source?.type === "API";
 
-  // 统计叶子节点数（粗略反映选项规模）。
+  // API 配置暂存 draft：编辑期不即时应用，确定时统一应用（必要时确认清规则）。
+  const [draft, setDraft] = useState<DynamicFormOptionSource | undefined>(source);
+  // draft 重置签名：弹窗开关 或 field.optionSource 变化（切换即时应用后）时重置 draft。
+  const draftSig = JSON.stringify(source) + (open ? "|1" : "|0");
+  const [initSig, setInitSig] = useState(draftSig);
+  if (draftSig !== initSig) {
+    setInitSig(draftSig);
+    setDraft(open ? source : undefined);
+  }
+
+  // 待确认的数据源变更（切换 / API 配置确定）：有涉及规则时弹二级确认。
+  const [pending, setPending] = useState<{
+    source: DynamicFormOptionSource | undefined;
+    count: number;
+    closeOnConfirm: boolean;
+  } | null>(null);
+
+  function countReferencing(): number {
+    return linkageRules.filter((r) => ruleReferencesField(r, field.fieldId)).length;
+  }
+
+  // 统计叶子节点数（摘要用）。
   function countLeaf(list: DynamicFormOption[]): number {
     return list.reduce(
       (acc, o) => acc + (o.children?.length ? countLeaf(o.children) : 1),
@@ -433,30 +472,56 @@ function OptionsDialog({
         : "配置选项";
   }
 
-  // 切换数据来源：STATIC 清空 optionSource（手动 options 保留）；API 给一份空配置。
+  // 切换数据来源（即时）：同类型不重复；有涉及规则先弹确认（确认后 updateField 清规则），无规则直接切。
   function switchSource(v: string) {
-    if (!v) return; // 单选 ToggleGroup 点已选项会回空串，忽略
-    if (v === "API") {
-      onChange({
-        optionSource: { type: "API", url: "", method: "POST", params: {}, mapping: {} },
-      });
+    if (!v) return; // 单选 ToggleGroup 点已选项回空串，忽略
+    const nextType = v === "API";
+    if (nextType === isApi) return; // 同类型不重复
+    const newSource: DynamicFormOptionSource | undefined = nextType
+      ? { type: "API", url: "", method: "POST", params: {}, mapping: {} }
+      : undefined;
+    const count = countReferencing();
+    if (count > 0) {
+      setPending({ source: newSource, count, closeOnConfirm: false });
     } else {
-      onChange({ optionSource: undefined });
+      onChange({ optionSource: newSource });
     }
   }
 
-  // 局部更新 optionSource（保持 type:"API"，未配置的键给默认）。
-  function setSource(patch: Partial<Omit<DynamicFormOptionSource, "type">>) {
-    onChange({
-      optionSource: {
-        type: "API",
-        url: source?.url ?? "",
-        method: source?.method ?? "POST",
-        params: source?.params ?? {},
-        mapping: source?.mapping ?? {},
-        ...patch,
-      },
-    });
+  // 局部更新 draft（保持 type:"API"，未配置的键给默认）。
+  function setDraftSource(patch: Partial<Omit<DynamicFormOptionSource, "type">>) {
+    setDraft((d) => ({
+      type: "API",
+      url: d?.url ?? "",
+      method: d?.method ?? "POST",
+      params: d?.params ?? {},
+      mapping: d?.mapping ?? {},
+      ...patch,
+    }));
+  }
+
+  // 确定（API 配置）：draft 实质变了 -> 有涉及规则弹确认，否则直接应用 + 关闭。
+  function applyDraft() {
+    const changed = JSON.stringify(draft) !== JSON.stringify(source);
+    if (!changed) {
+      setOpen(false);
+      return;
+    }
+    const count = countReferencing();
+    if (count > 0) {
+      setPending({ source: draft, count, closeOnConfirm: true });
+    } else {
+      onChange({ optionSource: draft });
+      setOpen(false);
+    }
+  }
+
+  // 确认待定变更：应用（updateField 清规则）+ 按需关闭。
+  function confirmPending() {
+    if (!pending) return;
+    onChange({ optionSource: pending.source });
+    if (pending.closeOnConfirm) setOpen(false);
+    setPending(null);
   }
 
   return (
@@ -466,7 +531,7 @@ function OptionsDialog({
         <Pencil className="h-3.5 w-3.5 shrink-0" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{cascade ? "级联选项" : "选项"}</DialogTitle>
           </DialogHeader>
@@ -488,8 +553,8 @@ function OptionsDialog({
 
           {isApi ? (
             <ApiSourceForm
-              source={source ?? { type: "API" }}
-              onChange={setSource}
+              source={draft ?? { type: "API" }}
+              onChange={setDraftSource}
               // 字段引用下拉排除自身（引用自己无意义）
               otherFields={allFields.filter((f) => f.fieldId !== field.fieldId)}
             />
@@ -506,8 +571,35 @@ function OptionsDialog({
               远程选项运行时拉取，以此为准；接口异常显「数据源异常」，空列表显「暂无可用选项」
             </p>
           )}
+
+          <DialogFooter>
+            {isApi ? (
+              <>
+                <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+                <Button onClick={applyDraft}>确定</Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setOpen(false)}>关闭</Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 二级确认：数据源变更将清空涉及该字段的联动规则 */}
+      <AlertDialog open={pending !== null} onOpenChange={(o) => !o && setPending(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>数据源变更</AlertDialogTitle>
+            <AlertDialogDescription>
+              数据源变更将清空 {pending?.count ?? 0} 条相关联动规则，是否继续？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPending(null)}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPending}>确认</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -189,6 +189,7 @@ export function FormDesigner({
               <FieldConfigPanel
                 field={selectedField}
                 allFields={allFields}
+                linkageRules={designer.state.linkageRules}
                 onChange={(patch) => selectedId && designer.updateField(selectedId, patch)}
               />
             </TabsContent>
