@@ -18,6 +18,7 @@ import { FIELD_REGISTRY } from "./fields/registry";
 import { groupKey, type DesignerState } from "./designer-state";
 import { computeFieldState, evalRule, findValueRule, type EffectiveFieldState } from "./linkage";
 import { validateFieldState } from "./validate";
+import { useRemoteOptions } from "./useRemoteOptions";
 
 // 预览：把设计数据用真实表单控件按 24 栅格渲染（可交互 + 提交校验 + 分组可折叠）。
 export function FormPreviewDialog({
@@ -57,15 +58,23 @@ export function FormPreviewDialog({
 
   const rules = state.linkageRules ?? [];
 
-  // 字段当前值（含 defaultValue 回退），供联动求值。
+  // 字段当前值（含 defaultValue 回退），供联动求值与远程选项依赖替换。
   function currentValues(): Record<string, unknown> {
     const v: Record<string, unknown> = {};
     for (const f of allFields) v[f.fieldId] = valueOf(f);
     return v;
   }
+  const vals = currentValues();
+  // 远程选项（optionSource.type==="API"）：依赖值变化自动重拉，未成功回退手动 options。
+  const { optionsOf } = useRemoteOptions(allFields, vals);
   // 每字段有效状态（每次渲染重算，值变即变）。
   const effState = new Map<string, EffectiveFieldState>(
-    allFields.map((f) => [f.fieldId, computeFieldState(f, rules, currentValues())]),
+    allFields.map((f) => {
+      // 远程 options 先合并进 field 再过 computeFieldState：
+      // OPTION 未命中 -> state.options = 远程 options（无远程回退手动）；命中 -> actionValue 覆盖。
+      const fieldWithRemote = { ...f, options: optionsOf(f) ?? f.options };
+      return [f.fieldId, computeFieldState(fieldWithRemote, rules, vals)];
+    }),
   );
 
   // VALUE 规则边沿触发：条件由不满足→满足时赋一次。ref 记上次结果。
