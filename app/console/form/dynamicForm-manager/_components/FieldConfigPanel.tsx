@@ -299,9 +299,13 @@ function DefaultValueEditor({
     );
   }
   if (meta.hasOptions && (field.options ?? []).length === 0) {
+    // API 远程数据源：设计态拉不到远程选项（且无手动兜底）时，提示运行时按远程选值（spec §6）。
+    const isApi = field.optionSource?.type === "API";
     return (
       <p className="rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
-        先在下方「选项」里添加选项，再设默认值
+        {isApi
+          ? "远程选项运行时拉取，默认值在预览/填表时按远程选项选值"
+          : "先在下方「选项」里添加选项，再设默认值"}
       </p>
     );
   }
