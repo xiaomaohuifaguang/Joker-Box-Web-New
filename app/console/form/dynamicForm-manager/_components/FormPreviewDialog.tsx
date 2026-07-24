@@ -18,7 +18,7 @@ import { FIELD_REGISTRY } from "./fields/registry";
 import { groupKey, type DesignerState } from "./designer-state";
 import { computeFieldState, evalRule, findValueRule, type EffectiveFieldState } from "./linkage";
 import { validateFieldState } from "./validate";
-import { useRemoteOptions } from "./useRemoteOptions";
+import { useRemoteOptions, type RemoteStatus } from "./useRemoteOptions";
 
 // 预览：把设计数据用真实表单控件按 24 栅格渲染（可交互 + 提交校验 + 分组可折叠）。
 export function FormPreviewDialog({
@@ -65,15 +65,25 @@ export function FormPreviewDialog({
     return v;
   }
   const vals = currentValues();
-  // 远程选项（optionSource.type==="API"）：依赖值变化自动重拉，未成功回退手动 options。
-  const { optionsOf } = useRemoteOptions(allFields, vals);
+  // 远程选项（optionSource.type==="API"）：依赖值变化自动重拉；已去手动兜底（API 以远程为准）。
+  const { optionsOf, statusOf } = useRemoteOptions(allFields, vals);
   // 每字段有效状态（每次渲染重算，值变即变）。
   const effState = new Map<string, EffectiveFieldState>(
     allFields.map((f) => {
-      // 远程 options 先合并进 field 再过 computeFieldState：
-      // OPTION 未命中 -> state.options = 远程 options（无远程回退手动）；命中 -> actionValue 覆盖。
-      const fieldWithRemote = { ...f, options: optionsOf(f) ?? f.options };
-      return [f.fieldId, computeFieldState(fieldWithRemote, rules, vals)];
+      // API 字段：options 完全以远程为准（成功含空数组），不再回退手动 f.options。
+      // OPTION 未命中 -> state.options = 远程 options；命中 -> actionValue 覆盖。
+      const isApi = f.optionSource?.type === "API";
+      const status = isApi ? statusOf(f.fieldId) : undefined;
+      const fieldWithRemote: DynamicFormField = isApi
+        ? { ...f, options: optionsOf(f) ?? [] }
+        : f;
+      const st = computeFieldState(fieldWithRemote, rules, vals);
+      // 数据源异常的 API 字段当禁用：required 置 0（不校验）、options 空、disabled（不进查看数据）。
+      const st2: EffectiveFieldState =
+        status === "error"
+          ? { ...st, required: "0", options: [], disabled: true }
+          : st;
+      return [f.fieldId, st2];
     }),
   );
 
@@ -113,7 +123,7 @@ export function FormPreviewDialog({
     const nextErrors: Record<string, string> = {};
     for (const f of allFields) {
       const st = effState.get(f.fieldId);
-      if (!st || !st.visible || st.disabled) continue; // 隐藏/禁用不校验
+      if (!st || !st.visible || st.disabled) continue; // 隐藏/禁用不校验（数据源异常已并入 disabled）
       const msg = validateFieldState(f, st, valueOf(f));
       if (msg) nextErrors[f.fieldId] = msg;
     }
@@ -140,7 +150,7 @@ export function FormPreviewDialog({
     const data: Record<string, unknown> = {};
     for (const f of allFields) {
       const st = effState.get(f.fieldId);
-      if (!st || !st.visible || st.disabled) continue; // 隐藏/禁用不进数据
+      if (!st || !st.visible || st.disabled) continue; // 隐藏/禁用不进数据（数据源异常已并入 disabled）
       const v = valueOf(f);
       // 跳过完全空的字段（undefined/null/空串），避免噪音；false/0/空数组保留。
       if (v === undefined || v === null || v === "") continue;
@@ -167,6 +177,7 @@ export function FormPreviewDialog({
               errors={errors}
               onChange={setValue}
               effState={effState}
+              statusOf={statusOf}
             />
           )}
           {state.groups.map((g) => (
@@ -179,6 +190,7 @@ export function FormPreviewDialog({
               errors={errors}
               onChange={setValue}
               effState={effState}
+              statusOf={statusOf}
             />
           ))}
           {allFields.length === 0 && (
@@ -237,6 +249,7 @@ function PreviewGroup({
   errors,
   onChange,
   effState,
+  statusOf,
 }: {
   title?: string;
   collapsed?: boolean;
@@ -245,6 +258,7 @@ function PreviewGroup({
   errors: Record<string, string>;
   onChange: (fieldId: string, v: unknown) => void;
   effState: Map<string, EffectiveFieldState>;
+  statusOf: (fieldId: string) => RemoteStatus;
 }) {
   const [collapsed, setCollapsed] = useState(!!initCollapsed);
   // 组内有校验错误时强制展开（否则用户看不到折叠组里的报错）。
@@ -268,10 +282,27 @@ function PreviewGroup({
           {fields.map((f) => {
             const st = effState.get(f.fieldId);
             if (!st || !st.visible) return null; // 联动隐藏：不渲染（值保留、不校验、不进数据）
+            // API 字段的数据源状态注入 props（控件据此显「数据源异常/加载中」占位）。
+            // 数据源异常时 effState 已置 disabled+required:0（当禁用：不校验、不进数据）。
+            const isApi = f.optionSource?.type === "API";
+            const status = isApi ? statusOf(f.fieldId) : undefined;
             return (
               <PreviewField
                 key={f.fieldId}
-                field={{ ...f, options: st.options, pattern: st.pattern, span: st.span, required: st.required }}
+                field={{
+                  ...f,
+                  options: st.options,
+                  pattern: st.pattern,
+                  span: st.span,
+                  required: st.required,
+                  props: isApi
+                    ? {
+                        ...f.props,
+                        __sourceError: status === "error",
+                        __sourceLoading: status === "loading",
+                      }
+                    : f.props,
+                }}
                 value={valueOf(f)}
                 error={errors[f.fieldId]}
                 onChange={(v) => onChange(f.fieldId, v)}

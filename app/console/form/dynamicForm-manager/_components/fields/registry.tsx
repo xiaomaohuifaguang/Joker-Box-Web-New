@@ -183,15 +183,37 @@ function renderOptions(field: DynamicFormField): DynamicFormOption[] {
   return field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? []);
 }
 
+// 数据源状态占位（API 远程选项）：预览注入 props.__sourceError/__sourceLoading。
+// 返回 null=正常渲染选项；否则返回「数据源异常/加载中」的占位节点。仅 props 显式为 true 才生效，
+// 联动编辑器（showAllOptions）构造的临时字段不带这些 props -> 天然走正常分支、不受影响。
+export function sourceStatusNode(field: DynamicFormField): ReactNode | null {
+  if (field.props?.__sourceError === true) {
+    return <p className="text-xs text-muted-foreground">数据源异常</p>;
+  }
+  if (field.props?.__sourceLoading === true) {
+    return <p className="text-xs text-muted-foreground">加载中…</p>;
+  }
+  return null;
+}
+
 function SelectControl({ value, onChange, disabled, field }: FieldControlProps) {
   const str = toStr(value);
   const clearable = !disabled && str !== "";
+  // 数据源异常：占位禁用（去兜底后远程失败即不可选）。
+  if (field.props?.__sourceError === true) {
+    return (
+      <Button variant="outline" disabled className="w-full justify-start font-normal text-muted-foreground">
+        数据源异常
+      </Button>
+    );
+  }
+  const loading = field.props?.__sourceLoading === true;
   return (
     <Clearable show={clearable} onClear={() => onChange(undefined)}>
-      <Select value={str} onValueChange={onChange} disabled={disabled}>
+      <Select value={str} onValueChange={onChange} disabled={disabled || loading}>
         {/* 隐藏 Radix 自带 chevron；末尾位互斥——有值由 Clearable 显 ×，无值自绘 chevron。 */}
         <SelectTrigger className="w-full [&>svg]:hidden">
-          <SelectValue placeholder={field.placeholder ?? "请选择"} />
+          <SelectValue placeholder={loading ? "加载中…" : (field.placeholder ?? "请选择")} />
           {!clearable && <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />}
         </SelectTrigger>
         {/* position=popper：锚定触发器正下方。默认 item-aligned 在仅禁用占位项（空选项）时对齐计算会跑飞到页面左上角。 */}
@@ -215,6 +237,8 @@ function SelectControl({ value, onChange, disabled, field }: FieldControlProps) 
 }
 
 function RadioControl({ value, onChange, disabled, field }: FieldControlProps) {
+  const statusNode = sourceStatusNode(field);
+  if (statusNode) return statusNode;
   const opts = renderOptions(field);
   if (opts.length === 0) {
     return <p className="text-xs text-muted-foreground">暂无可用选项</p>;
@@ -243,6 +267,8 @@ function CheckboxControl({ value, onChange, disabled, field }: FieldControlProps
   const arr = toArr(value);
   const toggle = (v: string, on: boolean) =>
     onChange(on ? [...arr, v] : arr.filter((x) => x !== v));
+  const statusNode = sourceStatusNode(field);
+  if (statusNode) return statusNode;
   const opts = renderOptions(field);
   if (opts.length === 0) {
     return <p className="text-xs text-muted-foreground">暂无可用选项</p>;

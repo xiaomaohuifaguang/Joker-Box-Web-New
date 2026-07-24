@@ -12,9 +12,10 @@ import { collectDeps, mapOptions, substituteParams } from "./optionSource";
 
 // 预览/填表运行时的远程选项拉取（optionSource.type==="API" 的字段）：
 // - 依赖（params 里的 ${fieldId} 占位）值变化 -> 请求 key 变化 -> 重拉。
-// - 依赖值有空（undefined/""）-> 跳过请求，optionsOf 返回 undefined（调用方回退手动 options）。
-// - 成功（含空数组）才存结果；失败 toast + 不存（回退手动）。空数组是成功（显示「暂无可用选项」）。
-// - 值优先级：optionsOf 仅在有「当前 key 对应的成功结果」时返回远程 options，否则 undefined。
+// - 值优先级（已去手动兜底）：API 字段的 options 完全以远程为准——
+//   成功（含空数组）用远程结果（空即空，显「暂无可用选项」）；失败/异常显「数据源异常」；
+//   加载中/依赖未填/地址非法显「加载中」。不回退手动 options。
+// - optionsOf 仅在「当前 key 已成功」时返回远程 options，否则 undefined（此时控件走 props.__source* 显状态）。
 
 // 一次远程选项请求的描述。key 唯一标识请求内容（url+method+替换后参数），用于去重/过期判定/竞态。
 interface RemoteRequest {
@@ -66,12 +67,18 @@ function toQuery(
   return q;
 }
 
+// API 字段的远程选项状态（驱动控件显「数据源异常/加载中」）。
+// - ready：当前 key 已成功（含空数组），optionsOf 返回远程 options。
+// - error：拉取失败/异常 -> 显「数据源异常」（禁用）。
+// - loading：加载中 / 依赖未填 / 地址非法 -> 显「加载中…」。
+export type RemoteStatus = "ready" | "error" | "loading";
+
 export function useRemoteOptions(
   fields: DynamicFormField[],
   values: Record<string, unknown>,
 ): {
   optionsOf: (f: DynamicFormField) => DynamicFormOption[] | undefined;
-  loading: (fieldId: string) => boolean;
+  statusOf: (fieldId: string) => RemoteStatus;
 } {
   // fieldId -> 最近一次成功的结果（key 用于过期判定：依赖变了，旧 key 的结果不能再用）。
   const [fetched, setFetched] = useState<
@@ -79,8 +86,11 @@ export function useRemoteOptions(
   >(new Map());
   // fetched 的 ref 镜像：effect 内同步读（state 读不到本次渲染后的值）。
   const fetchedRef = useRef(fetched);
-  // 加载中集合（loading() 展示用）。
+  // 加载中集合。
   const [loadingSet, setLoadingSet] = useState<Set<string>>(new Set());
+  // 失败集合：当前 key 拉取失败/异常（显「数据源异常」）。
+  const [failedSet, setFailedSet] = useState<Set<string>>(new Set());
+  const failedRef = useRef(failedSet);
   // fieldId -> 进行中的请求 key（防同 key 重发）。
   const inflightRef = useRef<Map<string, string>>(new Map());
   // fieldId -> 最近发起的请求 key（竞态守卫：响应回来时不是最新 key 则丢弃，后发覆盖先发）。
@@ -130,11 +140,15 @@ export function useRemoteOptions(
           const options = mapOptions(res.data, req.mapping);
           fetchedRef.current.set(req.fieldId, { key: req.key, options });
           setFetched(new Map(fetchedRef.current));
+          // 成功即清除该字段的失败标记。
+          failedRef.current.delete(req.fieldId);
+          setFailedSet(new Set(failedRef.current));
         })
         .catch(() => {
           if (latestKeyRef.current.get(req.fieldId) !== req.key) return;
-          // 失败不存结果：optionsOf 返回 undefined，调用方回退手动 options。
-          toast.error("远程选项加载失败");
+          // 失败/异常：标记 failed（控件显「数据源异常」），不回退手动 options。
+          failedRef.current.add(req.fieldId);
+          setFailedSet(new Set(failedRef.current));
         })
         .finally(() => {
           if (inflightRef.current.get(req.fieldId) !== req.key) return;
@@ -154,8 +168,8 @@ export function useRemoteOptions(
   const keyByFieldId = new Map<string, string>();
   for (const r of requests) if (r) keyByFieldId.set(r.fieldId, r.key);
 
-  // 值优先级：仅当存在「当前 key」对应的成功结果（含空数组）时返回远程 options；
-  // 未加载/失败/依赖为空/结果过期 -> undefined（调用方回退 f.options）。
+  // 值优先级（已去手动兜底）：仅当存在「当前 key」对应的成功结果（含空数组）时返回远程 options。
+  // 失败/加载中/依赖为空/结果过期 -> undefined（此时控件走 props.__source* 显「数据源异常/加载中」）。
   function optionsOf(f: DynamicFormField): DynamicFormOption[] | undefined {
     const key = keyByFieldId.get(f.fieldId);
     if (!key) return undefined;
@@ -163,9 +177,15 @@ export function useRemoteOptions(
     return entry && entry.key === key ? entry.options : undefined;
   }
 
-  function loading(fieldId: string): boolean {
-    return loadingSet.has(fieldId);
+  // API 字段的远程状态：error=失败 / ready=已成功 / loading=其余（加载中/依赖未填/地址非法）。
+  function statusOf(fieldId: string): RemoteStatus {
+    if (failedSet.has(fieldId)) return "error";
+    if (loadingSet.has(fieldId)) return "loading";
+    const key = keyByFieldId.get(fieldId);
+    const entry = fetched.get(fieldId);
+    if (key && entry && entry.key === key) return "ready";
+    return "loading";
   }
 
-  return { optionsOf, loading };
+  return { optionsOf, statusOf };
 }

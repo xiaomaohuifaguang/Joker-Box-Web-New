@@ -13,6 +13,9 @@ import type { FieldControlProps } from "./registry";
 // 下拉用内联绝对定位面板（不 portal），不用 Popover：预览 Dialog 内 PopoverContent portal 到 body
 // 会落在 Dialog 的 react-remove-scroll 拦截区外 -> 滚轮失效（同级联，见 CascaderControl）。
 export function MultiSelectControl({ field, value, onChange, disabled }: FieldControlProps) {
+  // 数据源状态（API 远程）：异常/加载中 -> 触发框占位 + 禁用（去兜底后远程失败即不可选）。
+  const sourceError = field.props?.__sourceError === true;
+  const loading = field.props?.__sourceLoading === true;
   const options = useMemo(
     () => (field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? [])),
     [field.options, field.props?.showAllOptions],
@@ -47,22 +50,24 @@ export function MultiSelectControl({ field, value, onChange, disabled }: FieldCo
       {/* 触发框：已选 tag 平铺，可单个移除。 */}
       <div
         role="button"
-        tabIndex={disabled ? -1 : 0}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        tabIndex={disabled || loading || sourceError ? -1 : 0}
+        onClick={() => !(disabled || loading || sourceError) && setOpen((o) => !o)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            if (!disabled) setOpen((o) => !o);
+            if (!(disabled || loading || sourceError)) setOpen((o) => !o);
           }
         }}
         className={cn(
           "flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm transition-colors",
-          disabled && "cursor-not-allowed opacity-50",
-          !disabled && "cursor-pointer hover:bg-accent/50",
+          (disabled || loading || sourceError) && "cursor-not-allowed opacity-50",
+          !(disabled || loading || sourceError) && "cursor-pointer hover:bg-accent/50",
         )}
       >
         {arr.length === 0 && (
-          <span className="px-1 text-muted-foreground">{field.placeholder || "请选择"}</span>
+          <span className="px-1 text-muted-foreground">
+            {sourceError ? "数据源异常" : loading ? "加载中…" : field.placeholder || "请选择"}
+          </span>
         )}
         {arr.map((v) => (
           <span

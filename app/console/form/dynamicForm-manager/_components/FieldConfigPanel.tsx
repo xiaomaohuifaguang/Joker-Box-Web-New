@@ -298,14 +298,18 @@ function DefaultValueEditor({
       </p>
     );
   }
-  if (meta.hasOptions && (field.options ?? []).length === 0) {
-    // API 远程数据源：设计态拉不到远程选项（且无手动兜底）时，提示运行时按远程选值（spec §6）。
-    const isApi = field.optionSource?.type === "API";
+  // API 远程数据源（跟随数据源类型）：设计态拉不到远程选项 -> 恒显只读提示，不给设默认值。
+  if (meta.hasOptions && field.optionSource?.type === "API") {
     return (
       <p className="rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
-        {isApi
-          ? "远程选项运行时拉取，默认值在预览/填表时按远程选项选值"
-          : "先在下方「选项」里添加选项，再设默认值"}
+        远程选项运行时拉取，默认值在预览/填表时按远程选项选值
+      </p>
+    );
+  }
+  if (meta.hasOptions && (field.options ?? []).length === 0) {
+    return (
+      <p className="rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
+        先在下方「选项」里添加选项，再设默认值
       </p>
     );
   }
@@ -499,8 +503,7 @@ function OptionsDialog({
 
           {isApi && (
             <p className="text-xs text-muted-foreground">
-              远程选项运行时拉取，优先生效；手动选项仅兜底
-              {options.length > 0 && `（已配置 ${options.length} 个手动选项作为兜底）`}
+              远程选项运行时拉取，以此为准；接口异常显「数据源异常」，空列表显「暂无可用选项」
             </p>
           )}
         </DialogContent>

@@ -82,7 +82,10 @@ export interface DynamicFormField {
   patternTips?: string;
   span?: number; // 1-24，默认 24
   sort?: number;
-  props?: Record<string, unknown>; // 组件额外配置
+  // 组件额外配置。已知键：showAllOptions（联动 VALUE/条件值列全部选项，含 visible=false）、
+  // withTime（DATERANGE 含时间）、checkStrictly（级联任选层级）。
+  // 运行时键（仅预览注入、保存前剥离，不进后端）：__sourceError / __sourceLoading（API 选项数据源状态）。
+  props?: Record<string, unknown>;
   id?: string; // 后端返回的表单项 id（编辑回显）
 }
 

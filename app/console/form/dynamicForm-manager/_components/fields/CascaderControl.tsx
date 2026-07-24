@@ -187,6 +187,9 @@ function DrillColumns({
 
 // ---- CASCADER（单选级联，值=路径数组）----
 export function CascaderControl({ field, value, onChange, disabled }: FieldControlProps) {
+  // 数据源状态（API 远程）：异常/加载中 -> 触发框占位 + 禁用（去兜底后远程失败即不可选）。
+  const sourceError = field.props?.__sourceError === true;
+  const loading = field.props?.__sourceLoading === true;
   // showAllOptions：联动 VALUE 赋值场景列全部选项（含 visible=false），显隐不生效。
   const options = useMemo(
     () => (field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? [])),
@@ -212,14 +215,17 @@ export function CascaderControl({ field, value, onChange, disabled }: FieldContr
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        disabled={disabled}
+        disabled={disabled || loading || sourceError}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors hover:bg-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
           !display && "text-muted-foreground",
         )}
       >
-        <span className="truncate">{display || field.placeholder || "请选择"}</span>
+        <span className="truncate">
+          {display ||
+            (sourceError ? "数据源异常" : loading ? "加载中…" : field.placeholder || "请选择")}
+        </span>
         {/* 末尾位互斥：有值显 ×（点击清空），无值显 chevron。占同一位置。 */}
         {!disabled && path.length > 0 ? (
           <button
@@ -255,6 +261,9 @@ export function CascaderControl({ field, value, onChange, disabled }: FieldContr
 
 // ---- MULTICASCADER（多选级联，值=二维路径数组；已选显示在框内）----
 export function MultiCascaderControl({ field, value, onChange, disabled }: FieldControlProps) {
+  // 数据源状态（API 远程）：异常/加载中 -> 触发框占位 + 禁用。
+  const sourceError = field.props?.__sourceError === true;
+  const loading = field.props?.__sourceLoading === true;
   const options = useMemo(
     () => (field.props?.showAllOptions ? (field.options ?? []) : visibleOptions(field.options ?? [])),
     [field.options, field.props?.showAllOptions],
@@ -285,17 +294,19 @@ export function MultiCascaderControl({ field, value, onChange, disabled }: Field
       {/* 触发框：已选项直接填进框内（多选 tag 平铺，可单个移除）。 */}
       <div
         role="button"
-        tabIndex={disabled ? -1 : 0}
-        onClick={() => !disabled && setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!disabled) setOpen((o) => !o); } }}
+        tabIndex={disabled || loading || sourceError ? -1 : 0}
+        onClick={() => !(disabled || loading || sourceError) && setOpen((o) => !o)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!(disabled || loading || sourceError)) setOpen((o) => !o); } }}
         className={cn(
           "flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm transition-colors",
-          disabled && "cursor-not-allowed opacity-50",
-          !disabled && "cursor-pointer hover:bg-accent/50",
+          (disabled || loading || sourceError) && "cursor-not-allowed opacity-50",
+          !(disabled || loading || sourceError) && "cursor-pointer hover:bg-accent/50",
         )}
       >
         {paths.length === 0 && (
-          <span className="px-1 text-muted-foreground">{field.placeholder || "请选择"}</span>
+          <span className="px-1 text-muted-foreground">
+            {sourceError ? "数据源异常" : loading ? "加载中…" : field.placeholder || "请选择"}
+          </span>
         )}
         {paths.map((p) => {
           const key = pathKey(p);
