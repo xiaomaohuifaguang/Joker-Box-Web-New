@@ -278,7 +278,10 @@ function PreviewGroup({
         </button>
       )}
       {isOpen && (
-        <div className={cn("grid grid-cols-[repeat(24,minmax(0,1fr))] gap-x-3 gap-y-4", title && "p-3")}>
+        // 24 栅格列间隙用固定 rem（gap-x-[0.75rem]），不随主题 --space-unit 缩放：
+        // Minimal 等 spacing 放大的主题下，若用 gap-x-3（=3×space-unit）会把 23 个列间隙撑大，
+        // 挤压 minmax(0,1fr) 列导致两个 span=12 顶不到同一行。行距 gap-y 仍随主题（不影响列宽数学）。
+        <div className={cn("grid grid-cols-[repeat(24,minmax(0,1fr))] gap-x-[0.75rem] gap-y-4", title && "p-3")}>
           {fields.map((f) => {
             const st = effState.get(f.fieldId);
             if (!st || !st.visible) return null; // 联动隐藏：不渲染（值保留、不校验、不进数据）

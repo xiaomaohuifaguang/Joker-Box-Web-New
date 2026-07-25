@@ -151,7 +151,10 @@ export function FieldContainer({
         <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">{title}</div>
       )}
       <SortableContext items={fields.map((f) => f.fieldId)} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-wrap gap-2 p-2" data-container={containerId}>
+        {/* gap 用固定 8px（gap-[8px]），不随主题 --space-unit 缩放：Minimal 等 spacing 放大主题下，
+            gap-2 会变大、撑破「calc(span% − 余量)」的列宽预算，导致两个 span=12 换行。
+            字段卡余量（calc(span/24% − 8px)）与此 gap 对齐。 */}
+        <div className="flex flex-wrap gap-[8px] p-2" data-container={containerId}>
           {fields.length === 0 ? (
             <DroppableEmpty containerId={containerId} />
           ) : (
@@ -200,7 +203,8 @@ function SortableFieldCard({
     id: field.fieldId,
   });
   const span = field.span ?? 24;
-  // span/24 -> 宽度百分比（预留 gap）。
+  // span/24 -> 宽度百分比。余量减一个完整 gap（8px，与容器 gap-[8px] 对齐，且与主题 spacing 解耦），
+  // 保证 n 列 span 之和=24 时恰好同行、Minimal 等 spacing 放大主题下也不溢出换行。
   const widthPct = `${(span / 24) * 100}%`;
   return (
     <div
@@ -208,7 +212,7 @@ function SortableFieldCard({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        width: `calc(${widthPct} - 4px)`,
+        width: `calc(${widthPct} - 8px)`,
       }}
       onClick={(e) => {
         e.stopPropagation();
