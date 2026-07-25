@@ -132,6 +132,19 @@ export interface DynamicFormPageParam {
   size: number;
 }
 
+// 已发布版本（/dynamicForm/publishedForms 的 data）。含历史版本，编辑页版本切换用。
+export interface DynamicFormPublishedVersion {
+  formId?: string; // 该版本所属表单 id（与 formName 同级返回，可校验是否对应当前编辑的表）
+  formName?: string;
+  latestVersion?: string; // 最新发布版本号
+  versions?: DynamicFormVersion[];
+}
+
+export interface DynamicFormVersion {
+  version?: string;
+  publishTime?: string;
+}
+
 // ---- 联动规则（linkageRules，add/update/info 的 data 内）----
 
 // 动作类型。

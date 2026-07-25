@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   DynamicForm,
   DynamicFormPageParam,
+  DynamicFormPublishedVersion,
   DynamicFormSavePayload,
   Page,
 } from "@/types";
@@ -20,7 +21,7 @@ export async function queryDynamicFormPage(
   return data;
 }
 
-// 详情：POST /dynamicForm/info，body { id, version? }（编辑回显用；version 省略=最新）。
+// 详情：POST /dynamicForm/info，body { id, version? }（编辑回显 / 发布态只读查看用；version 省略=默认 DRAFT 版本）。
 export async function getDynamicFormInfo(
   id: string,
   version?: string,
@@ -48,4 +49,26 @@ export async function updateDynamicForm(
 // 删除：POST /dynamicForm/remove，body { id }。响应只看 code。
 export async function removeDynamicForm(id: string): Promise<void> {
   await api.post<unknown>("/dynamicForm/remove", { body: { id } });
+}
+
+// 发布：POST /dynamicForm/deploy，query 参数 formId。响应只看 code。
+export async function deployDynamicForm(formId: string): Promise<void> {
+  await api.post<unknown>("/dynamicForm/deploy", { params: { formId } });
+}
+
+// 停用：POST /dynamicForm/stop，query 参数 formId。响应只看 code。
+export async function stopDynamicForm(formId: string): Promise<void> {
+  await api.post<unknown>("/dynamicForm/stop", { params: { formId } });
+}
+
+// 已发布版本列表：POST /dynamicForm/publishedForms，query 参数 formId。
+// data 是 List（按 formId 聚合的版本记录，含 formId/formName/latestVersion/versions），编辑页版本切换用。
+export async function getPublishedForms(
+  formId: string,
+): Promise<DynamicFormPublishedVersion[]> {
+  const { data } = await api.post<DynamicFormPublishedVersion[]>(
+    "/dynamicForm/publishedForms",
+    { params: { formId } },
+  );
+  return data;
 }

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
-import { removeDynamicForm } from "@/lib/api/dynamicForm";
+import { Ban, ChevronLeft, ChevronRight, Eye, Pencil, Plus, RotateCcw, Search, Send, Trash2 } from "lucide-react";
+import { deployDynamicForm, removeDynamicForm, stopDynamicForm } from "@/lib/api/dynamicForm";
 import { ApiError } from "@/lib/api";
 import { useDynamicFormPage } from "@/hooks/useDynamicFormPage";
 import { Badge } from "@/components/ui/badge";
@@ -54,13 +54,22 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
 }
 
 // 表单模板列表：标题 + 搜索 + 表格 + 分页。布局对齐其它后台页（h1 + flex h-full flex-col gap-4）。
-export function FormListPanel({ onDesign }: { onDesign: (id: string | null) => void }) {
+// 操作列按状态开放：草稿=编辑/删除/发布；已发布=查看/停用；停用=编辑/发布。
+export function FormListPanel({
+  onDesign,
+  onView,
+}: {
+  onDesign: (id: string | null) => void;
+  onView: (form: DynamicForm) => void;
+}) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
   const [size, setSize] = useState(10);
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleting, setDeleting] = useState<DynamicForm | null>(null);
+  const [publishing, setPublishing] = useState<DynamicForm | null>(null);
+  const [stopping, setStopping] = useState<DynamicForm | null>(null);
   const { page, loading } = useDynamicFormPage({ search, current, size, refreshKey });
 
   // 搜索防抖。
@@ -81,6 +90,30 @@ export function FormListPanel({ onDesign }: { onDesign: (id: string | null) => v
       setRefreshKey((k) => k + 1);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "删除失败");
+    }
+  }
+
+  async function confirmDeploy() {
+    if (!publishing?.id) return;
+    try {
+      await deployDynamicForm(publishing.id);
+      toast.success("已发布");
+      setPublishing(null);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "发布失败");
+    }
+  }
+
+  async function confirmStop() {
+    if (!stopping?.id) return;
+    try {
+      await stopDynamicForm(stopping.id);
+      toast.success("已停用");
+      setStopping(null);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "停用失败");
     }
   }
 
@@ -132,7 +165,7 @@ export function FormListPanel({ onDesign }: { onDesign: (id: string | null) => v
               <TableHead className="text-xs font-medium text-muted-foreground">版本</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground">状态</TableHead>
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">更新时间</TableHead>
-              <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
+              <TableHead className="w-32 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -170,24 +203,84 @@ export function FormListPanel({ onDesign }: { onDesign: (id: string | null) => v
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => f.id && onDesign(f.id)}
-                        aria-label="编辑"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => setDeleting(f)}
-                        aria-label="删除"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {/* 草稿：编辑 / 删除 / 发布 */}
+                      {(f.status ?? "0") === "0" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => f.id && onDesign(f.id)}
+                            aria-label="编辑"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => setDeleting(f)}
+                            aria-label="删除"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPublishing(f)}
+                            aria-label="发布"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      {/* 已发布：查看 / 停用 */}
+                      {f.status === "1" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => onView(f)}
+                            aria-label="查看"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setStopping(f)}
+                            aria-label="停用"
+                          >
+                            <Ban className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      {/* 停用：编辑 / 发布 */}
+                      {f.status === "-1" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => f.id && onDesign(f.id)}
+                            aria-label="编辑"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPublishing(f)}
+                            aria-label="发布"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -268,6 +361,32 @@ export function FormListPanel({ onDesign }: { onDesign: (id: string | null) => v
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>删除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!publishing} onOpenChange={(o) => !o && setPublishing(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认发布「{publishing?.name}」？</AlertDialogTitle>
+            <AlertDialogDescription>发布后表单对外可用，发布态不可再编辑。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeploy}>发布</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!stopping} onOpenChange={(o) => !o && setStopping(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认停用「{stopping?.name}」？</AlertDialogTitle>
+            <AlertDialogDescription>停用后表单不可再使用，可重新发布。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStop}>停用</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

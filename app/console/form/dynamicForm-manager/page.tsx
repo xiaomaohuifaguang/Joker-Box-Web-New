@@ -16,10 +16,15 @@ export default function DynamicFormManagerPage() {
   );
 }
 
-type View = { name: "list" } | { name: "design"; id: string | null };
+type View =
+  | { name: "list" }
+  | { name: "design"; id: string | null }
+  | { name: "view"; id: string; version?: string };
 
 function parseView(search: string): View {
   const p = new URLSearchParams(search);
+  const v = p.get("view");
+  if (v != null) return { name: "view", id: v, version: p.get("version") ?? undefined };
   const d = p.get("design");
   if (d == null) return { name: "list" };
   return { name: "design", id: d === "new" ? null : d };
@@ -39,7 +44,9 @@ function Inner() {
     const url =
       v.name === "design"
         ? `/console/form/dynamicForm-manager?design=${v.id ?? "new"}`
-        : "/console/form/dynamicForm-manager";
+        : v.name === "view"
+          ? `/console/form/dynamicForm-manager?view=${v.id}${v.version ? `&version=${encodeURIComponent(v.version)}` : ""}`
+          : "/console/form/dynamicForm-manager";
     window.history.pushState(null, "", url);
     setView(v);
   }, []);
@@ -53,5 +60,21 @@ function Inner() {
       />
     );
   }
-  return <FormListPanel onDesign={(id) => go({ name: "design", id })} />;
+  if (view.name === "view") {
+    return (
+      <FormDesigner
+        id={view.id}
+        version={view.version}
+        readOnly
+        onBack={() => go({ name: "list" })}
+        onSaved={() => go({ name: "list" })}
+      />
+    );
+  }
+  return (
+    <FormListPanel
+      onDesign={(id) => go({ name: "design", id })}
+      onView={(form) => form.id && go({ name: "view", id: form.id, version: form.version })}
+    />
+  );
 }
