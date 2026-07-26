@@ -1,4 +1,5 @@
-import { api } from "@/lib/api";
+import { api, ApiError, handleUnauthorized } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 import type {
   DynamicForm,
   DynamicFormPageParam,
@@ -71,4 +72,36 @@ export async function getPublishedForms(
     { params: { formId } },
   );
   return data;
+}
+
+// 提交：POST /dynamicForm/submit，multipart FormData（formId/version/data）。
+// data 是 Map<fieldId, value>，序列化成 JSON 字符串塞单个 data 字段（后端反序列化）。
+// formInstanceId 为「更新已提交实例」语义预留，本次新增提交不传。响应 data = 表单实例 id。
+const SUBMIT_SUCCESS_CODE = 200;
+export async function submitDynamicForm(input: {
+  formId: string;
+  version: string;
+  data: Record<string, unknown>;
+  formInstanceId?: string;
+}): Promise<string> {
+  const fd = new FormData();
+  fd.append("formId", input.formId);
+  fd.append("version", input.version);
+  fd.append("data", JSON.stringify(input.data));
+  if (input.formInstanceId) fd.append("formInstanceId", input.formInstanceId);
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch("/joker-box/dynamicForm/submit", {
+    method: "POST",
+    headers,
+    body: fd,
+  });
+  if (!res.ok) throw new ApiError(res.status, `提交失败: ${res.status}`);
+  const body = await res.json().catch(() => null);
+  if (!body) throw new ApiError(res.status, "提交失败：响应异常");
+  handleUnauthorized(body.code, !!token);
+  if (body.code !== SUBMIT_SUCCESS_CODE)
+    throw new ApiError(body.code, body.msg || `提交失败: ${body.code}`);
+  return body.data as string;
 }
