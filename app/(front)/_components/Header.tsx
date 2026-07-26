@@ -147,7 +147,7 @@ export function Header() {
         <NavigationMenu viewport={false} className="hidden flex-none md:flex">
           <NavigationMenuList className="gap-6">
             <NavigationMenuItem>
-              <NavLink href="/" label="首页" active={pathname === "/"} icon="Home" />
+              <NavLink href="/" label="首页" active={pathname === "/"} />
             </NavigationMenuItem>
             {menuItems.map((item) =>
               item.children?.length ? (

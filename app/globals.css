@@ -57,7 +57,7 @@
   --display-font: var(--font-fraunces);
   --body-font: var(--font-geist-sans);
   --mono-font: var(--font-geist-mono);
-  --radius: 2.5rem;
+  --radius: 0.75rem;
   /* 阴影分量（结构统一，数值各主题自填）：第一层主投影用分量 + calc 派生 */
   --shadow-x: 0px;
   --shadow-y: 4px;
