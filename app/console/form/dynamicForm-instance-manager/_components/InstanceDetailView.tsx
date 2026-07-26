@@ -60,51 +60,50 @@ export function InstanceDetailView({
   }, [instanceId]);
 
   return (
-    // 宽度与前台填表页一致（Container：85% / max 1600 居中 + py-10）。
-    <Container className="flex-1 py-10">
-      <div className="flex flex-col gap-4">
-        {/* 头部：返回 + 标题 + 元信息 */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            返回
-          </Button>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">
-            {form?.name ?? "实例详情"}
-          </h1>
-          {form?.version && (
-            <span className="font-mono text-xs text-muted-foreground">v{form.version}</span>
-          )}
-        </div>
-        {form?.description && (
-          <p className="text-sm text-muted-foreground">{form.description}</p>
+    <div className="flex flex-col gap-4">
+      {/* 头部：返回 + 标题 + 元信息（不随表单收窄，保持后台布局） */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          返回
+        </Button>
+        <h1 className="font-display text-lg font-semibold">
+          {form?.name ?? "实例详情"}
+        </h1>
+        {form?.version && (
+          <span className="font-mono text-xs text-muted-foreground">v{form.version}</span>
         )}
+      </div>
+      {form?.description && (
+        <p className="text-sm text-muted-foreground">{form.description}</p>
+      )}
 
-        {/* 内容 */}
-        {loading ? (
+      {/* 表单区：宽度与前台填表页一致（Container：85% / max 1600 居中） */}
+      {loading ? (
+        <Container>
           <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : error ? (
-          <div className="flex items-center justify-center rounded-lg border py-24">
-            <p className="text-sm text-muted-foreground">{error}</p>
-          </div>
-        ) : form ? (
-          <div className="mt-2">
-            <DynamicFormRenderer
-              fields={form.fields ?? []}
-              groups={form.groups ?? []}
-              linkageRules={[]}
-              values={values}
-              errors={{}}
-              onChange={() => {}}
-              disabled
-            />
-          </div>
-        ) : null}
-      </div>
-    </Container>
+        </Container>
+      ) : error ? (
+        <div className="flex items-center justify-center rounded-lg border py-24">
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      ) : form ? (
+        <Container className="mt-2">
+          <DynamicFormRenderer
+            fields={form.fields ?? []}
+            groups={form.groups ?? []}
+            linkageRules={[]}
+            values={values}
+            errors={{}}
+            onChange={() => {}}
+            disabled
+          />
+        </Container>
+      ) : null}
+    </div>
   );
 }
