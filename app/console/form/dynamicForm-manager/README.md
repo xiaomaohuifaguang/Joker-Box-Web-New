@@ -13,7 +13,7 @@
 - `FormPreviewDialog`/`OptionsEditor`/`LinkagePanel`/`LinkageRuleEditor`/`GroupSection`。
 
 ## 字段与画布
-- **字段库**：19 类型分四组（基础/选择/日期时间/高级）：INPUT/TEXTAREA/NUMBER/SWITCH/SLIDER/RATE/COLOR/SELECT/MULTISELECT/RADIO/CHECKBOX/DATE/TIME/DATETIME/DATERANGE/UPLOAD/CASCADER/MULTICASCADER/TABLE。**DATERANGE**：值=`[start,end]` 字符串数组，`props.withTime` 切 date-only/含时间，`DateRangeControl` 双日历+「至」，校验 end<start。**TABLE**：值=`Record<列key,string>[]` 行对象数组，列定义存 `tableColumns`（`TableColumnsDialog` 增删列+key去重），联动操作符仅 EMPTY/NOT_EMPTY。
+- **字段库**：19 类型分四组（基础/选择/日期时间/高级）：INPUT/TEXTAREA/NUMBER/SWITCH/SLIDER/RATE/COLOR/SELECT/MULTISELECT/RADIO/CHECKBOX/DATE/TIME/DATETIME/DATERANGE/UPLOAD/CASCADER/MULTICASCADER/TABLE。**DATERANGE**：值=`[start,end]` 字符串数组，`props.withTime` 切 date-only/含时间，`DateRangeControl` 双日历+「至」，校验 end<start。**TABLE**：值=`Record<列key,string>[]` 行对象数组，列定义存 `columns`（`TableColumnsDialog` 增删列+key去重），联动操作符仅 EMPTY/NOT_EMPTY。
 - **画布**：24 栅格（`grid-cols-[repeat(24,...)]` + `gridColumn: span X`），@dnd-kit **跨组拖拽排序/改挂**（多 SortableContext 容器 + `UNGROUPED_ID`，未分组恒在分组上方），`GroupSection` 可折叠/改名/删除（删组字段回未分组）。gap 用固定 8px 与主题 spacing 解耦（Minimal 下两 span=12 可同行）。
 - **配置面板**：按类型动态显通用/校验属性 + 选项编辑 + 默认值（复用该字段 Control 编辑）。选项统一**弹窗编辑**（`OptionsDialog`，级联带嵌套子级）；级联默认值走宽 Dialog 内联面板。选项 `visible?: boolean`（默认 true，false 预览/填表隐藏，`visibleOptions()` 统一过滤；**隐藏不删已选值**）。
 - **控件**（`fields/`）：`UploadControl`（值存 FileInfo/FileInfo[]，`max`=数量上限）；`CascaderControl`/`MultiCascaderControl`（值=路径数组/二维路径数组，`props.checkStrictly` true=任选层级/false=仅叶子；点 label 展开 + 圆圈选中）；`MultiSelectControl`（真下拉多选，区别于 CHECKBOX 平铺组）。三者下拉**内联绝对定位面板（不 portal）**——滚轮被挡见「通用坑」。

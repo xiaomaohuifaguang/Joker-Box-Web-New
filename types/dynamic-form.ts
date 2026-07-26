@@ -73,7 +73,7 @@ export interface DynamicFormField {
   placeholder?: string;
   options?: DynamicFormOption[]; // 单选/多选用
   optionSource?: DynamicFormOptionSource; // 选项数据源（STATIC=用 options / API=远程拉取）
-  tableColumns?: DynamicFormTableColumn[]; // 动态表格列定义（仅 TABLE）
+  columns?: DynamicFormTableColumn[]; // 动态表格列定义（仅 TABLE）
   minLength?: number;
   maxLength?: number;
   min?: number;

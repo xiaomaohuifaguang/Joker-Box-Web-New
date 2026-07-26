@@ -503,7 +503,7 @@ export const FIELD_REGISTRY: Record<DynamicFormFieldType, FieldMeta> = {
     type: "TABLE",
     label: "动态表格",
     group: "高级",
-    defaults: () => ({ tableColumns: [] }),
+    defaults: () => ({ columns: [] }),
     Control: TableControl,
   },
   UPLOAD: {

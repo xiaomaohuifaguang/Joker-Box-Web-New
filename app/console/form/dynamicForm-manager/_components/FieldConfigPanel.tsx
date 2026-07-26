@@ -172,8 +172,8 @@ export function FieldConfigPanel({
       {isTable && (
         <Field label="表格列">
           <TableColumnsDialog
-            columns={field.tableColumns ?? []}
-            onChange={(tableColumns) => onChange({ tableColumns })}
+            columns={field.columns ?? []}
+            onChange={(columns) => onChange({ columns })}
           />
         </Field>
       )}

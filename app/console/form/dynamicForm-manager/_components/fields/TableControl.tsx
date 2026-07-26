@@ -7,13 +7,13 @@ import type { DynamicFormTableColumn } from "@/types";
 import type { FieldControlProps } from "./registry";
 
 // 动态表格（TABLE）：值 = Record<列key, string>[]（行对象数组）。
-// 列 = field.tableColumns（设计器配置）；单元格统一为单行文本 Input。
+// 列 = field.columns（设计器配置）；单元格统一为单行文本 Input。
 // 添加/删除整行，编辑单元格；disabled 只读展示（隐藏增删、禁用输入）。
 export default function TableControl({ value, onChange, disabled, field }: FieldControlProps) {
   const rows: Record<string, string>[] = Array.isArray(value)
     ? (value as Record<string, string>[])
     : [];
-  const columns: DynamicFormTableColumn[] = field.tableColumns ?? [];
+  const columns: DynamicFormTableColumn[] = field.columns ?? [];
 
   // 无列兜底：预览时设计器没配列。
   if (columns.length === 0) {
