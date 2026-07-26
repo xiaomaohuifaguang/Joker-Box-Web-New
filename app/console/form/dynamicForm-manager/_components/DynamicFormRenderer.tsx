@@ -28,6 +28,7 @@ export interface DynamicFormRendererProps {
   values: Record<string, unknown>;
   errors: Record<string, string>;
   onChange: (fieldId: string, v: unknown) => void;
+  disabled?: boolean; // 整表只读（实例详情预览）：强制禁用所有控件。默认 false
 }
 
 export interface DynamicFormRendererHandle {
@@ -43,7 +44,7 @@ export const DynamicFormRenderer = forwardRef<
   DynamicFormRendererHandle,
   DynamicFormRendererProps
 >(function DynamicFormRenderer(
-  { fields, groups, linkageRules, values, errors, onChange },
+  { fields, groups, linkageRules, values, errors, onChange, disabled },
   ref,
 ) {
   const allFields = [...fields, ...groups.flatMap((g) => g.fields)];
@@ -155,6 +156,7 @@ export const DynamicFormRenderer = forwardRef<
           onChange={onChange}
           effState={effState}
           statusOf={statusOf}
+          forceDisabled={disabled}
         />
       )}
       {groups.map((g) => (
@@ -168,6 +170,7 @@ export const DynamicFormRenderer = forwardRef<
           onChange={onChange}
           effState={effState}
           statusOf={statusOf}
+          forceDisabled={disabled}
         />
       ))}
     </div>
@@ -183,6 +186,7 @@ function RendererGroup({
   onChange,
   effState,
   statusOf,
+  forceDisabled,
 }: {
   title?: string;
   collapsed?: boolean;
@@ -192,6 +196,7 @@ function RendererGroup({
   onChange: (fieldId: string, v: unknown) => void;
   effState: Map<string, EffectiveFieldState>;
   statusOf: (fieldId: string) => RemoteStatus;
+  forceDisabled?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(!!initCollapsed);
   // 组内有校验错误时强制展开（否则看不到折叠组里的报错）。
@@ -238,7 +243,7 @@ function RendererGroup({
                 value={valueOf(f)}
                 error={errors[f.fieldId]}
                 onChange={(v) => onChange(f.fieldId, v)}
-                disabled={st.disabled}
+                disabled={forceDisabled || st.disabled}
               />
             );
           })}

@@ -82,6 +82,7 @@ export interface DynamicFormField {
   patternTips?: string;
   span?: number; // 1-24，默认 24
   sort?: number;
+  value?: unknown; // 实例详情（/dynamicForm/instance/info）回填的当前实例值；设计/填表态不返回
   // 组件额外配置。已知键：showAllOptions（联动 VALUE/条件值列全部选项，含 visible=false）、
   // withTime（DATERANGE 含时间）、checkStrictly（级联任选层级）。
   // 运行时键（仅预览注入、保存前剥离，不进后端）：__sourceError / __sourceLoading（API 选项数据源状态）。

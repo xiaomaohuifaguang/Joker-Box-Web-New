@@ -86,6 +86,17 @@ export async function queryDynamicFormInstancePage(
   return data;
 }
 
+// 实例详情：POST /dynamicForm/instance/info，query 参数 formInstanceId（同 deploy/stop 的 query 风格）。
+// 响应结构同 /dynamicForm/info（fields/groups 的字段多了 value 回填实例值），但不返回 linkageRules（只读预览用）。
+export async function getDynamicFormInstanceInfo(
+  formInstanceId: string,
+): Promise<DynamicForm> {
+  const { data } = await api.post<DynamicForm>("/dynamicForm/instance/info", {
+    params: { formInstanceId },
+  });
+  return data;
+}
+
 // 提交：POST /dynamicForm/submit，body 传参（同 /dynamicForm/* 其它接口，非 multipart）。
 // body = { formId, version, data, formInstanceId? }（FormData 是后端接收 body 的对象）。
 // data 是 Map<fieldId, value>，直接作 JSON 对象随 body 发送（后端反序列化）。
