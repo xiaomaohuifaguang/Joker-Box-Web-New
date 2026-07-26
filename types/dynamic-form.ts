@@ -132,6 +132,24 @@ export interface DynamicFormPageParam {
   size: number;
 }
 
+// 表单实例（/dynamicForm/instance/queryPage 的 data 记录）。createTime/updateTime
+// 后端已格式化为 "yyyy-MM-dd HH:mm:ss" 字符串（GMT+8），前端直接展示。
+export interface DynamicFormInstance {
+  id?: string; // 动态表单实例 id
+  formId?: string; // 表单 id
+  formName?: string; // 表单名称
+  version?: string; // 版本
+  createTime?: string;
+  updateTime?: string;
+}
+
+// 实例分页查询参数。
+export interface DynamicFormInstancePageParam {
+  search?: string;
+  current: number;
+  size: number;
+}
+
 // 已发布版本（/dynamicForm/publishedForms 的 data）。含历史版本，编辑页版本切换用。
 export interface DynamicFormPublishedVersion {
   formId?: string; // 该版本所属表单 id（与 formName 同级返回，可校验是否对应当前编辑的表）

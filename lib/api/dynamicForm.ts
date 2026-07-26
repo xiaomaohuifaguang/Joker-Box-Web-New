@@ -1,6 +1,8 @@
 import { api } from "@/lib/api";
 import type {
   DynamicForm,
+  DynamicFormInstance,
+  DynamicFormInstancePageParam,
   DynamicFormPageParam,
   DynamicFormPublishedVersion,
   DynamicFormSavePayload,
@@ -69,6 +71,17 @@ export async function getPublishedForms(
   const { data } = await api.post<DynamicFormPublishedVersion[]>(
     "/dynamicForm/publishedForms",
     { params: { formId } },
+  );
+  return data;
+}
+
+// 实例分页：POST /dynamicForm/instance/queryPage，body { search?, current, size }。
+export async function queryDynamicFormInstancePage(
+  params: DynamicFormInstancePageParam,
+): Promise<Page<DynamicFormInstance>> {
+  const { data } = await api.post<Page<DynamicFormInstance>>(
+    "/dynamicForm/instance/queryPage",
+    { body: params },
   );
   return data;
 }
