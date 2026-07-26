@@ -20,8 +20,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { CardFan } from "@/components/CardFan";
 
 const SEX_OPTIONS: Sex[] = ["男", "女", "未知"];
+
+// 方案 A：单线输入框（去框，底部 2px 线，聚焦亮 brand 红线）。
+const underlineInput =
+  "h-11 rounded-none border-0 border-b-2 border-border bg-transparent px-0 shadow-none focus-visible:border-brand focus-visible:ring-0";
 
 // 注册表单校验：必填项 + 邮箱格式 + 两次密码一致（错误挂在 confirmPassword）。
 const schema = z
@@ -110,18 +115,61 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-start justify-center px-6 py-12">
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          autoComplete="off"
-          className="flex w-96 flex-col gap-4"
-        >
-          <div className="text-center">
-            <h1 className="font-display text-2xl font-semibold">注册 Joker Box</h1>
-            <p className="mt-1 text-sm text-muted-foreground">万千功能，一站聚合</p>
+    <main className="grid min-h-screen md:grid-cols-2">
+      {/* 品牌舞台（桌面左侧 / 移动顶部横条）：牌桌绿 + 蚀刻排线 + 扇形牌 + 标语。全 token。 */}
+      <section
+        className="relative flex flex-col items-center justify-center gap-6 overflow-hidden bg-felt px-6 py-12 md:gap-10"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(52deg, transparent 0 5px, color-mix(in srgb, var(--background) 5%, transparent) 5px 6px), repeating-linear-gradient(-38deg, transparent 0 7px, color-mix(in srgb, var(--brand) 6%, transparent) 7px 8px)",
+        }}
+      >
+        <CardFan size={104} className="scale-[0.55] md:scale-100" />
+        <div className="text-center">
+          <p className="font-display text-2xl font-semibold text-background md:text-3xl">
+            万千功能，一站聚合
+          </p>
+          <p className="mt-2 text-sm text-background/70 md:mt-3">
+            入座——不止于工具，更是你的全能数字助手。
+          </p>
+        </div>
+      </section>
+
+      {/* 表单（右侧 / 移动下方）：方案 B——表单容器做成一张竖向扑克牌。
+          左侧 brand 红竖边（直排 JOKER+♠）+ 牌面 bg-surface + 角落 J/♠ + 右缘邮票穿孔。 */}
+      <section className="flex min-w-0 items-center justify-center overflow-x-hidden bg-background px-6 py-12">
+        <div className="relative flex w-full max-w-lg overflow-hidden rounded-xl border bg-surface shadow-xl">
+          {/* 左缘：brand 红竖边 + 直排 JOKER + ♠ */}
+          <div className="flex w-12 flex-none flex-col items-center justify-between bg-brand py-5 text-background">
+            <span className="font-mono text-xs font-bold tracking-widest [writing-mode:vertical-rl]">
+              JOKER
+            </span>
+            <span className="text-lg leading-none">♠</span>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {/* 牌面 */}
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              autoComplete="off"
+              className="relative flex min-w-0 flex-1 flex-col gap-5 p-7 sm:p-9"
+            >
+              {/* 角落 J/♠ 标记（右上 / 左下） */}
+              <span aria-hidden className="pointer-events-none absolute right-4 top-3 flex flex-col items-center leading-none">
+                <span className="font-mono text-sm font-bold text-foreground">J</span>
+                <span className="text-sm text-brand">♠</span>
+              </span>
+              <span aria-hidden className="pointer-events-none absolute bottom-3 left-4 flex rotate-180 flex-col items-center leading-none">
+                <span className="font-mono text-sm font-bold text-foreground">J</span>
+                <span className="text-sm text-brand">♠</span>
+              </span>
+
+              <div>
+                <p className="font-mono text-xs uppercase tracking-widest text-brand">Joker Box</p>
+                <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">入座</h1>
+                <p className="mt-2 text-sm text-muted-foreground">注册一个账号</p>
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
           <FormField
             control={form.control}
@@ -130,7 +178,7 @@ export default function RegisterPage() {
               <FormItem>
                 <FormLabel>用户名 *</FormLabel>
                 <FormControl>
-                  <Input placeholder="用户名" autoComplete="off" {...field} />
+                  <Input placeholder="用户名" autoComplete="off" {...field} className={underlineInput} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -148,8 +196,7 @@ export default function RegisterPage() {
                     type="password"
                     placeholder="密码"
                     autoComplete="new-password"
-                    {...field}
-                  />
+                    {...field} className={underlineInput} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -167,8 +214,7 @@ export default function RegisterPage() {
                     type="password"
                     placeholder="再次输入密码"
                     autoComplete="new-password"
-                    {...field}
-                  />
+                    {...field} className={underlineInput} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -182,7 +228,7 @@ export default function RegisterPage() {
               <FormItem>
                 <FormLabel>昵称 *</FormLabel>
                 <FormControl>
-                  <Input placeholder="昵称" autoComplete="off" {...field} />
+                  <Input placeholder="昵称" autoComplete="off" {...field} className={underlineInput} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -200,8 +246,7 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="邮箱"
                     autoComplete="off"
-                    {...field}
-                  />
+                    {...field} className={underlineInput} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -219,8 +264,7 @@ export default function RegisterPage() {
                     <Input
                       placeholder="邮箱验证码"
                       autoComplete="off"
-                      {...field}
-                    />
+                      {...field} className={underlineInput} />
                   </FormControl>
                   <Button
                     type="button"
@@ -272,25 +316,38 @@ export default function RegisterPage() {
                   <Input
                     placeholder="手机号（选填）"
                     autoComplete="off"
-                    {...field}
-                  />
+                    {...field} className={underlineInput} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading} className="h-11 w-full text-base">
             {loading ? "注册中…" : "注册"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             已有账号？
-            <Link href="/login" className="text-foreground">
+            <Link href="/login" className="font-medium text-brand hover:underline">
               登录
             </Link>
           </p>
-        </form>
-      </Form>
+            </form>
+          </Form>
+
+          {/* 右缘：邮票穿孔（径向点阵） */}
+          <div
+            aria-hidden
+            className="w-3 flex-none border-l border-dashed border-border"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, var(--border) 1.5px, transparent 1.5px)",
+              backgroundSize: "100% 14px",
+              backgroundPosition: "center",
+            }}
+          />
+        </div>
+      </section>
     </main>
   );
 }
