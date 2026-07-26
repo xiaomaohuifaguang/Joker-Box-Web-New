@@ -19,13 +19,13 @@
 - 必传 `version`，所以**只可能拿到该发布版本**，不会回落到 DRAFT。
 - 响应 `data` = `DynamicForm`（`fields`/`groups`/`linkageRules`/`name`/`description`）。
 
-### 提交：`POST /dynamicForm/submit`（multipart）
-- **FormData**：`formId: String`、`version: String`、`data: String`（= `JSON.stringify(Map<fieldId, value>)`）。
+### 提交：`POST /dynamicForm/submit`（JSON body）
+- **request body** = `{ formId: String, version: String, data: Map<fieldId, value>, formInstanceId: String? }`（`FormData` 是后端用来接收 body 的 Java 对象，**不是**前端要发的 multipart FormData）。
 - `formInstanceId: String?` 后端支持「更新某条已提交实例」，**本次前台不传**。
 - 响应：判断 `code === 200`；`data` = 表单实例 id（本次仅 toast/调试用，不消费）。
-- 新增 `lib/api/dynamicForm.ts` 包装 `submitDynamicForm({ formId, version, data, formInstanceId? })`：**走 multipart**（自定义 `fetch` + `getToken()` + `FormData`，镜像 `lib/api/dynamicFormFile.ts` 的 `uploadDynamicFormFile`，**不走 `api.post` 的 JSON**）。签名预留 `formInstanceId?: string`，本次调用方不传。
+- 新增 `lib/api/dynamicForm.ts` 包装 `submitDynamicForm({ formId, version, data, formInstanceId? })`：**走 `api.post({ body })`**（同 `/dynamicForm/*` 其它接口的 JSON body 方式，**非 multipart**）。`data` 直接作 JSON 对象随 body 发送。签名预留 `formInstanceId?: string`，本次调用方不传。
 
-> ✅ 已与后端确认：`data` 序列化成 JSON 字符串塞进单个 multipart `data` 字段，**后端负责反序列化**。前端照此发送即可。
+> ✅ 已与后端确认：前端发 JSON body，`data` 为 `fieldId→value` 的 JSON 对象，**后端负责反序列化**。
 
 ## 架构与代码组织
 
