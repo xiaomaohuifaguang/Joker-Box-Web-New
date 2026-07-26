@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useUser } from "@/hooks/useUser";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -33,11 +33,12 @@ export function UserMenu() {
           className="rounded-full p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label="用户菜单"
         >
-          <Avatar className="h-9 w-9">
-            <AvatarFallback className="bg-felt font-display text-sm text-background">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            userId={user?.userId}
+            initials={initials}
+            className="h-9 w-9"
+            fallbackClassName="bg-felt font-display text-sm text-background"
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">

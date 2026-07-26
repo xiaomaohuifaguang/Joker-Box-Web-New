@@ -25,7 +25,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -204,11 +204,12 @@ export function ConsoleSidebar() {
                   tooltip={name}
                   className="data-[state=open]:bg-sidebar-accent"
                 >
-                  <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                    <AvatarFallback className="rounded-lg bg-felt font-display text-xs text-background">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    userId={user?.userId}
+                    initials={initials}
+                    className="h-8 w-8 shrink-0 rounded-lg"
+                    fallbackClassName="rounded-lg bg-felt font-display text-xs text-background"
+                  />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{name}</span>
                     <span className="truncate text-xs text-muted-foreground">
