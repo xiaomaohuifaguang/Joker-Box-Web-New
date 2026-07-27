@@ -30,6 +30,14 @@
   margin-bottom: 0;
 }
 
+/* 预览断词与编辑器一致：编辑器 contenteditable 默认 overflow-wrap:break-word（超长无空格串
+   自动断行），.prose 默认 normal 会一行溢出外壳。补上使新增/预览断行一致。
+   word-break:break-word 兜底连续 CJK/长串。 */
+.prose[data-rich-content] {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 /* 让 Tailwind 的 dark: 工具类跟着 .dark 类走（v4 写法） */
 @custom-variant dark (&:where(.dark, .dark *));
 
