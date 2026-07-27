@@ -62,6 +62,7 @@ type FormState = {
   icon: string;
   sort: number;
   whiteList: string;
+  description: string;
 };
 
 const EMPTY: FormState = {
@@ -71,6 +72,7 @@ const EMPTY: FormState = {
   icon: "",
   sort: 0,
   whiteList: "0",
+  description: "",
 };
 
 // 新增 / 编辑菜单。editing 非 null 时为编辑（加载并保存 api 绑定）。
@@ -117,6 +119,7 @@ export function MenuFormDialog({
               icon: editing.icon,
               sort: editing.sort,
               whiteList: editing.whiteList,
+              description: editing.description ?? "",
             }
           : { ...EMPTY, parentId: defaultParentId },
       );
@@ -189,6 +192,7 @@ export function MenuFormDialog({
             sort: form.sort,
             menuType,
             whiteList: form.whiteList,
+            description: form.description.trim() || undefined,
           },
           apiPathTree: buildApiPathSaveTree(apiTree ?? [], selected),
         });
@@ -202,6 +206,7 @@ export function MenuFormDialog({
           sort: form.sort,
           menuType,
           whiteList: form.whiteList,
+          description: form.description.trim() || undefined,
         });
         toast.success("已新增");
       }
@@ -288,6 +293,13 @@ export function MenuFormDialog({
                 白名单菜单无需鉴权（未登录可见）
               </span>
             </div>
+
+            <Label className="text-sm text-muted-foreground">描述</Label>
+            <Input
+              value={form.description}
+              onChange={(e) => set("description", e.target.value)}
+              placeholder="选填"
+            />
           </div>
 
           {/* 关联 api 绑定树（仅编辑） */}

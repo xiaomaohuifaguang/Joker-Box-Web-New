@@ -11,9 +11,9 @@ import type { Menu, MenuType } from "@/types";
 // 后端已按 token 过滤菜单树（返回用户可见的项），客户端直接渲染、不再二次过滤 authPaths。
 // 页面级用 <RequirePermission> 兜底（直接输入 URL 无权限 -> 404）。
 const cache = new Map<string, Menu[]>();
-const pending = new Map<string, Promise<Menu[]>>();
+const pending = new Map<string, Promise<Menu[] | null>>();
 
-function loadMenuTree(key: string, menuType: MenuType): Promise<Menu[]> {
+function loadMenuTree(key: string, menuType: MenuType): Promise<Menu[] | null> {
   const existing = pending.get(key);
   if (existing) return existing; // 并发去重：多个实例同时挂载只发一次
   const p = getMenuTree(menuType)
@@ -24,9 +24,9 @@ function loadMenuTree(key: string, menuType: MenuType): Promise<Menu[]> {
       return tree;
     })
     .catch(() => {
-      cache.set(key, []); // 失败回落空树（导航缺失，不阻断页面）
       pending.delete(key);
-      return [];
+      // 失败不缓存空树（旧逻辑把 [] 永久缓存导致菜单长期为空）；保持 null 让下次挂载重试。
+      return null;
     });
   pending.set(key, p);
   return p;
@@ -49,13 +49,15 @@ export function useMenuTree(menuType: MenuType) {
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
     setPrevKey(key);
-    const cached = cache.get(key);
-    if (cached) setTree(cached);
+    setTree(cache.get(key) ?? null);
   }
 
   useEffect(() => {
     if (!mounted) return;
     if (cache.get(key)) return; // 命中缓存：render 期已回填，免请求
+    // 已登录但 userId 未就绪（key 仍是 anon）：等 user 加载出真实 key 再拉，
+    // 避免用 anon key 提前发请求并把结果缓存到错误的 key 下（刚登录进后台菜单为空的根因）。
+    if (authed && !userId) return;
     let active = true;
     loadMenuTree(key, menuType).then((data) => {
       if (active) setTree(data);
@@ -63,7 +65,7 @@ export function useMenuTree(menuType: MenuType) {
     return () => {
       active = false;
     };
-  }, [mounted, key, menuType]);
+  }, [mounted, key, menuType, authed, userId]);
 
   return { menu: tree, loading: tree === null };
 }

@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, ChevronsUpDown } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, Home, LogOut, Mail } from "lucide-react";
 import { MenuIcon } from "@/components/menuIcons";
 import {
   Collapsible,
@@ -35,6 +36,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useMenuTree } from "@/hooks/useMenuTree";
 import { useUser } from "@/hooks/useUser";
@@ -50,6 +61,7 @@ export function ConsoleSidebar() {
   const { user } = useUser();
   const { menu, loading } = useMenuTree(MENU_TYPE.CONSOLE);
   const { state, isMobile } = useSidebar();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const initials = (user?.nickname || user?.username || "?")
     .slice(0, 2)
@@ -219,37 +231,82 @@ export function ConsoleSidebar() {
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="w-64">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-display font-semibold leading-none">
+              <DropdownMenuContent side="top" align="end" className="w-72 p-0">
+                {/* 身份卡头：大头像 + 名称 + 管理员徽章 + 用户名 */}
+                <div className="flex items-center gap-3 px-3 py-3">
+                  <UserAvatar
+                    userId={user?.userId}
+                    initials={initials}
+                    className="h-11 w-11"
+                    fallbackClassName="bg-felt font-display text-base text-background"
+                  />
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-display text-sm font-semibold leading-none">
                         {name}
                       </span>
-                      {user?.admin && <Badge>管理员</Badge>}
+                      {user?.admin && (
+                        <Badge className="h-4 px-1 text-[10px]">管理员</Badge>
+                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="truncate text-xs text-muted-foreground">
                       @{user?.username ?? "-"}
                     </span>
-                    {user?.mail && (
-                      <span className="truncate font-mono text-xs text-muted-foreground">
-                        {user.mail}
-                      </span>
-                    )}
                   </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/">返回前台</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="text-destructive focus:text-destructive"
-                >
-                  退出登录
-                </DropdownMenuItem>
+                </div>
+
+                {/* 信息行：邮箱（icon + 内容，紧凑无小标题） */}
+                {user?.mail ? (
+                  <>
+                    <DropdownMenuSeparator className="m-0" />
+                    <div className="flex flex-col gap-2 px-3 py-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate font-mono">{user.mail}</span>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+
+                <DropdownMenuSeparator className="m-0" />
+                <div className="p-1">
+                  <DropdownMenuItem asChild>
+                    <Link href="/">
+                      <Home className="h-4 w-4" />
+                      返回前台
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault(); // 保持下拉打开，避免 AlertDialog 焦点冲突
+                      setConfirmLogout(true);
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    退出登录
+                  </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* 退出登录二次确认：防止向上展开误触直接退出 */}
+            <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>确认退出登录？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    退出后需要重新登录才能继续使用后台功能。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction onClick={logout}>
+                    退出登录
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

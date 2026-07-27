@@ -67,6 +67,7 @@ export default function MenuManagerPage() {
           sort: n.sort,
           menuType,
           whiteList: n.whiteList,
+          description: n.description,
         }),
       ),
     );

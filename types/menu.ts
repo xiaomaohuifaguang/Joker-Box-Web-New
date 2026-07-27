@@ -30,6 +30,8 @@ export interface Menu {
   icon?: string;
   /** 子菜单 */
   children?: Menu[];
+  /** 描述（非必填；仅前台子菜单展示，有值才渲染） */
+  description?: string;
   /** 是否白名单："1" 是（无需 authPaths 鉴权，未登录可见）/ "0" 否 */
   whiteList: string;
 }

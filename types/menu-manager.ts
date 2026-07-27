@@ -18,6 +18,8 @@ export interface MenuNode {
   sort: number;
   /** 是否白名单："1" 是 / "0" 否 */
   whiteList: string;
+  /** 描述（非必填） */
+  description?: string;
   /** 子菜单 */
   children?: MenuNode[];
   /** yyyy-MM-dd HH:mm:ss */
@@ -44,6 +46,8 @@ export interface MenuPayload {
   menuType: number;
   /** 是否白名单："1" 是 / "0" 否 */
   whiteList: string;
+  /** 描述（非必填） */
+  description?: string;
 }
 
 // ---- 菜单 ↔ api 路径绑定（/menu/apiPathTreeWithMenu 与 /menu/save 的 apiPathTree）----

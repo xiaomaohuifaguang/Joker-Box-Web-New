@@ -63,11 +63,9 @@ function NavLink({
   );
 }
 
-// NavigationMenu trigger / 子链接样式：覆盖默认填充胶囊，匹配极简文字风。
+// NavigationMenu trigger 样式：覆盖默认填充胶囊，匹配极简文字风。
 const navTriggerClass =
   "inline-flex h-auto w-auto items-center gap-1.5 rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
-const subLinkClass =
-  "flex items-center gap-2 rounded-md px-3 py-2 hover:bg-background hover:text-foreground data-[active=true]:bg-transparent data-[active=true]:text-foreground";
 
 function SunIcon() {
   return (
@@ -159,19 +157,33 @@ export function Header() {
                     {item.name}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="flex w-48 flex-col">
-                      {item.children.map((c) => (
-                        <li key={c.path}>
+                    {/* 子菜单：名称上 / 描述下（有值才渲染），发丝分割线分隔，hover 泛 felt 绿 */}
+                    <ul className="flex w-60 flex-col p-1.5">
+                      {item.children.map((c, i) => (
+                        <li
+                          key={c.path}
+                          className={i > 0 ? "border-t border-border/60" : ""}
+                        >
                           <NavigationMenuLink
                             asChild
                             active={pathname === c.path}
-                            className={subLinkClass}
+                            className="flex flex-col items-start gap-0.5 rounded-md px-3 py-2.5 transition-colors hover:bg-felt/15 focus:bg-felt/15 data-[active=true]:bg-transparent"
                           >
                             <Link href={c.path}>
-                              {c.icon && (
-                                <MenuIcon name={c.icon} className="h-4 w-4" />
-                              )}
-                              <span>{c.name}</span>
+                              <span
+                                className={`font-display text-[15px] font-medium leading-tight ${
+                                  pathname === c.path
+                                    ? "text-foreground"
+                                    : "text-foreground/90"
+                                }`}
+                              >
+                                {c.name}
+                              </span>
+                              {c.description ? (
+                                <span className="text-xs leading-snug text-muted-foreground">
+                                  {c.description}
+                                </span>
+                              ) : null}
                             </Link>
                           </NavigationMenuLink>
                         </li>
@@ -276,16 +288,23 @@ export function Header() {
                               key={c.path}
                               href={c.path}
                               onClick={() => setMobileOpen(false)}
-                              className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-background hover:text-foreground ${
+                              className={`flex flex-col items-start gap-0.5 rounded-md px-3 py-1.5 transition-colors hover:bg-background ${
                                 pathname === c.path
                                   ? "text-foreground"
                                   : "text-muted-foreground"
                               }`}
                             >
-                              {c.icon && (
-                                <MenuIcon name={c.icon} className="h-4 w-4" />
-                              )}
-                              {c.name}
+                              <span className="flex items-center gap-2 text-sm">
+                                {c.icon && (
+                                  <MenuIcon name={c.icon} className="h-4 w-4" />
+                                )}
+                                {c.name}
+                              </span>
+                              {c.description ? (
+                                <span className="pl-6 text-xs text-muted-foreground">
+                                  {c.description}
+                                </span>
+                              ) : null}
                             </Link>
                           ))}
                         </div>
