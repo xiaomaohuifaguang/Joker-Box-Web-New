@@ -574,3 +574,99 @@
 
 /* 微交互：hover 不位移/不缩放，只靠 bg 变化 */
 :root[data-theme="minimal"] [class*="hover:-translate"]:hover { transform: none; }
+
+/* ===== 流程设计器画布 · 「接线图」视觉系统 =====
+   画布是工程工具不是品牌页：信号色（带电/选中）恒定工程蓝 #2563eb，不随主题预设，保证任何
+   预设+明暗下反馈一致可预期。节点本身保留各 kind 的语义色（开始=绿/结束=红/网关=琥珀…）。 */
+
+/* 节点「带电」高亮：蓝色实心 glow（box-shadow 不吃 SVG、不吃 clip-path，HTML 节点通用）。 */
+.flow-node-active {
+  box-shadow:
+    0 0 0 2px #2563eb,
+    0 0 14px rgb(37 99 235 / 0.55);
+}
+/* 暗色下用更亮的蓝 + 更强光晕，保证在深底上可读。 */
+.dark .flow-node-active {
+  box-shadow:
+    0 0 0 2px #60a5fa,
+    0 0 18px rgb(96 165 250 / 0.6);
+}
+
+/* 连接句柄：缩小 + 中性描边，hover 变工程蓝（图纸接线柱）。 */
+.react-flow__handle {
+  width: 7px;
+  height: 7px;
+  background: var(--surface);
+  border: 1.5px solid var(--muted-foreground);
+  transition: background 120ms, border-color 120ms, box-shadow 120ms;
+}
+.react-flow__handle:hover,
+.react-flow__handle.connecting {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.22);
+}
+.dark .react-flow__handle:hover,
+.dark .react-flow__handle.connecting {
+  background: #60a5fa;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgb(96 165 250 / 0.3);
+}
+
+/* Controls：去圆角胶囊感，用工程小方钮 + 硬边框 + 清楚 hover。 */
+.react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--elevation-md);
+}
+.react-flow__controls-button {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--foreground);
+}
+.react-flow__controls-button:last-child { border-bottom: 0; }
+.react-flow__controls-button:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.react-flow__controls-button svg { fill: currentColor; }
+/* 暗色下：控件浮在深色画布上容易融掉——提亮底色 + 更强投影 + 亮边框，让它「立」起来。 */
+.dark .react-flow__controls {
+  border-color: var(--muted-foreground);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04),
+    0 10px 28px rgb(0 0 0 / 0.6);
+}
+.dark .react-flow__controls-button {
+  background: var(--popover);
+  color: var(--foreground);
+}
+.dark .react-flow__controls-button:hover {
+  background: var(--muted);
+}
+
+/* MiniMap：工程小图，去重阴影、用边框定位。 */
+.react-flow__minimap {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+/* 暗色下同 Controls：提亮边框 + 投影，避免融进画布。 */
+.dark .react-flow__minimap {
+  border-color: var(--muted-foreground);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.6);
+}
+
+/* 模拟运行：连边 dash 流动（电流方向感），reduced-motion 时静止。 */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -14; }
+}
+.flow-edge-animated .react-flow__edge-path {
+  stroke-dasharray: 6 4;
+  animation: flow-dash 0.55s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-edge-animated .react-flow__edge-path { animation: none; }
+}

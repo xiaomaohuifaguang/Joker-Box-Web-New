@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { Page, UserOrgItem, UserRecord, UserRole } from "@/types";
+import type { Page, SelectorUser, UserOrgItem, UserRecord, UserRole } from "@/types";
 
 // 用户管理接口（/user/*）。区别于 lib/api/auth.ts 的当前登录用户接口（/auth/*）。
 // id 参数统一 string（契合后端 String userId/roleId/orgId）；调用处用 String(record.id) 转换。
@@ -83,4 +83,21 @@ export async function removeUserOrg(
   orgId: string,
 ): Promise<void> {
   await api.post<unknown>("/user/deleteOrg", { params: { userId, orgId } });
+}
+
+// 动态人员选择器（搜索）：POST /user/selectorUserWithInfo?search=，query 传参。
+// 默认仅返回 10 条，需配合 search 缩小范围。
+export async function selectorUserWithInfo(search: string): Promise<SelectorUser[]> {
+  const { data } = await api.post<SelectorUser[]>("/user/selectorUserWithInfo", {
+    params: { search },
+  });
+  return data ?? [];
+}
+
+// 动态人员选择器初始化（按已存 ids 拉回展示名）：POST /user/selectorInitByIds，body List<Integer>。
+export async function selectorInitByIds(ids: number[]): Promise<SelectorUser[]> {
+  const { data } = await api.post<SelectorUser[]>("/user/selectorInitByIds", {
+    body: ids,
+  });
+  return data ?? [];
 }

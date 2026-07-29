@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export',
+  allowedDevOrigins: ['10.144.0.1', 'localhost'],
 };
 
 // 开发期把 /joker-box/* 代理到后端（同源、无 CORS）。

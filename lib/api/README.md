@@ -18,6 +18,6 @@
 
 ## 文件 → 后端模块
 
-`client.ts`(请求基建) · `auth`(getToken/register/mailCode) · `menu`(menuTree，前后台导航) · `menuManage` · `org` · `user` · `roleManage` · `apiPath` · `codeTable` · `website`(前台分组) · `websiteManage`(后台 CRUD) · `mail` · `ganDaShi` · `dynamicForm` · `dynamicFormFile`(上传/下载) · `file`(云盘) · `index.ts`(汇出 `api`/`ApiError` 等)
+`client.ts`(请求基建) · `auth`(getToken/register/mailCode) · `menu`(menuTree，前后台导航) · `menuManage` · `org` · `user` · `roleManage` · `apiPath` · `codeTable` · `website`(前台分组) · `websiteManage`(后台 CRUD) · `mail` · `ganDaShi` · `dynamicForm` · `dynamicFormFile`(上传/下载) · `process`(流程定义 queryPage/add/save/info/remove/stop/delegateExpressions(服务任务委托表达式下拉)，发布 deploy 走 **query 传参 id**——非 body，见「传参风格」) · `user`(queryPage/CRUD/角色机构绑定/selectorUserWithInfo/selectorInitByIds) · `org`(queryPage/getOrgTree/CRUD/info) · `file`(云盘) · `index.ts`(汇出 `api`/`ApiError` 等)
 
 类型在 `types/`（按域分文件）。新增接口：在对应模块文件加 wrapper + 在 `types/` 加请求/响应类型。

@@ -16,7 +16,6 @@ export function RequirePermission({ children }: { children: ReactNode }) {
   const mounted = useMounted();
   const { authenticated } = useAuth();
   const { user } = useUser();
-
   if (!mounted) return null;
   // 未登录 -> 404（不跳 /login，隐藏页面存在）
   if (!authenticated) {

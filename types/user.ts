@@ -6,6 +6,16 @@ export interface Role {
   name: string;
 }
 
+// 动态人员选择器返回的用户（/user/selectorUserWithInfo、/user/selectorInitByIds）。
+export interface SelectorUser {
+  /** 用户id */
+  id: number;
+  /** 用户名 */
+  username: string;
+  /** 昵称 */
+  nickname: string;
+}
+
 export interface UserOrg {
   /** 机构名称 */
   name: string;
