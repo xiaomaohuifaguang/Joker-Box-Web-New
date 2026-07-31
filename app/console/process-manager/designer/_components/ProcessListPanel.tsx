@@ -261,8 +261,8 @@ export function ProcessListPanel({
                             <Ban className="h-4 w-4" />
                           </Button>
                         )}
-                        {/* 发布：仅已停用 */}
-                        {status === "-1" && (
+                        {/* 发布：草稿 / 已停用 */}
+                        {(status === "0" || status === "-1") && (
                           <Button
                             variant="ghost"
                             size="icon"

@@ -18,6 +18,8 @@ export interface ProcessDefinition {
   status?: string;
   /** 画布数据（仅详情返回；React Flow 图 JSON {nodes, edges}） */
   rawData?: ProcessRawData;
+  /** 全局表单绑定（与 processName 同级） */
+  globalFormBinding?: ProcessDefinitionForm;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
   createTime?: string;
   /** 更新时间（yyyy-MM-dd HH:mm:ss） */
@@ -32,6 +34,14 @@ export interface ProcessDefinitionPageParam {
   current: number;
   /** 搜索（流程名称，可空） */
   search?: string;
+}
+
+// 流程表单绑定（globalFormBinding）：流程级绑定的动态表单 + 版本。
+export interface ProcessDefinitionForm {
+  /** 表单ID */
+  formId?: string;
+  /** 绑定的表单版本号 */
+  formVersion?: string;
 }
 
 // 画布数据（ProcessDefinition.rawData）。React Flow 标准图 JSON，后端据此转 BPMN。
@@ -56,6 +66,8 @@ export interface ProcessDefinitionAddPayload {
   processDescription?: string;
   /** 画布数据 */
   rawData?: ProcessRawData;
+  /** 全局表单绑定 */
+  globalFormBinding?: ProcessDefinitionForm;
 }
 
 // 保存修改请求体（POST /processDefinition/save）。比 add 多 id。响应只看 code。

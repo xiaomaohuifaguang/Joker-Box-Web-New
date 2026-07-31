@@ -63,14 +63,16 @@ export async function stopDynamicForm(formId: string): Promise<void> {
   await api.post<unknown>("/dynamicForm/stop", { params: { formId } });
 }
 
-// 已发布版本列表：POST /dynamicForm/publishedForms，query 参数 formId。
-// data 是 List（按 formId 聚合的版本记录，含 formId/formName/latestVersion/versions），编辑页版本切换用。
+// 已发布版本列表：POST /dynamicForm/publishedForms。
+// 不传参 → 返回所有已发布表单（含历史版本），用于流程表单绑定等的「选表单+版本」；
+// 传 formId（query）→ 该表单的版本记录，编辑页版本切换用。
+// data 是 List（按 formId 聚合：formId/formName/latestVersion/versions）。
 export async function getPublishedForms(
-  formId: string,
+  formId?: string,
 ): Promise<DynamicFormPublishedVersion[]> {
   const { data } = await api.post<DynamicFormPublishedVersion[]>(
     "/dynamicForm/publishedForms",
-    { params: { formId } },
+    formId ? { params: { formId } } : undefined,
   );
   return data;
 }

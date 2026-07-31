@@ -41,6 +41,12 @@ const ACTION_BUTTONS = [
   { value: "reject", label: "拒绝" },
 ];
 
+// 是否继承主表单字段（inheritMainForm）。主表单=流程 globalFormBinding 绑定的表单。
+const INHERIT_MAIN_FORM = [
+  { value: "0", label: "否" },
+  { value: "1", label: "是" },
+];
+
 // 驳回方式（backType，勾选「驳回」后显示）。
 const BACK_TYPES = [
   { value: "prev", label: "上一节点" },
@@ -81,6 +87,7 @@ export function UserTaskConfig({
   const backType = d.backType ?? "";
   const backNodeId = d.backNodeId ?? "";
   const backAssigneePolicy = d.backAssigneePolicy ?? "auto";
+  const inheritMainForm = d.inheritMainForm ?? "";
 
   // 驳回节点候选：沿入边反向 BFS 收集当前节点的所有上游（祖先），再过滤出任务类（serviceTask/userTask）。
   // 「驳回」语义是回退到上游，不允许顺流跳到下游（避免永动环）；开始/结束/网关不可驳回。
@@ -104,7 +111,9 @@ export function UserTaskConfig({
     });
   })();
 
-  // 回显候选用户名：挂载时按已存 candidateUsers ids 拉展示名并入 __names（若无）。
+  // 回显候选用户名：按已存 candidateUsers ids 拉展示名并入 __names（若无）。
+  // 依赖 node.id + candidateUsers：切换到另一个 userTask 节点时必须重跑（否则两节点 candidateUsers 相同
+  // 时 effect 不触发、第二节点 __names 缺失 → 显示 #id）。
   useEffect(() => {
     const ids = (d.candidateUsers ?? "").split(",").map((x) => x.trim()).filter(Boolean);
     const missing = ids.filter((id) => !names[id]);
@@ -121,9 +130,9 @@ export function UserTaskConfig({
     return () => {
       cancelled = true;
     };
-    // 仅在 candidateUsers 变化时补名（names 一并入 dep 会循环，故只读最新即可）。
+    // names 一并入 dep 会因 onChange 写 __names 而循环，故只读最新；node.id 保证切节点重跑。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d.candidateUsers]);
+  }, [node.id, d.candidateUsers]);
 
   // 合并展示名映射（选择器内部也会补，统一进 __names）。
   function mergeNames(added: Record<string, string>) {
@@ -350,6 +359,27 @@ export function UserTaskConfig({
           </div>
         </div>
       )}
+
+      {/* 是否继承主表单字段：主表单=流程「表单绑定」绑定的表单。选「是」则本节点表单在主表单字段上追加。 */}
+      <div className="grid gap-1.5">
+        <Label className="text-xs">继承主表单字段</Label>
+        <Select
+          value={inheritMainForm}
+          onValueChange={(v) => onChange({ inheritMainForm: v })}
+          disabled={readOnly}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="选择是否继承" />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            {INHERIT_MAIN_FORM.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }

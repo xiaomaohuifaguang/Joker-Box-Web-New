@@ -55,6 +55,8 @@ export interface ProcessNodeData extends Record<string, unknown> {
   backNodeId?: string;
   /** 回退后任务分配策略：auto 智能默认（有上次办理人则派回，无则按配置重分配）/ last_handler 派给上次办理人 / reassign 按 candidate 重分配 */
   backAssigneePolicy?: string;
+  /** 是否继承主表单字段：0-否 / 1-是（仅用户任务；主表单=流程 globalFormBinding 绑定的表单） */
+  inheritMainForm?: string;
   /** 候选 id → 展示名 的运行时映射（__ 前缀，保存前 stripNode 剥离，不入库） */
   __names?: Record<string, string>;
 
@@ -69,7 +71,9 @@ export type ProcessFlowNode = Node<ProcessNodeData, ProcessNodeKind>;
 
 /** 连线（sequenceFlow）业务数据：存 edge.data，随 rawData 保存。 */
 export interface ProcessEdgeData extends Record<string, unknown> {
-  /** 连线备注/描述（label 走 React Flow 原生 edge.label 直接渲染在线上，不入 data） */
+  /** 连线名称（与 React Flow 原生 edge.label 双写一份，方便后端统一从 data 读） */
+  label?: string;
+  /** 连线备注/描述（label 走 React Flow 原生 edge.label 直接渲染在线上，同时同步进 data.label） */
   description?: string;
 
   // ---- 网关出边专属（仅排他/包容网关的出边可配置）----
@@ -141,6 +145,8 @@ export const PROCESS_NODE_REGISTRY: Record<ProcessNodeKind, KindMeta> = {
     icon: Settings,
     target: true,
     source: true,
+    // 任务=顺序活动，最多 1 条出边；分支走排他/包容网关、并行走向并行网关（条件挂网关出线）。
+    maxOut: 1,
     unique: false,
     card: "border-primary/50 bg-primary/10",
     iconChip: "bg-primary/15 text-primary",
@@ -153,6 +159,7 @@ export const PROCESS_NODE_REGISTRY: Record<ProcessNodeKind, KindMeta> = {
     icon: User,
     target: true,
     source: true,
+    maxOut: 1,
     unique: false,
     card: "border-sky-500/50 bg-sky-500/10",
     iconChip: "bg-sky-500/15 text-sky-600 dark:text-sky-400",

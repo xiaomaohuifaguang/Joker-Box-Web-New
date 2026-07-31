@@ -28,7 +28,9 @@ import {
   getProcessDefinitionInfo,
   saveProcessDefinition,
 } from "@/lib/api/process";
+import { getPublishedForms } from "@/lib/api/dynamicForm";
 import { ApiError } from "@/lib/api";
+import type { DynamicFormPublishedVersion, ProcessRawData } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,7 +115,20 @@ function stripNode(n: ProcessFlowNode) {
 
 // 保存前剥离连线：只留语义字段（id/source/target/handle/label/data），剥掉 style/markerEnd/selected。
 // 样式是渲染细节（React Flow 特有 + Tailwind token），不该进 rawData——加载回填时由 createEdge 统一补。
-function stripEdge(e: Edge) {
+// 排他/包容网关出边：按源节点类型归一化，保证必须字段显式入库（不依赖 UI 是否触发过 onChange）——
+//   isDefault 必传（默认 false）；conditionType 默认 CUSTOM；NATIVE 时 nativeExpression 默认 ${false}；
+//   默认分支或 CUSTOM 时 nativeExpression 置空。
+function stripEdge(e: Edge, sourceKind?: string) {
+  const isConditionalGateway = sourceKind === "exclusiveGateway" || sourceKind === "inclusiveGateway";
+  let data = e.data;
+  if (isConditionalGateway) {
+    const d = (e.data ?? {}) as ProcessEdgeData;
+    const isDefault = d.isDefault ?? false;
+    const conditionType = isDefault ? undefined : (d.conditionType ?? "CUSTOM");
+    const nativeExpression =
+      !isDefault && conditionType === "NATIVE" ? (d.nativeExpression ?? "${false}") : undefined;
+    data = { ...d, isDefault, conditionType, nativeExpression };
+  }
   return {
     id: e.id,
     source: e.source,
@@ -121,12 +136,20 @@ function stripEdge(e: Edge) {
     ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
     ...(e.targetHandle ? { targetHandle: e.targetHandle } : {}),
     ...(e.label != null ? { label: e.label } : {}),
-    ...(e.data != null ? { data: e.data } : {}),
+    ...(data != null ? { data } : {}),
   };
 }
 
 // rawData（保存的结构）→ React Flow nodes/edges。nodes 直接还原；edges 由 createEdge 补回渲染样式。
 // rawData 即 add/save 存的 {nodes, edges}（剥样式/运行时），后端透传存储。
+// 序列化当前画布为 rawData（保存 + 查看数据共用，保证所见即所存）。
+// edges 经 stripEdge 归一化（排他/包容网关出边补必传字段）。
+function buildRawData(nodes: ProcessFlowNode[], edges: Edge[]): ProcessRawData {
+  return {
+    nodes: nodes.map(stripNode),
+    edges: edges.map((e) => stripEdge(e, nodes.find((n) => n.id === e.source)?.type)),
+  };
+}
 function nodesFromRaw(raw: unknown): ProcessFlowNode[] {
   const list = (raw as { nodes?: unknown[] } | undefined)?.nodes;
   return Array.isArray(list) ? (list as ProcessFlowNode[]) : [];
@@ -134,13 +157,16 @@ function nodesFromRaw(raw: unknown): ProcessFlowNode[] {
 function edgesFromRaw(raw: unknown): Edge[] {
   const list = (raw as { edges?: Array<{ id?: string; source: string; target: string; label?: unknown; data?: unknown }> } | undefined)?.edges;
   if (!Array.isArray(list)) return [];
-  return list.map((e) =>
-    createEdge(e.source, e.target, {
+  return list.map((e) => {
+    const data = e.data as Edge["data"];
+    // label 双写兼容：原生 label 优先；缺则回退 data.label（旧数据/后端只在 data 里放 label 的情况）。
+    const label = e.label ?? (data as { label?: unknown } | undefined)?.label;
+    return createEdge(e.source, e.target, {
       ...(e.id ? { id: e.id } : {}),
-      ...(e.label != null ? { label: e.label as Edge["label"] } : {}),
-      ...(e.data != null ? { data: e.data as Edge["data"] } : {}),
-    }),
-  );
+      ...(label != null ? { label: label as Edge["label"] } : {}),
+      ...(data != null ? { data } : {}),
+    });
+  });
 }
 
 // 流程设计画布：顶栏（返回 + 元信息 + 查看数据 + 模拟运行 + 保存）+ 三栏。
@@ -181,6 +207,9 @@ function DesignerInner({
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  // 流程表单绑定（rawData.data.globalFormBinding）：formId + formVersion 两级。
+  const [formId, setFormId] = useState("");
+  const [formVersion, setFormVersion] = useState("");
   const [saving, setSaving] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [paletteSearch, setPaletteSearch] = useState("");
@@ -212,6 +241,9 @@ function DesignerInner({
         const ns = nodesFromRaw(raw);
         setNodes(ns.length > 0 ? ns : initialNodes);
         setEdges(edgesFromRaw(raw));
+        // 表单绑定回填（payload 顶层 globalFormBinding，与 processName 同级）。
+        setFormId(info.globalFormBinding?.formId ?? "");
+        setFormVersion(info.globalFormBinding?.formVersion ?? "");
       })
       .catch((err) => {
         if (!cancelled) toast.error(err instanceof ApiError ? err.message : "加载失败");
@@ -224,6 +256,20 @@ function DesignerInner({
     };
   }, [id, setNodes, setEdges]);
 
+  // 构造 add/save 接口的完整请求体（保存 + 查看数据共用——查看数据看的就是接口真正发送的 body）。
+  // 编辑态（id!=null）额外带 id，与 saveProcessDefinition 的入参一致；新建态无 id，与 addProcessDefinition 一致。
+  function buildPayload() {
+    return {
+      ...(id != null ? { id } : {}),
+      processName: name.trim(),
+      processCategory: category.trim() || undefined,
+      processDescription: description.trim() || undefined,
+      rawData: buildRawData(nodes, edges),
+      // 全局表单绑定：与 processName 同级（payload 顶层，不在 rawData 里）。
+      globalFormBinding: { formId, formVersion },
+    };
+  }
+
   // 保存：id==null 新建（add）/ id!=null 修改（save）。剥离运行时字段后提交。
   async function save() {
     if (!name.trim()) {
@@ -233,20 +279,12 @@ function DesignerInner({
     }
     setSaving(true);
     try {
-      const payload = {
-        processName: name.trim(),
-        processCategory: category.trim() || undefined,
-        processDescription: description.trim() || undefined,
-        rawData: {
-          nodes: nodes.map(stripNode),
-          edges: edges.map(stripEdge),
-        },
-      };
+      const payload = buildPayload();
       if (id == null) {
         await addProcessDefinition(payload);
         toast.success("已保存草稿");
       } else {
-        await saveProcessDefinition({ id, ...payload });
+        await saveProcessDefinition({ id: id!, ...payload });
         toast.success("已保存");
       }
       onSaved?.();
@@ -357,6 +395,7 @@ function DesignerInner({
   const selectedEdge = useMemo(() => edges.find((e) => e.selected), [edges]);
 
   // 更新选中连线的 label（原生字段，线上渲染）/ data（业务字段）。
+  // label 双写：既走 React Flow 原生 edge.label（画布渲染），也同步一份 edge.data.label（后端统一从 data 读）。
   // 排他网关出边的「是否默认分支」是单选：把某边设为默认时，同源其它出边的 isDefault 一并清掉。
   function updateSelectedEdge(patch: { label?: string; data?: Partial<ProcessEdgeData> }) {
     if (!selectedEdge) return;
@@ -367,7 +406,18 @@ function DesignerInner({
           return {
             ...e,
             ...(patch.label !== undefined ? { label: patch.label === "" ? undefined : patch.label } : {}),
-            ...(patch.data !== undefined ? { data: { ...e.data, ...patch.data } } : {}),
+            // label 与 data 合并：patch.data 优先，label 同步进 data.label（空则置 undefined）。
+            ...((patch.data !== undefined || patch.label !== undefined)
+              ? {
+                  data: {
+                    ...e.data,
+                    ...patch.data,
+                    ...(patch.label !== undefined
+                      ? { label: patch.label === "" ? undefined : patch.label }
+                      : {}),
+                  },
+                }
+              : {}),
           };
         }
         // 同一排他网关的其它出边：新默认产生时取消其默认。
@@ -739,10 +789,17 @@ function DesignerInner({
                 name={name}
                 category={category}
                 description={description}
+                formId={formId}
+                formVersion={formVersion}
                 readOnly={readOnly}
                 onNameChange={setName}
                 onCategoryChange={setCategory}
                 onDescriptionChange={setDescription}
+                onFormIdChange={(v) => {
+                  setFormId(v);
+                  setFormVersion(""); // 换表单清空版本，重选
+                }}
+                onFormVersionChange={setFormVersion}
               />
             </>
           )}
@@ -766,31 +823,57 @@ function DesignerInner({
         </ContextMenuContent>
       </ContextMenu>
 
-      <ProcessDataDialog open={dataOpen} onOpenChange={setDataOpen} data={{ nodes, edges }} />
+      <ProcessDataDialog open={dataOpen} onOpenChange={setDataOpen} data={buildPayload()} />
     </div>
   );
 }
 
-// 流程属性表单：点空白时展示。名称/分类（processKey/描述等后续按后端字段扩展）。
+// 流程属性表单：点空白时展示。名称/分类/描述 + 表单绑定（globalFormBinding：选已发布表单 + 版本，两级联动）。
 function ProcessConfig({
   id,
   name,
   category,
   description,
+  formId,
+  formVersion,
   readOnly,
   onNameChange,
   onCategoryChange,
   onDescriptionChange,
+  onFormIdChange,
+  onFormVersionChange,
 }: {
   id: number | null;
   name: string;
   category: string;
   description: string;
+  formId: string;
+  formVersion: string;
   readOnly: boolean;
   onNameChange: (v: string) => void;
   onCategoryChange: (v: string) => void;
   onDescriptionChange: (v: string) => void;
+  onFormIdChange: (v: string) => void;
+  onFormVersionChange: (v: string) => void;
 }) {
+  // 已发布表单列表（含历史版本）：挂载拉一次（publishedForms 不传参=全量）。
+  const [formOptions, setFormOptions] = useState<DynamicFormPublishedVersion[]>([]);
+  const [formsLoading, setFormsLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    getPublishedForms()
+      .then((list) => !cancelled && setFormOptions(list))
+      .catch(() => !cancelled && setFormOptions([]))
+      .finally(() => !cancelled && setFormsLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 当前选中表单的版本列表（两级联动第二级）。
+  const selectedForm = formOptions.find((f) => f.formId === formId);
+  const versionOptions = selectedForm?.versions ?? [];
+
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-3">
       <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
@@ -829,6 +912,49 @@ function ProcessConfig({
           rows={3}
         />
       </div>
+
+      {/* 表单绑定：选已发布表单 + 版本（两级联动），存 rawData.data.globalFormBinding。 */}
+      <div className="grid gap-1.5">
+        <Label className="text-xs">绑定表单</Label>
+        <Select
+          value={formId}
+          onValueChange={onFormIdChange}
+          disabled={readOnly || formsLoading}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder={formsLoading ? "加载中…" : "选择已发布表单（可选）"} />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            {formOptions.map((f) => (
+              <SelectItem key={f.formId} value={f.formId ?? ""}>
+                {f.formName ?? f.formId}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {formId && (
+        <div className="grid gap-1.5">
+          <Label className="text-xs">表单版本</Label>
+          <Select
+            value={formVersion}
+            onValueChange={onFormVersionChange}
+            disabled={readOnly}
+          >
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue placeholder="选择版本" />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              {versionOptions.map((v) => (
+                <SelectItem key={v.version} value={v.version ?? ""}>
+                  {v.version}
+                  {v.version === selectedForm?.latestVersion ? "（最新）" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">流程 key 等字段后续按后端约定扩展。</p>
     </fieldset>
   );
@@ -882,7 +1008,7 @@ function NodeConfig({
       </div>
       {/* userTask 专属：审批类型/通过率/候选人 */}
       {node.type === "userTask" && (
-        <UserTaskConfig node={node} nodes={nodes} edges={edges} readOnly={readOnly} onChange={onChange} />
+        <UserTaskConfig key={node.id} node={node} nodes={nodes} edges={edges} readOnly={readOnly} onChange={onChange} />
       )}
       {/* serviceTask 专属：委托表达式/异步 */}
       {node.type === "serviceTask" && (
@@ -924,7 +1050,9 @@ function EdgeConfig({
   const isDefault = data.isDefault ?? false;
   // conditionType：默认分支留空（不可配条件）；非默认分支缺省 CUSTOM（后续要做的自定义方式）。
   const conditionType = data.conditionType ?? "CUSTOM";
-  const nativeExpression = data.nativeExpression ?? "";
+  // 传统表达式：NATIVE 时缺省 ${false}（空值兜底）。
+  const nativeExpression =
+    conditionType === "NATIVE" ? (data.nativeExpression ?? "${false}") : (data.nativeExpression ?? "");
 
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-3">
@@ -983,7 +1111,15 @@ function EdgeConfig({
                 <Label className="text-xs">条件类型</Label>
                 <Select
                   value={conditionType}
-                  onValueChange={(v) => onChange({ data: { conditionType: v } })}
+                  onValueChange={(v) =>
+                    // 切到 NATIVE 时，nativeExpression 为空则补默认 ${false}（不只是显示兜底，写入数据随 rawData 保存）。
+                    onChange({
+                      data:
+                        v === "NATIVE" && !(data.nativeExpression ?? "").trim()
+                          ? { conditionType: v, nativeExpression: "${false}" }
+                          : { conditionType: v },
+                    })
+                  }
                   disabled={readOnly}
                 >
                   <SelectTrigger className="h-9 w-full">

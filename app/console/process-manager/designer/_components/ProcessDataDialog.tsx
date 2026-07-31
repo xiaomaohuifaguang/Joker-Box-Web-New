@@ -2,7 +2,6 @@
 
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
-import type { Edge, Node } from "@xyflow/react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-// 「查看数据」弹窗：展示当前画布数据（nodes + edges）的 JSON 快照，可复制。
+// 「查看数据」弹窗：展示 add/save 接口真正发送的请求体 JSON 快照（含元信息 + rawData），可复制。
 export function ProcessDataDialog({
   open,
   onOpenChange,
@@ -20,7 +19,8 @@ export function ProcessDataDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  data: { nodes: Node[]; edges: Edge[] };
+  /** add/save 接口的完整请求体（buildPayload 产物） */
+  data: Record<string, unknown>;
 }) {
   const json = JSON.stringify(data, null, 2);
 
@@ -35,7 +35,7 @@ export function ProcessDataDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>画布数据</DialogTitle>
+          <DialogTitle>接口数据（add/save 请求体）</DialogTitle>
         </DialogHeader>
         <pre className="max-h-[60vh] overflow-auto rounded-md border bg-muted/50 p-3 text-xs leading-relaxed">
           {json}
