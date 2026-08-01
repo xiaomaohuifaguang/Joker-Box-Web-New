@@ -165,3 +165,13 @@ export const INSTANCE_TABS: { value: ProcessInstanceType; label: string }[] = [
   { value: "5", label: "全部" },
   { value: "0", label: "草稿" },
 ];
+
+// 发起流程时的定义信息（/processDefinition/startInfo 响应）。后续会扩展表单信息等。
+export interface ProcessStartInfo {
+  /** 流程定义id */
+  id?: number;
+  /** 流程定义名称 */
+  processName?: string;
+  /** 当前版本 */
+  version?: string;
+}

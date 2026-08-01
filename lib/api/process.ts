@@ -9,6 +9,7 @@ import type {
   ProcessHandleParam,
   ProcessInstance,
   ProcessInstancePageParam,
+  ProcessStartInfo,
   SelectOption,
 } from "@/types";
 
@@ -111,5 +112,16 @@ export async function getProcessInstanceInfo(
   const { data } = await api.post<ProcessInstance>("/processInstance/info", {
     params: { id },
   });
+  return data;
+}
+
+// 发起流程时的定义信息：POST /processDefinition/startInfo，query 参数 processDefinitionId（注意：非 body）。响应 data = ProcessStartInfo。
+export async function getProcessDefinitionStartInfo(
+  processDefinitionId: number,
+): Promise<ProcessStartInfo> {
+  const { data } = await api.post<ProcessStartInfo>(
+    "/processDefinition/startInfo",
+    { params: { processDefinitionId } },
+  );
   return data;
 }
