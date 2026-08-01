@@ -44,6 +44,14 @@ export interface ProcessDefinitionForm {
   formVersion?: string;
 }
 
+// 节点字段权限（node.data.fieldPermissions 元素）。仅收录非默认权限，默认 VISIBLE 不入库。
+export interface ProcessNodeFieldPermission {
+  /** 对应字段的 fieldId */
+  fieldKey: string;
+  /** 权限：READONLY 只读 / HIDDEN 隐藏 / REQUIRED 必填（默认 VISIBLE 可见，不收录） */
+  permission: "READONLY" | "HIDDEN" | "REQUIRED";
+}
+
 // 画布数据（ProcessDefinition.rawData）。React Flow 标准图 JSON，后端据此转 BPMN。
 // nodes[].type 即 BPMN 元素名（startEvent/serviceTask/...），属性在 nodes[].data。
 export interface ProcessRawData {

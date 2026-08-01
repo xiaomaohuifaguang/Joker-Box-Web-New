@@ -63,6 +63,7 @@ import {
 } from "./nodes";
 import { UserTaskConfig } from "./UserTaskConfig";
 import { ServiceTaskConfig } from "./ServiceTaskConfig";
+import { InheritMainFormField } from "./InheritMainFormField";
 
 const initialNodes: ProcessFlowNode[] = [
   { id: "start", type: "startEvent", position: { x: 120, y: 140 }, data: { label: "开始" } },
@@ -224,6 +225,17 @@ function DesignerInner({
   const { screenToFlowPosition, getEdge } = useReactFlow();
 
   const editing = !readOnly && !sim;
+
+  // 清空/换表单/换版本后，各节点「继承主表单字段」失去前提——重置所有节点勾选 + 字段权限（开关同步禁用/失效）。
+  const resetNodesInheritMainForm = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.data.inheritMainForm || (n.data.fieldPermissions?.length ?? 0) > 0
+          ? { ...n, data: { ...n.data, inheritMainForm: false, fieldPermissions: [] } }
+          : n,
+      ),
+    );
+  }, [setNodes]);
 
   // 加载详情（编辑/查看，id!=null）：拉 info 回填元信息 + 画布（nodes/edges 由 rawData 还原）。
   // loading 初值在 state 声明算好（id!=null 即 true），effect 只做异步拉取——避免 effect 内同步 setState（见通用坑）。
@@ -774,7 +786,7 @@ function DesignerInner({
           ) : selectedNode && !paneActive ? (
             <>
               <h2 className="text-xs font-medium text-muted-foreground">节点配置</h2>
-              <NodeConfig node={selectedNode} nodes={nodes} edges={edges} readOnly={readOnly} onChange={updateSelected} />
+              <NodeConfig node={selectedNode} nodes={nodes} edges={edges} readOnly={readOnly} mainFormBound={formId !== "" && formVersion !== ""} formId={formId} formVersion={formVersion} onChange={updateSelected} />
             </>
           ) : selectedEdge && !paneActive ? (
             <>
@@ -798,8 +810,12 @@ function DesignerInner({
                 onFormIdChange={(v) => {
                   setFormId(v);
                   setFormVersion(""); // 换表单清空版本，重选
+                  if (v !== formId) resetNodesInheritMainForm(); // 清空/换表单 → 重置各节点继承主表单
                 }}
-                onFormVersionChange={setFormVersion}
+                onFormVersionChange={(v) => {
+                  setFormVersion(v);
+                  if (v !== formVersion) resetNodesInheritMainForm(); // 换版本 → 重置各节点继承主表单
+                }}
               />
             </>
           )}
@@ -829,6 +845,10 @@ function DesignerInner({
 }
 
 // 流程属性表单：点空白时展示。名称/分类/描述 + 表单绑定（globalFormBinding：选已发布表单 + 版本，两级联动）。
+// 流程表单绑定「不绑定」选项的占位值（Radix SelectItem 不允许空串 value，映射回 ""）。
+const NO_FORM_VALUE = "__none__";
+
+// 表单绑定 Select 可清空；版本 Select 选完不可清（无意义）。清空/换表单/换版本都重置各节点 inheritMainForm。
 function ProcessConfig({
   id,
   name,
@@ -917,14 +937,15 @@ function ProcessConfig({
       <div className="grid gap-1.5">
         <Label className="text-xs">绑定表单</Label>
         <Select
-          value={formId}
-          onValueChange={onFormIdChange}
+          value={formId === "" ? NO_FORM_VALUE : formId}
+          onValueChange={(v) => onFormIdChange(v === NO_FORM_VALUE ? "" : v)}
           disabled={readOnly || formsLoading}
         >
           <SelectTrigger className="h-9 w-full">
             <SelectValue placeholder={formsLoading ? "加载中…" : "选择已发布表单（可选）"} />
           </SelectTrigger>
           <SelectContent position="popper">
+            <SelectItem value={NO_FORM_VALUE}>不绑定表单</SelectItem>
             {formOptions.map((f) => (
               <SelectItem key={f.formId} value={f.formId ?? ""}>
                 {f.formName ?? f.formId}
@@ -966,6 +987,9 @@ function NodeConfig({
   nodes,
   edges,
   readOnly,
+  mainFormBound,
+  formId,
+  formVersion,
   onChange,
 }: {
   node: ProcessFlowNode;
@@ -974,6 +998,12 @@ function NodeConfig({
   /** 画布全部连线（驳回节点按图反向可达算上游用） */
   edges: Edge[];
   readOnly: boolean;
+  /** 流程是否已绑定表单+版本（globalFormBinding.formId/formVersion 均非空；决定「继承主表单字段」可否勾选） */
+  mainFormBound: boolean;
+  /** 主表单 id（globalFormBinding.formId；继承主表单字段的字段权限配置用） */
+  formId: string;
+  /** 主表单版本（globalFormBinding.formVersion；字段权限配置用） */
+  formVersion: string;
   onChange: (patch: Partial<ProcessNodeData>) => void;
 }) {
   const meta = PROCESS_NODE_REGISTRY[(node.type as ProcessNodeKind) ?? "serviceTask"];
@@ -1006,21 +1036,33 @@ function NodeConfig({
           rows={3}
         />
       </div>
-      {/* userTask 专属：审批类型/通过率/候选人 */}
+      {/* userTask 专属：审批类型/通过率/候选人 + 继承主表单字段 */}
       {node.type === "userTask" && (
-        <UserTaskConfig key={node.id} node={node} nodes={nodes} edges={edges} readOnly={readOnly} onChange={onChange} />
+        <UserTaskConfig key={node.id} node={node} nodes={nodes} edges={edges} readOnly={readOnly} mainFormBound={mainFormBound} formId={formId} formVersion={formVersion} onChange={onChange} />
+      )}
+      {/* startEvent 专属：继承主表单字段（开始节点可作为流程发起表单，继承主表单字段） */}
+      {node.type === "startEvent" && (
+        <InheritMainFormField
+          value={node.data.inheritMainForm ?? false}
+          fieldPermissions={node.data.fieldPermissions ?? []}
+          formId={formId}
+          formVersion={formVersion}
+          mainFormBound={mainFormBound}
+          readOnly={readOnly}
+          onChange={onChange}
+        />
       )}
       {/* serviceTask 专属：委托表达式/异步 */}
       {node.type === "serviceTask" && (
         <ServiceTaskConfig node={node} readOnly={readOnly} onChange={onChange} />
       )}
-      {node.type !== "userTask" && node.type !== "serviceTask" && (
+      {node.type !== "userTask" && node.type !== "serviceTask" && node.type !== "startEvent" && (
         <p className="text-xs text-muted-foreground">
           {node.type === "exclusiveGateway" || node.type === "inclusiveGateway"
             ? "该网关的分支条件挂在出线上（连线条件后续在连线上配置）。"
             : node.type === "parallelGateway"
               ? "并行网关各出线并行执行，无需条件。"
-              : "开始/结束节点无额外 BPMN 属性。"}
+              : "结束节点无额外 BPMN 属性。"}
         </p>
       )}
     </fieldset>

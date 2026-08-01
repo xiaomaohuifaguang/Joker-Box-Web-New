@@ -17,6 +17,7 @@ import {
   CandidateRolesSelect,
   CandidateUsersSelect,
 } from "./CandidateSelects";
+import { InheritMainFormField } from "./InheritMainFormField";
 import { selectorInitByIds } from "@/lib/api/user";
 import type { Edge } from "@xyflow/react";
 import {
@@ -41,12 +42,6 @@ const ACTION_BUTTONS = [
   { value: "reject", label: "拒绝" },
 ];
 
-// 是否继承主表单字段（inheritMainForm）。主表单=流程 globalFormBinding 绑定的表单。
-const INHERIT_MAIN_FORM = [
-  { value: "0", label: "否" },
-  { value: "1", label: "是" },
-];
-
 // 驳回方式（backType，勾选「驳回」后显示）。
 const BACK_TYPES = [
   { value: "prev", label: "上一节点" },
@@ -68,6 +63,9 @@ export function UserTaskConfig({
   nodes,
   edges,
   readOnly,
+  mainFormBound,
+  formId,
+  formVersion,
   onChange,
 }: {
   node: ProcessFlowNode;
@@ -76,6 +74,12 @@ export function UserTaskConfig({
   /** 画布全部连线（驳回节点按图反向可达算上游用） */
   edges: Edge[];
   readOnly: boolean;
+  /** 流程是否已绑定表单+版本（决定「继承主表单字段」可否勾选） */
+  mainFormBound: boolean;
+  /** 主表单 id（继承主表单字段的字段权限配置用） */
+  formId: string;
+  /** 主表单版本（字段权限配置用） */
+  formVersion: string;
   onChange: (patch: Partial<ProcessNodeData>) => void;
 }) {
   const d = node.data;
@@ -87,7 +91,6 @@ export function UserTaskConfig({
   const backType = d.backType ?? "";
   const backNodeId = d.backNodeId ?? "";
   const backAssigneePolicy = d.backAssigneePolicy ?? "auto";
-  const inheritMainForm = d.inheritMainForm ?? "";
 
   // 驳回节点候选：沿入边反向 BFS 收集当前节点的所有上游（祖先），再过滤出任务类（serviceTask/userTask）。
   // 「驳回」语义是回退到上游，不允许顺流跳到下游（避免永动环）；开始/结束/网关不可驳回。
@@ -247,11 +250,14 @@ export function UserTaskConfig({
                     ? actionButtons.filter((x) => x !== b.value)
                     : [...actionButtons, b.value];
                   const patch: Partial<ProcessNodeData> = { actionButtons: next.join(",") };
-                  // 取消勾选「驳回」时清掉驳回相关配置。
                   if (b.value === "back" && on) {
+                    // 取消勾选「驳回」时清掉驳回相关配置。
                     patch.backType = undefined;
                     patch.backNodeId = undefined;
                     patch.backAssigneePolicy = undefined;
+                  } else if (b.value === "back" && !on) {
+                    // 勾选「驳回」时默认驳回方式=上一节点（prev）。
+                    patch.backType = "prev";
                   }
                   onChange(patch);
                 }}
@@ -360,26 +366,16 @@ export function UserTaskConfig({
         </div>
       )}
 
-      {/* 是否继承主表单字段：主表单=流程「表单绑定」绑定的表单。选「是」则本节点表单在主表单字段上追加。 */}
-      <div className="grid gap-1.5">
-        <Label className="text-xs">继承主表单字段</Label>
-        <Select
-          value={inheritMainForm}
-          onValueChange={(v) => onChange({ inheritMainForm: v })}
-          disabled={readOnly}
-        >
-          <SelectTrigger className="h-9 w-full">
-            <SelectValue placeholder="选择是否继承" />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            {INHERIT_MAIN_FORM.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* 是否继承主表单字段：仅流程绑定了表单才可勾选；勾选后展开字段权限配置。 */}
+      <InheritMainFormField
+        value={d.inheritMainForm ?? false}
+        fieldPermissions={d.fieldPermissions ?? []}
+        formId={formId}
+        formVersion={formVersion}
+        mainFormBound={mainFormBound}
+        readOnly={readOnly}
+        onChange={onChange}
+      />
     </div>
   );
 }

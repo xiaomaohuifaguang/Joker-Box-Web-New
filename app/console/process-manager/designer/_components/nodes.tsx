@@ -3,6 +3,7 @@
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { Play, Square, Settings, User, X, Plus, CircleDot, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ProcessNodeFieldPermission } from "@/types/process";
 
 // 节点「带电/选中」信号色：与画布连线同一工程蓝（恒定，不随主题预设），保证任何预设下反馈一致。
 // 选中=中性 ring（克制，随主题 --ring）；运行/高亮=蓝色实心 glow（图纸「通电」）。
@@ -55,10 +56,13 @@ export interface ProcessNodeData extends Record<string, unknown> {
   backNodeId?: string;
   /** 回退后任务分配策略：auto 智能默认（有上次办理人则派回，无则按配置重分配）/ last_handler 派给上次办理人 / reassign 按 candidate 重分配 */
   backAssigneePolicy?: string;
-  /** 是否继承主表单字段：0-否 / 1-是（仅用户任务；主表单=流程 globalFormBinding 绑定的表单） */
-  inheritMainForm?: string;
   /** 候选 id → 展示名 的运行时映射（__ 前缀，保存前 stripNode 剥离，不入库） */
   __names?: Record<string, string>;
+
+  /** 是否继承主表单字段（仅开始/用户任务；主表单=流程 globalFormBinding 绑定的表单，未选好表单+版本时不可勾选） */
+  inheritMainForm?: boolean;
+  /** 字段权限（仅 inheritMainForm 勾选时可配；仅收录非默认权限，VISIBLE 不入库；元素见 types/process ProcessNodeFieldPermission） */
+  fieldPermissions?: ProcessNodeFieldPermission[];
 
   // ---- serviceTask 专属（BPMN 服务任务配置）----
   /** 委托表达式（后端服务 bean 名，如 "delegateDemoService"） */
