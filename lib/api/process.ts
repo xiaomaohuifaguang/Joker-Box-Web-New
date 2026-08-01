@@ -1,10 +1,14 @@
 import { api } from "@/lib/api";
 import type {
+  DeployedProcessDefinition,
   Page,
   ProcessDefinition,
   ProcessDefinitionAddPayload,
   ProcessDefinitionPageParam,
   ProcessDefinitionSavePayload,
+  ProcessHandleParam,
+  ProcessInstance,
+  ProcessInstancePageParam,
   SelectOption,
 } from "@/types";
 
@@ -63,4 +67,39 @@ export async function deployProcessDefinition(id: number): Promise<void> {
 export async function getDelegateExpressions(): Promise<SelectOption[]> {
   const { data } = await api.post<SelectOption[]>("/processDefinition/delegateExpressions");
   return data;
+}
+
+// ===== 申请中心（流程实例，第一版）=====
+
+// 已部署流程列表：POST /processDefinition/deployList，无参。响应 data = DeployedProcessDefinition[]。
+export async function getDeployList(): Promise<DeployedProcessDefinition[]> {
+  const { data } = await api.post<DeployedProcessDefinition[]>(
+    "/processDefinition/deployList",
+  );
+  return data;
+}
+
+// 实例分页：POST /processInstance/queryPage，body ProcessInstancePageParam。
+export async function queryProcessInstancePage(
+  params: ProcessInstancePageParam,
+): Promise<Page<ProcessInstance>> {
+  const { data } = await api.post<Page<ProcessInstance>>(
+    "/processInstance/queryPage",
+    { body: params },
+  );
+  return data;
+}
+
+// 发起流程：POST /processInstance/start，body ProcessHandleParam。响应只看 code。
+export async function startProcessInstance(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/start", { body: payload });
+}
+
+// 保存草稿：POST /processInstance/saveDraft，body ProcessHandleParam。响应只看 code。
+export async function saveProcessDraft(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/saveDraft", { body: payload });
 }
