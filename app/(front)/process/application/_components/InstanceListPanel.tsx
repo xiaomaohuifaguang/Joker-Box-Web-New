@@ -29,8 +29,6 @@ import {
   PROCESS_INSTANCE_STATUS_FALLBACK,
   type ProcessInstanceType,
 } from "@/types";
-import { EditDraftDialog } from "./EditDraftDialog";
-import { InstanceDetailDialog } from "./InstanceDetailDialog";
 
 const PAGE_SIZES = [10, 20, 50];
 
@@ -42,23 +40,23 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   return [1, "…", current - 1, current, current + 1, "…", total];
 }
 
-// 我的流程列表：tab（进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。草稿可编辑、其他可查看（详情对话框）。
+// 我的流程列表：tab（进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。草稿可编辑、其他可查看（跳转路由视图）。
 export function InstanceListPanel({
   activeTab,
   onTabChange,
   refreshKey,
-  onHandled,
+  onView,
+  onEdit,
 }: {
   activeTab: ProcessInstanceType;
   onTabChange: (t: ProcessInstanceType) => void;
   refreshKey: number;
-  onHandled: (kind: "start" | "draft") => void;
+  onView: (instanceId: number) => void;
+  onEdit: (instanceId: number) => void;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
-  const [viewingId, setViewingId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
   // 外部（父组件）程序化切换 tab 时（如发起/存草稿成功后）也重置到第一页；
   // onValueChange 只在用户点 tab 时触发，受控 prop 变化不触发，故需在 render 期比较。
   const [prevTab, setPrevTab] = useState(activeTab);
@@ -189,7 +187,7 @@ export function InstanceListPanel({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => r.id != null && setEditingId(r.id)}
+                          onClick={() => r.id != null && onEdit(r.id)}
                           aria-label="编辑"
                         >
                           <Pencil className="h-4 w-4" />
@@ -199,7 +197,7 @@ export function InstanceListPanel({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => r.id != null && setViewingId(r.id)}
+                          onClick={() => r.id != null && onView(r.id)}
                           aria-label="查看"
                         >
                           <Eye className="h-4 w-4" />
@@ -213,18 +211,6 @@ export function InstanceListPanel({
           </TableBody>
         </Table>
       </div>
-
-      <InstanceDetailDialog
-        instanceId={viewingId}
-        open={viewingId != null}
-        onOpenChange={(o) => !o && setViewingId(null)}
-      />
-      <EditDraftDialog
-        instanceId={editingId}
-        open={editingId != null}
-        onOpenChange={(o) => !o && setEditingId(null)}
-        onDone={onHandled}
-      />
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <span>共 {total} 条</span>

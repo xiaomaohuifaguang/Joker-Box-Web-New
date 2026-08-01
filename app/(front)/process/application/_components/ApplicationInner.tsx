@@ -5,6 +5,8 @@ import { Container } from "@/components/Container";
 import type { ProcessInstanceType } from "@/types";
 import { InstanceListPanel } from "./InstanceListPanel";
 import { StartProcessSection } from "./StartProcessSection";
+import { DetailView } from "./DetailView";
+import { EditView } from "./EditView";
 import { StartView } from "./StartView";
 
 // 视图状态：列表 / 发起 / 查看 / 编辑（query 切换，对齐 ganDaShi ForumInner）。
@@ -75,12 +77,21 @@ export function ApplicationInner() {
     );
   }
   if (view.name === "detail") {
-    // Task 4 接入 DetailView。
-    return null;
+    return (
+      <DetailView
+        instanceId={view.instanceId}
+        onBack={() => go({ name: "list" })}
+      />
+    );
   }
   if (view.name === "edit") {
-    // Task 4 接入 EditView。
-    return null;
+    return (
+      <EditView
+        instanceId={view.instanceId}
+        onBack={() => go({ name: "list" })}
+        onDone={handleDone}
+      />
+    );
   }
 
   return (
@@ -103,7 +114,8 @@ export function ApplicationInner() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           refreshKey={refreshKey}
-          onHandled={handleDone}
+          onView={(id) => go({ name: "detail", instanceId: id })}
+          onEdit={(id) => go({ name: "edit", instanceId: id })}
         />
       </section>
     </Container>
