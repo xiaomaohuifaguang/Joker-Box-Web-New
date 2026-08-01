@@ -1,0 +1,105 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Container } from "@/components/Container";
+import type { ProcessInstanceType } from "@/types";
+import { InstanceListPanel } from "./InstanceListPanel";
+import { StartProcessSection } from "./StartProcessSection";
+
+// 视图状态：列表 / 发起 / 查看 / 编辑（query 切换，对齐 ganDaShi ForumInner）。
+export type View =
+  | { name: "list" }
+  | { name: "start"; definitionId: number }
+  | { name: "detail"; instanceId: number }
+  | { name: "edit"; instanceId: number };
+
+// 从 URL query 解析视图（?start=defId / ?view=instId / ?edit=instId / 无参=列表）。
+function parseView(search: string): View {
+  const p = new URLSearchParams(search);
+  const start = p.get("start");
+  if (start) return { name: "start", definitionId: Number(start) };
+  const view = p.get("view");
+  if (view) return { name: "detail", instanceId: Number(view) };
+  const edit = p.get("edit");
+  if (edit) return { name: "edit", instanceId: Number(edit) };
+  return { name: "list" };
+}
+
+function viewToUrl(v: View): string {
+  if (v.name === "start") return `/process/application?start=${v.definitionId}`;
+  if (v.name === "detail") return `/process/application?view=${v.instanceId}`;
+  if (v.name === "edit") return `/process/application?edit=${v.instanceId}`;
+  return "/process/application";
+}
+
+// 申请中心视图编排：list / start / detail / edit 四视图切换。
+// state 为主（渲染可靠），URL 用原生 pushState 同步（可分享/刷新/前进后退还原）。
+// 不用 router.push：同 path 仅改 query 时静态导出的软导航不可靠。
+export function ApplicationInner() {
+  const [view, setView] = useState<View>(() =>
+    typeof window === "undefined" ? { name: "list" } : parseView(window.location.search),
+  );
+  const [activeTab, setActiveTab] = useState<ProcessInstanceType>("1");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // 前进/后退 -> 同步回 state。
+  useEffect(() => {
+    const onPop = () => setView(parseView(window.location.search));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const go = useCallback((v: View) => {
+    window.history.pushState(null, "", viewToUrl(v));
+    setView(v);
+  }, []);
+
+  // 发起/编辑/存草稿成功：回列表、切对应 tab、刷新。
+  const handleDone = useCallback(
+    (kind: "start" | "draft") => {
+      setRefreshKey((k) => k + 1);
+      setActiveTab(kind === "start" ? "1" : "0");
+      go({ name: "list" });
+    },
+    [go],
+  );
+
+  if (view.name === "start") {
+    // Task 3 接入 StartView。
+    return null;
+  }
+  if (view.name === "detail") {
+    // Task 4 接入 DetailView。
+    return null;
+  }
+  if (view.name === "edit") {
+    // Task 4 接入 EditView。
+    return null;
+  }
+
+  return (
+    <Container className="py-8 md:py-12">
+      <header className="mb-6">
+        <h1 className="font-display text-2xl font-semibold">申请中心</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          选择流程发起申请，或查看我发起的流程。
+        </p>
+      </header>
+
+      <section className="mb-8">
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">发起流程</h2>
+        <StartProcessSection onStarted={handleDone} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">我的流程</h2>
+        <InstanceListPanel
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          refreshKey={refreshKey}
+          onHandled={handleDone}
+        />
+      </section>
+    </Container>
+  );
+}
