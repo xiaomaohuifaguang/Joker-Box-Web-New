@@ -83,3 +83,82 @@ export interface ProcessDefinitionSavePayload extends ProcessDefinitionAddPayloa
   /** 流程id */
   id: number;
 }
+
+// ===== 申请中心（流程实例，第一版）=====
+
+// 已部署流程（/processDefinition/deployList 元素）。发起流程的下拉选项。
+export interface DeployedProcessDefinition {
+  /** 流程id */
+  id?: number;
+  /** 流程定义名称 */
+  processName?: string;
+  /** 当前版本 */
+  version?: string;
+}
+
+// 流程实例（/processInstance/queryPage 元素）。processStatus：0 草稿 / 10 已完成 / 其他 审批中。
+export interface ProcessInstance {
+  /** 流程实例id */
+  id?: number;
+  /** 流程定义id */
+  processDefinitionId?: number;
+  /** 流程定义名称 */
+  processDefinitionName?: string;
+  /** 流程定义版本 */
+  processDefinitionVersion?: string;
+  /** 流程标题 */
+  title?: string;
+  /** 流程编号 */
+  code?: string;
+  /** 流程状态：0 草稿 / 10 已完成 / 其他 审批中 */
+  processStatus?: string;
+  /** 创建时间（yyyy-MM-dd HH:mm:ss） */
+  createTime?: string;
+  /** 更新时间（yyyy-MM-dd HH:mm:ss） */
+  updateTime?: string;
+}
+
+// 查询类型：1 我发起的(进行中) / 5 我发起的(全部) / 0 草稿。
+export type ProcessInstanceType = "1" | "5" | "0";
+
+// 分页查询参数（POST /processInstance/queryPage body）。
+export interface ProcessInstancePageParam {
+  /** 查询类型 */
+  type: ProcessInstanceType;
+  /** 页大小 */
+  size: number;
+  /** 当前页码 */
+  current: number;
+  /** 搜索（可空） */
+  search?: string;
+}
+
+// 发起 / 存草稿请求体（POST /processInstance/start | /processInstance/saveDraft）。响应只看 code。
+export interface ProcessHandleParam {
+  /** 流程定义id（必填） */
+  processDefinitionId: number;
+  /** 流程标题（可空，后端兜底） */
+  title?: string;
+}
+
+// 实例状态徽标映射。键外（非 0/10）视为审批中。
+export const PROCESS_INSTANCE_STATUS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "outline" }
+> = {
+  "0": { label: "草稿", variant: "secondary" },
+  "10": { label: "已完成", variant: "default" },
+};
+
+// 审批中（默认/回退）徽标。
+export const PROCESS_INSTANCE_STATUS_FALLBACK = {
+  label: "审批中",
+  variant: "outline" as const,
+};
+
+// 列表 tab（顺序：进行中 / 全部 / 草稿）。
+export const INSTANCE_TABS: { value: ProcessInstanceType; label: string }[] = [
+  { value: "1", label: "进行中" },
+  { value: "5", label: "全部" },
+  { value: "0", label: "草稿" },
+];
