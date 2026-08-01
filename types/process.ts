@@ -96,7 +96,7 @@ export interface DeployedProcessDefinition {
   version?: string;
 }
 
-// 流程实例（/processInstance/queryPage 元素）。processStatus：0 草稿 / 10 已完成 / 其他 审批中。
+// 流程实例（/processInstance/queryPage 元素）。processStatus：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中。
 export interface ProcessInstance {
   /** 流程实例id */
   id?: number;
@@ -110,7 +110,7 @@ export interface ProcessInstance {
   title?: string;
   /** 流程编号 */
   code?: string;
-  /** 流程状态：0 草稿 / 10 已完成 / 其他 审批中 */
+  /** 流程状态：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中 */
   processStatus?: string;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
   createTime?: string;
@@ -141,13 +141,14 @@ export interface ProcessHandleParam {
   title?: string;
 }
 
-// 实例状态徽标映射。键外（非 0/10）视为审批中。
+// 实例状态徽标映射。键外（非 0/10/11）视为审批中。
 export const PROCESS_INSTANCE_STATUS: Record<
   string,
   { label: string; variant: "default" | "secondary" | "outline" }
 > = {
   "0": { label: "草稿", variant: "secondary" },
   "10": { label: "已完成", variant: "default" },
+  "11": { label: "已终止", variant: "outline" },
 };
 
 // 审批中（默认/回退）徽标。
