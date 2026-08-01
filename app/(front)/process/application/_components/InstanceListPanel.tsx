@@ -53,6 +53,13 @@ export function InstanceListPanel({
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
+  // 外部（父组件）程序化切换 tab 时（如发起/存草稿成功后）也重置到第一页；
+  // onValueChange 只在用户点 tab 时触发，受控 prop 变化不触发，故需在 render 期比较。
+  const [prevTab, setPrevTab] = useState(activeTab);
+  if (prevTab !== activeTab) {
+    setPrevTab(activeTab);
+    setCurrent(1);
+  }
   const [size, setSize] = useState(10);
   const { page, loading } = useProcessInstancePage({
     type: activeTab,
