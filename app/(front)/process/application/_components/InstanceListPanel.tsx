@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Search } from "lucide-react";
 import { useProcessInstancePage } from "@/hooks/useProcessInstancePage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import {
   PROCESS_INSTANCE_STATUS_FALLBACK,
   type ProcessInstanceType,
 } from "@/types";
+import { EditDraftDialog } from "./EditDraftDialog";
+import { InstanceDetailDialog } from "./InstanceDetailDialog";
 
 const PAGE_SIZES = [10, 20, 50];
 
@@ -40,19 +42,23 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   return [1, "…", current - 1, current, current + 1, "…", total];
 }
 
-// 我的流程列表：tab（进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。纯展示，无行操作（第一版）。
+// 我的流程列表：tab（进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。草稿可编辑、其他可查看（详情对话框）。
 export function InstanceListPanel({
   activeTab,
   onTabChange,
   refreshKey,
+  onHandled,
 }: {
   activeTab: ProcessInstanceType;
   onTabChange: (t: ProcessInstanceType) => void;
   refreshKey: number;
+  onHandled: (kind: "start" | "draft") => void;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
+  const [viewingId, setViewingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   // 外部（父组件）程序化切换 tab 时（如发起/存草稿成功后）也重置到第一页；
   // onValueChange 只在用户点 tab 时触发，受控 prop 变化不触发，故需在 render 期比较。
   const [prevTab, setPrevTab] = useState(activeTab);
@@ -123,16 +129,17 @@ export function InstanceListPanel({
               <TableHead className="text-xs font-medium text-muted-foreground">状态</TableHead>
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">创建时间</TableHead>
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">更新时间</TableHead>
+              <TableHead className="w-16 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell
                       key={j}
-                      className={j >= 2 && j !== 4 ? "hidden lg:table-cell" : ""}
+                      className={j >= 2 && j !== 4 && j !== 7 ? "hidden lg:table-cell" : ""}
                     >
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
@@ -142,7 +149,7 @@ export function InstanceListPanel({
             ) : records.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="h-40 text-center text-sm text-muted-foreground"
                 >
                   暂无流程记录
@@ -176,6 +183,29 @@ export function InstanceListPanel({
                     <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
                       {r.updateTime || "-"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {r.processStatus === "0" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => r.id != null && setEditingId(r.id)}
+                          aria-label="编辑"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => r.id != null && setViewingId(r.id)}
+                          aria-label="查看"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -183,6 +213,18 @@ export function InstanceListPanel({
           </TableBody>
         </Table>
       </div>
+
+      <InstanceDetailDialog
+        instanceId={viewingId}
+        open={viewingId != null}
+        onOpenChange={(o) => !o && setViewingId(null)}
+      />
+      <EditDraftDialog
+        instanceId={editingId}
+        open={editingId != null}
+        onOpenChange={(o) => !o && setEditingId(null)}
+        onDone={onHandled}
+      />
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <span>共 {total} 条</span>

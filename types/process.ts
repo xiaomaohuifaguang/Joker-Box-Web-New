@@ -135,8 +135,10 @@ export interface ProcessInstancePageParam {
 
 // 发起 / 存草稿请求体（POST /processInstance/start | /processInstance/saveDraft）。响应只看 code。
 export interface ProcessHandleParam {
-  /** 流程定义id（必填） */
+  /** 流程定义id（发起/保存草稿时必填） */
   processDefinitionId: number;
+  /** 自建流程实例id（编辑/提交既有草稿时携带；新建省略） */
+  processInstanceId?: number;
   /** 流程标题（可空，后端兜底） */
   title?: string;
 }

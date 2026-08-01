@@ -39,6 +39,7 @@ export default function ProcessApplicationPage() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             refreshKey={refreshKey}
+            onHandled={handleStarted}
           />
         </section>
       </Container>

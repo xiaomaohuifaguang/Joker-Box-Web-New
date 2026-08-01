@@ -103,3 +103,13 @@ export async function saveProcessDraft(
 ): Promise<void> {
   await api.post<unknown>("/processInstance/saveDraft", { body: payload });
 }
+
+// 实例详情：POST /processInstance/info，query 参数 id（注意：非 body）。响应 data = ProcessInstance。
+export async function getProcessInstanceInfo(
+  id: number,
+): Promise<ProcessInstance> {
+  const { data } = await api.post<ProcessInstance>("/processInstance/info", {
+    params: { id },
+  });
+  return data;
+}
