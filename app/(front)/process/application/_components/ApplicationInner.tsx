@@ -5,6 +5,7 @@ import { Container } from "@/components/Container";
 import type { ProcessInstanceType } from "@/types";
 import { InstanceListPanel } from "./InstanceListPanel";
 import { StartProcessSection } from "./StartProcessSection";
+import { StartView } from "./StartView";
 
 // 视图状态：列表 / 发起 / 查看 / 编辑（query 切换，对齐 ganDaShi ForumInner）。
 export type View =
@@ -65,8 +66,13 @@ export function ApplicationInner() {
   );
 
   if (view.name === "start") {
-    // Task 3 接入 StartView。
-    return null;
+    return (
+      <StartView
+        definitionId={view.definitionId}
+        onBack={() => go({ name: "list" })}
+        onDone={handleDone}
+      />
+    );
   }
   if (view.name === "detail") {
     // Task 4 接入 DetailView。
@@ -88,7 +94,7 @@ export function ApplicationInner() {
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">发起流程</h2>
-        <StartProcessSection onStarted={handleDone} />
+        <StartProcessSection onStart={(id) => go({ name: "start", definitionId: id })} />
       </section>
 
       <section>

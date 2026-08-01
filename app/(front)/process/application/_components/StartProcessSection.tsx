@@ -16,19 +16,17 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DeployedProcessDefinition } from "@/types";
-import { StartProcessDialog } from "./StartProcessDialog";
 
-// 发起流程区块：搜索式下拉选择已部署流程 + 「发起」按钮，弹出标题对话框。
+// 发起流程区块：搜索式下拉选择已部署流程 + 「发起」按钮，点击后由调用方跳转发起视图。
 export function StartProcessSection({
-  onStarted,
+  onStart,
 }: {
-  onStarted: (kind: "start" | "draft") => void;
+  onStart: (definitionId: number) => void;
 }) {
   const [list, setList] = useState<DeployedProcessDefinition[] | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,17 +117,13 @@ export function StartProcessSection({
           </Command>
         </PopoverContent>
       </Popover>
-      <Button disabled={selected == null} onClick={() => setDialogOpen(true)}>
+      <Button
+        disabled={selected == null}
+        onClick={() => selected?.id != null && onStart(selected.id)}
+      >
         <Send className="h-4 w-4" />
         发起
       </Button>
-
-      <StartProcessDialog
-        definition={selected}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onDone={onStarted}
-      />
     </div>
   );
 }
