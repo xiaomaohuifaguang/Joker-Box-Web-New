@@ -1,10 +1,10 @@
 import { RequirePermission } from "@/components/RequirePermission";
-import { ComingSoon } from "@/components/ComingSoon";
+import { ApprovalInner } from "./_components/ApprovalInner";
 
 export default function ProcessApprovalPage() {
   return (
     <RequirePermission>
-      <ComingSoon title="审批中心" />
+      <ApprovalInner />
     </RequirePermission>
   );
 }

@@ -125,10 +125,13 @@ export interface ProcessInstance {
 // 查询类型：1 我发起的(进行中) / 5 我发起的(全部) / 0 草稿。
 export type ProcessInstanceType = "1" | "5" | "0";
 
+// 审批中心查询类型：2 待办 / 3 待认领 / 4 已办。
+export type ApprovalInstanceType = "2" | "3" | "4";
+
 // 分页查询参数（POST /processInstance/queryPage body）。
 export interface ProcessInstancePageParam {
   /** 查询类型 */
-  type: ProcessInstanceType;
+  type: ProcessInstanceType | ApprovalInstanceType;
   /** 页大小 */
   size: number;
   /** 当前页码 */
@@ -170,6 +173,16 @@ export const INSTANCE_TABS: { value: ProcessInstanceType; label: string }[] = [
   { value: "1", label: "进行中" },
   { value: "5", label: "全部" },
   { value: "0", label: "草稿" },
+];
+
+// 审批中心列表 tab（顺序：待办 / 待认领 / 已办）。
+export const APPROVAL_INSTANCE_TABS: {
+  value: ApprovalInstanceType;
+  label: string;
+}[] = [
+  { value: "2", label: "待办" },
+  { value: "3", label: "待认领" },
+  { value: "4", label: "已办" },
 ];
 
 // 发起流程时的定义信息（/processDefinition/startInfo 响应）。后续会扩展表单信息等。

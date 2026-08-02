@@ -2,11 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { queryProcessInstancePage } from "@/lib/api/process";
-import type { Page, ProcessInstance, ProcessInstanceType } from "@/types";
+import type {
+  ApprovalInstanceType,
+  Page,
+  ProcessInstance,
+  ProcessInstanceType,
+} from "@/types";
 
-// 分页查询我的流程实例。任一参数或 refreshKey 变化时重拉。
+// 分页查询流程实例（申请中心/审批中心共用）。任一参数或 refreshKey 变化时重拉。
 export function useProcessInstancePage(params: {
-  type: ProcessInstanceType;
+  type: ProcessInstanceType | ApprovalInstanceType;
   search: string;
   current: number;
   size: number;
