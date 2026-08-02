@@ -127,16 +127,17 @@ export function StartView({
         )}
       </header>
 
-      <div className="flex max-w-3xl flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <label className="text-sm text-muted-foreground">流程标题</label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="可留空，由系统自动生成"
           maxLength={100}
+          className="max-w-md"
         />
         {showForm && info?.startForm && (
-          <div className="mt-6 max-w-3xl">
+          <div className="mt-6">
             <ProcessFormFields
               form={info.startForm}
               values={values}

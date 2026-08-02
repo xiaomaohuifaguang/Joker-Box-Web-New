@@ -86,7 +86,7 @@ export function DetailView({
         </p>
       </header>
       {loading ? (
-        <div className="flex max-w-md flex-col gap-3">
+        <div className="flex flex-col gap-3">
           {Array.from({ length: 7 }).map((_, i) => (
             <Skeleton key={i} className="h-5 w-full" />
           ))}
@@ -95,7 +95,7 @@ export function DetailView({
         <p className="py-6 text-sm text-muted-foreground">加载失败</p>
       ) : (
         <>
-          <dl className="flex max-w-3xl flex-col gap-3">
+          <dl className="flex flex-col gap-3">
             {rows.map((r) => (
               <div key={r.label} className="flex items-start gap-3 text-sm">
                 <dt className="w-20 shrink-0 text-muted-foreground">{r.label}</dt>
