@@ -116,6 +116,8 @@ export interface ProcessInstance {
   processStatus?: string;
   /** 当前任务id（审批中心列表返回，与 processDefinitionName 同级；详情 info 需回传） */
   taskId?: string;
+  /** 处理页可用的审批按钮（info 返回，与 processDefinitionName 同级）：pass 通过 / back 驳回 / reject 拒绝 */
+  buttonActions?: string[];
   /** 任务表单（含已存数据 value；无表单缺省） */
   taskForm?: TaskFormVO;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
@@ -171,6 +173,16 @@ export const PROCESS_INSTANCE_STATUS: Record<
 export const PROCESS_INSTANCE_STATUS_FALLBACK = {
   label: "审批中",
   variant: "outline" as const,
+};
+
+// 审批操作按钮映射（buttonActions 元素 -> 中文 + 按钮样式）。pass 主操作，back/reject 次/危险。
+export const PROCESS_BUTTON_ACTIONS: Record<
+  string,
+  { label: string; variant: "default" | "outline" | "destructive" }
+> = {
+  pass: { label: "通过", variant: "default" },
+  back: { label: "驳回", variant: "outline" },
+  reject: { label: "拒绝", variant: "destructive" },
 };
 
 // 列表 tab（顺序：进行中 / 全部 / 草稿）。

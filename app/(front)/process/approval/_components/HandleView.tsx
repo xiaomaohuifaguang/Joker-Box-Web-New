@@ -14,6 +14,7 @@ import {
   ProcessFormFields,
 } from "../../application/_components/ProcessForm";
 import {
+  PROCESS_BUTTON_ACTIONS,
   PROCESS_INSTANCE_STATUS,
   PROCESS_INSTANCE_STATUS_FALLBACK,
   type ProcessInstance,
@@ -67,6 +68,16 @@ export function HandleView({
     PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
     PROCESS_INSTANCE_STATUS_FALLBACK;
   const showForm = hasProcessForm(detail?.taskForm);
+  // 可用审批按钮（后端 buttonActions 控制）；未知动作不渲染。
+  const actions = (detail?.buttonActions ?? []).filter(
+    (a) => PROCESS_BUTTON_ACTIONS[a] != null,
+  );
+
+  // 审批操作：动作接口后续接入，先占位。
+  function handleAction(action: string) {
+    // TODO: 接 /processInstance/{pass,back,reject}，body ProcessHandleParam(processInstanceId+taskId+globalFormData)
+    void action;
+  }
 
   return (
     <Container className="py-8 md:py-12">
@@ -119,7 +130,22 @@ export function HandleView({
               rendererRef={rendererRef}
             />
           )}
-          {/* 审批操作按钮（同意/驳回等）后续接入 */}
+          {actions.length > 0 && (
+            <div className="mt-8 flex gap-2">
+              {actions.map((a) => {
+                const meta = PROCESS_BUTTON_ACTIONS[a];
+                return (
+                  <Button
+                    key={a}
+                    variant={meta.variant}
+                    onClick={() => handleAction(a)}
+                  >
+                    {meta.label}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
     </Container>
