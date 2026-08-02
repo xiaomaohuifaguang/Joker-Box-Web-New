@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Container } from "@/components/Container";
+import type { DynamicFormRendererHandle } from "@/app/console/form/dynamicForm-manager/_components/DynamicFormRenderer";
+import {
+  hasProcessForm,
+  seedProcessFormValues,
+  ProcessFormFields,
+} from "./ProcessForm";
+import type { TaskFormVO } from "@/types";
 
 // 编辑草稿视图：按 id 回填标题，改后存草稿/发起（body 带 processInstanceId 提交既有草稿）。
 export function EditView({
@@ -30,6 +37,12 @@ export function EditView({
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<"start" | "draft" | null>(null);
+  const [form, setForm] = useState<TaskFormVO | undefined>(undefined);
+  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const rendererRef = useRef<DynamicFormRendererHandle>(null);
+
+  const showForm = hasProcessForm(form);
 
   const [prevId, setPrevId] = useState(instanceId);
   if (prevId !== instanceId) {
@@ -46,6 +59,8 @@ export function EditView({
         setMetaName(data.processDefinitionName ?? "");
         setMetaVersion(data.processDefinitionVersion ?? "");
         setTitle(data.title ?? "");
+        setForm(data.taskForm);
+        setValues(seedProcessFormValues(data.taskForm));
       })
       .catch(() => {
         if (cancelled) return;
@@ -62,12 +77,24 @@ export function EditView({
 
   async function submit(kind: "start" | "draft") {
     if (definitionId == null || submitting) return;
+    if (showForm && kind === "start") {
+      const errs = rendererRef.current?.validate() ?? {};
+      setErrors(errs);
+      if (Object.keys(errs).length > 0) {
+        toast.error("请完善表单必填项");
+        return;
+      }
+    }
+    const globalFormData = showForm
+      ? (rendererRef.current?.collectData() ?? {})
+      : undefined;
     setSubmitting(kind);
     try {
       const payload = {
         processDefinitionId: definitionId,
         processInstanceId: instanceId,
         title: title.trim() || undefined,
+        ...(globalFormData ? { globalFormData } : {}),
       };
       if (kind === "start") await startProcessInstance(payload);
       else await saveProcessDraft(payload);
@@ -100,9 +127,9 @@ export function EditView({
         </p>
       </header>
       {loading ? (
-        <Skeleton className="h-9 w-full max-w-md" />
+        <Skeleton className="h-9 w-full max-w-3xl" />
       ) : (
-        <div className="flex max-w-md flex-col gap-2">
+        <div className="flex max-w-3xl flex-col gap-2">
           <label className="text-sm text-muted-foreground">流程标题</label>
           <Input
             value={title}
@@ -110,6 +137,17 @@ export function EditView({
             placeholder="可留空，由系统自动生成"
             maxLength={100}
           />
+          {showForm && form && (
+            <div className="mt-6 max-w-3xl">
+              <ProcessFormFields
+                form={form}
+                values={values}
+                errors={errors}
+                onChange={(id, v) => setValues((s) => ({ ...s, [id]: v }))}
+                rendererRef={rendererRef}
+              />
+            </div>
+          )}
           <div className="mt-4 flex gap-2">
             <Button
               variant="outline"

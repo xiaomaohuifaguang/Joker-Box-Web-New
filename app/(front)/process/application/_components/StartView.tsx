@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
@@ -13,10 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Container } from "@/components/Container";
+import type { DynamicFormRendererHandle } from "@/app/console/form/dynamicForm-manager/_components/DynamicFormRenderer";
+import {
+  hasProcessForm,
+  seedProcessFormValues,
+  ProcessFormFields,
+} from "./ProcessForm";
 import type { ProcessStartInfo } from "@/types";
 
-// 发起流程视图：按 definitionId 调 startInfo 取流程名/版本，填标题后发起/存草稿。
-// 第一版只发标题（无表单数据，后续在此接表单）。
+// 发起流程视图：按 definitionId 调 startInfo 取流程名/版本 + 发起表单，填标题后发起/存草稿。
+// 发起时校验表单必填；存草稿不校验，仅收集 globalFormData。
 export function StartView({
   definitionId,
   onBack,
@@ -30,6 +36,11 @@ export function StartView({
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [submitting, setSubmitting] = useState<"start" | "draft" | null>(null);
+  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const rendererRef = useRef<DynamicFormRendererHandle>(null);
+
+  const showForm = hasProcessForm(info?.startForm);
 
   // definitionId 变化时重新进入加载态（render 期比较；effect 内只在异步回调 setState）。
   const [prevId, setPrevId] = useState(definitionId);
@@ -43,7 +54,9 @@ export function StartView({
     let cancelled = false;
     getProcessDefinitionStartInfo(definitionId)
       .then((data) => {
-        if (!cancelled) setInfo(data);
+        if (cancelled) return;
+        setInfo(data);
+        setValues(seedProcessFormValues(data.startForm));
       })
       .catch(() => {
         if (!cancelled) setInfo(null);
@@ -58,11 +71,23 @@ export function StartView({
 
   async function submit(kind: "start" | "draft") {
     if (submitting) return;
+    if (showForm && kind === "start") {
+      const errs = rendererRef.current?.validate() ?? {};
+      setErrors(errs);
+      if (Object.keys(errs).length > 0) {
+        toast.error("请完善表单必填项");
+        return;
+      }
+    }
+    const globalFormData = showForm
+      ? (rendererRef.current?.collectData() ?? {})
+      : undefined;
     setSubmitting(kind);
     try {
       const payload = {
         processDefinitionId: definitionId,
         title: title.trim() || undefined,
+        ...(globalFormData ? { globalFormData } : {}),
       };
       if (kind === "start") await startProcessInstance(payload);
       else await saveProcessDraft(payload);
@@ -102,7 +127,7 @@ export function StartView({
         )}
       </header>
 
-      <div className="flex max-w-md flex-col gap-2">
+      <div className="flex max-w-3xl flex-col gap-2">
         <label className="text-sm text-muted-foreground">流程标题</label>
         <Input
           value={title}
@@ -110,6 +135,17 @@ export function StartView({
           placeholder="可留空，由系统自动生成"
           maxLength={100}
         />
+        {showForm && info?.startForm && (
+          <div className="mt-6 max-w-3xl">
+            <ProcessFormFields
+              form={info.startForm}
+              values={values}
+              errors={errors}
+              onChange={(id, v) => setValues((s) => ({ ...s, [id]: v }))}
+              rendererRef={rendererRef}
+            />
+          </div>
+        )}
         <div className="mt-4 flex gap-2">
           <Button
             variant="outline"
