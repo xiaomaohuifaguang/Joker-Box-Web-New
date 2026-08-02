@@ -149,6 +149,8 @@ export function computeFieldState(
         break; // VALUE 走边沿触发（useLinkageValues），不参与状态叠加
     }
   }
+  // 只读优先级高于一切（含联动 ENABLED）：循环结束后复位。
+  if (field.props?.__processReadonly === true) state.disabled = true;
   return state;
 }
 
