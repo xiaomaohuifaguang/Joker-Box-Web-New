@@ -141,7 +141,15 @@ export function StartView({
               form={info.startForm}
               values={values}
               errors={errors}
-              onChange={(id, v) => setValues((s) => ({ ...s, [id]: v }))}
+              onChange={(id, v) => {
+                setValues((s) => ({ ...s, [id]: v }));
+                setErrors((e) => {
+                  if (!(id in e)) return e;
+                  const next = { ...e };
+                  delete next[id];
+                  return next;
+                });
+              }}
               rendererRef={rendererRef}
             />
           </div>

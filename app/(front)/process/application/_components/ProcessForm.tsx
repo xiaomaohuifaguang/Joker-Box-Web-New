@@ -33,11 +33,12 @@ export function seedProcessFormValues(
   return v;
 }
 
-// permission 映射进克隆字段（优先级高于表单设计配置）：
-// HIDDEN -> visible:false；READONLY -> props.__processReadonly:true；REQUIRED -> required:"1"。
+// permission 映射进克隆字段（优先级高于表单设计配置与联动规则）：
+// HIDDEN -> visible:false + props.__processHidden:true；READONLY -> props.__processReadonly:true；REQUIRED -> required:"1"。
 function applyPermission(f: DynamicFormField): DynamicFormField {
   const p = (f as { permission?: string | null }).permission;
-  if (p === "HIDDEN") return { ...f, visible: false };
+  if (p === "HIDDEN")
+    return { ...f, visible: false, props: { ...f.props, __processHidden: true } };
   if (p === "READONLY")
     return { ...f, props: { ...f.props, __processReadonly: true } };
   if (p === "REQUIRED") return { ...f, required: "1" };
