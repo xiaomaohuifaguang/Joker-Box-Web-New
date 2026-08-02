@@ -6,6 +6,7 @@ import { getProcessInstanceInfo } from "@/lib/api/process";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Container } from "@/components/Container";
 import {
   PROCESS_INSTANCE_STATUS,
@@ -28,6 +29,8 @@ export function DetailView({
 }) {
   const [detail, setDetail] = useState<ProcessInstance | null>(null);
   const [loading, setLoading] = useState(true);
+  // 查看态默认不引入联动规则（全量静态展示已存数据）；切换后严格按联动（该隐就隐），但始终只读。
+  const [useLinkage, setUseLinkage] = useState(false);
 
   const [prevId, setPrevId] = useState(instanceId);
   if (prevId !== instanceId) {
@@ -59,6 +62,9 @@ export function DetailView({
 
   const showForm = hasProcessForm(detail?.taskForm);
   const formValues = seedProcessFormValues(detail?.taskForm);
+  // 仅当表单定义了联动规则时才提供切换（否则切换无意义）。
+  const hasLinkage =
+    (detail?.taskForm?.globalForm?.linkageRules?.length ?? 0) > 0;
 
   const rows: { label: string; value: React.ReactNode }[] = detail
     ? [
@@ -105,10 +111,23 @@ export function DetailView({
           </dl>
           {showForm && detail?.taskForm && (
             <div className="mt-8">
-              <h2 className="mb-3 text-sm font-medium text-muted-foreground">表单</h2>
+              <div className="mb-3 flex items-center gap-3">
+                <h2 className="text-sm font-medium text-muted-foreground">表单</h2>
+                {hasLinkage && (
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch
+                      checked={useLinkage}
+                      onCheckedChange={setUseLinkage}
+                      aria-label="按联动规则显示"
+                    />
+                    按联动规则显示
+                  </label>
+                )}
+              </div>
               <ProcessFormFields
                 form={detail.taskForm}
                 readOnly
+                linkage={useLinkage}
                 values={formValues}
                 errors={{}}
                 onChange={() => {}}

@@ -48,11 +48,12 @@ function applyPermission(f: DynamicFormField): DynamicFormField {
   return f;
 }
 
-// 流程表单渲染：把 permission 映射进字段后用共享 DynamicFormRenderer。
-// readOnly=整表只读（查看详情）。键=fieldId。
+// 流程表单渲染：把 permission 映射进字段后用共享 DynamicFormRenderer。键=fieldId。
+// readOnly=整表只读（查看详情；显示字段也不可改）。linkage=是否引入联动规则（默认 readOnly 时不引入）。
 export function ProcessFormFields({
   form,
   readOnly,
+  linkage,
   values,
   errors,
   onChange,
@@ -60,6 +61,7 @@ export function ProcessFormFields({
 }: {
   form: TaskFormVO;
   readOnly?: boolean;
+  linkage?: boolean;
   values: Record<string, unknown>;
   errors: Record<string, string>;
   onChange: (fieldId: string, v: unknown) => void;
@@ -72,12 +74,14 @@ export function ProcessFormFields({
     ...gr,
     fields: gr.fields.map(applyPermission),
   }));
+  // 是否引入联动：显式传 linkage 优先；否则 readOnly 默认不引入、可编辑默认引入。
+  const useLinkage = linkage ?? !readOnly;
   return (
     <DynamicFormRenderer
       ref={rendererRef}
       fields={fields}
       groups={groups}
-      linkageRules={readOnly ? [] : (g.linkageRules ?? [])}
+      linkageRules={useLinkage ? (g.linkageRules ?? []) : []}
       values={values}
       errors={readOnly ? {} : errors}
       onChange={readOnly ? () => {} : onChange}
