@@ -114,6 +114,8 @@ export interface ProcessInstance {
   code?: string;
   /** 流程状态：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中 */
   processStatus?: string;
+  /** 当前任务id（审批中心列表返回，与 processDefinitionName 同级；详情 info 需回传） */
+  taskId?: number;
   /** 任务表单（含已存数据 value；无表单缺省） */
   taskForm?: TaskFormVO;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */

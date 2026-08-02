@@ -6,19 +6,31 @@ import type { ApprovalInstanceType } from "@/types";
 import { ApprovalListPanel } from "./ApprovalListPanel";
 import { DetailView } from "../../application/_components/DetailView";
 
-// 视图状态：列表 / 查看（query 切换，对齐 ApplicationInner）。
-export type View = { name: "list" } | { name: "detail"; instanceId: number };
+// 视图状态：列表 / 查看（query 切换，对齐 ApplicationInner）。detail 可带 taskId（审批处理/认领场景）。
+export type View =
+  | { name: "list" }
+  | { name: "detail"; instanceId: number; taskId?: number };
 
-// 从 URL query 解析视图（?view=instId / 无参=列表）。
+// 从 URL query 解析视图（?view=instId[&taskId=n] / 无参=列表）。
 function parseView(search: string): View {
   const p = new URLSearchParams(search);
   const view = p.get("view");
-  if (view) return { name: "detail", instanceId: Number(view) };
+  if (view) {
+    const taskId = p.get("taskId");
+    return {
+      name: "detail",
+      instanceId: Number(view),
+      taskId: taskId != null ? Number(taskId) : undefined,
+    };
+  }
   return { name: "list" };
 }
 
 function viewToUrl(v: View): string {
-  if (v.name === "detail") return `/process/approval?view=${v.instanceId}`;
+  if (v.name === "detail") {
+    const base = `/process/approval?view=${v.instanceId}`;
+    return v.taskId != null ? `${base}&taskId=${v.taskId}` : base;
+  }
   return "/process/approval";
 }
 
@@ -46,6 +58,7 @@ export function ApprovalInner() {
     return (
       <DetailView
         instanceId={view.instanceId}
+        taskId={view.taskId}
         onBack={() => go({ name: "list" })}
       />
     );
@@ -64,6 +77,9 @@ export function ApprovalInner() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onView={(id) => go({ name: "detail", instanceId: id })}
+        onOpenTask={(instanceId, taskId) =>
+          go({ name: "detail", instanceId, taskId })
+        }
       />
     </Container>
   );

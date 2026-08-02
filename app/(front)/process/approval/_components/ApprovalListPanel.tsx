@@ -40,15 +40,18 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   return [1, "…", current - 1, current, current + 1, "…", total];
 }
 
-// 审批列表：tab（待办/待认领/已办）+ 防抖搜索 + 表格 + 分页。已办行可查看（跳转路由视图）。
+// 审批列表：tab（待办/待认领/已办）+ 防抖搜索 + 表格 + 分页。
+// 操作列按 tab：待办=处理、待认领=认领（均带 taskId 跳详情），已办=查看。
 export function ApprovalListPanel({
   activeTab,
   onTabChange,
   onView,
+  onOpenTask,
 }: {
   activeTab: ApprovalInstanceType;
   onTabChange: (t: ApprovalInstanceType) => void;
   onView: (instanceId: number) => void;
+  onOpenTask: (instanceId: number, taskId?: number) => void;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -179,15 +182,28 @@ export function ApprovalListPanel({
                       {r.updateTime || "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => r.id != null && onView(r.id)}
-                        aria-label="查看"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      {activeTab === "4" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => r.id != null && onView(r.id)}
+                          aria-label="查看"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() =>
+                            r.id != null && onOpenTask(r.id, r.taskId)
+                          }
+                        >
+                          {activeTab === "3" ? "认领" : "处理"}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

@@ -19,12 +19,14 @@ import {
   ProcessFormFields,
 } from "./ProcessForm";
 
-// 查看实例详情视图：只读展示（不含创建人，第一版）。
+// 查看实例详情视图：只读展示（不含创建人，第一版）。审批中心处理/认领进入时带 taskId（info 需回传）。
 export function DetailView({
   instanceId,
+  taskId,
   onBack,
 }: {
   instanceId: number;
+  taskId?: number;
   onBack: () => void;
 }) {
   const [detail, setDetail] = useState<ProcessInstance | null>(null);
@@ -32,16 +34,17 @@ export function DetailView({
   // 查看态默认不引入联动规则（全量静态展示已存数据）；切换后严格按联动（该隐就隐），但始终只读。
   const [useLinkage, setUseLinkage] = useState(false);
 
-  const [prevId, setPrevId] = useState(instanceId);
-  if (prevId !== instanceId) {
-    setPrevId(instanceId);
+  const [prevKey, setPrevKey] = useState(`${instanceId}|${taskId ?? ""}`);
+  const depKey = `${instanceId}|${taskId ?? ""}`;
+  if (prevKey !== depKey) {
+    setPrevKey(depKey);
     setDetail(null);
     setLoading(true);
   }
 
   useEffect(() => {
     let cancelled = false;
-    getProcessInstanceInfo(instanceId)
+    getProcessInstanceInfo(instanceId, taskId)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
@@ -54,7 +57,7 @@ export function DetailView({
     return () => {
       cancelled = true;
     };
-  }, [instanceId]);
+  }, [instanceId, taskId]);
 
   const st =
     PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
