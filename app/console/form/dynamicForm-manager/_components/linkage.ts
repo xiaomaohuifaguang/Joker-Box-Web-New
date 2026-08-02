@@ -108,6 +108,9 @@ export function computeFieldState(
     pattern: field.pattern,
     span: field.span,
   };
+  // 流程字段级只读（permission=READONLY 注入的 __processReadonly）：强制禁用。
+  // 优先级最高，先于联动规则求值。
+  if (field.props?.__processReadonly === true) state.disabled = true;
   const relevant = rules
     .filter((r) => r.enable && r.targetFieldId === field.fieldId)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));

@@ -1,3 +1,5 @@
+import type { DynamicForm, DynamicFormField, DynamicFormFieldGroup } from "./dynamic-form";
+
 // 流程引擎（/processDefinition/*）类型定义。第一版：流程定义分页列表。
 
 // 流程定义（流程模板）。status：0 草稿 / 1 已发布 / -1 已停用。
@@ -112,6 +114,8 @@ export interface ProcessInstance {
   code?: string;
   /** 流程状态：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中 */
   processStatus?: string;
+  /** 任务表单（含已存数据 value；无表单缺省） */
+  taskForm?: TaskFormVO;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
   createTime?: string;
   /** 更新时间（yyyy-MM-dd HH:mm:ss） */
@@ -141,6 +145,8 @@ export interface ProcessHandleParam {
   processInstanceId?: number;
   /** 流程标题（可空，后端兜底） */
   title?: string;
+  /** 表单数据（键=fieldId；无表单省略） */
+  globalFormData?: Record<string, unknown>;
 }
 
 // 实例状态徽标映射。键外（非 0/10/11）视为审批中。
@@ -174,4 +180,34 @@ export interface ProcessStartInfo {
   processName?: string;
   /** 当前版本 */
   version?: string;
+  /** 发起表单（流程未绑定/节点继承时缺省） */
+  startForm?: TaskFormVO;
+}
+
+// ===== 申请中心表单接入 =====
+
+// 字段权限：VISIBLE 可见(默认) / READONLY 只读 / HIDDEN 隐藏 / REQUIRED 必填；空=VISIBLE。
+// 优先级高于表单设计配置。
+export type ProcessFieldPermission = "VISIBLE" | "READONLY" | "HIDDEN" | "REQUIRED";
+
+// 流程表单字段：DynamicFormField + permission（+ value 回填，见 DynamicFormField.value）。
+export type ProcessFormField = DynamicFormField & {
+  permission?: ProcessFieldPermission | null;
+};
+
+// 流程表单分组：fields 换成 ProcessFormField。
+export type ProcessFormGroup = Omit<DynamicFormFieldGroup, "fields"> & {
+  fields: ProcessFormField[];
+};
+
+// 流程表单：DynamicForm 的 fields/groups 换成带 permission 的版本。
+export type ProcessForm = Omit<DynamicForm, "fields" | "groups"> & {
+  fields?: ProcessFormField[];
+  groups?: ProcessFormGroup[];
+};
+
+// startInfo.startForm / processInstance.info.taskForm 包装。
+export interface TaskFormVO {
+  /** 全局表单（可能不存在：流程未绑定/节点继承） */
+  globalForm?: ProcessForm;
 }
