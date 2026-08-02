@@ -108,12 +108,19 @@ export async function saveProcessDraft(
 // 实例详情：POST /processInstance/info，query 参数 id（注意：非 body）；审批场景另传 taskId。响应 data = ProcessInstance。
 export async function getProcessInstanceInfo(
   id: number,
-  taskId?: number,
+  taskId?: string,
 ): Promise<ProcessInstance> {
   const { data } = await api.post<ProcessInstance>("/processInstance/info", {
     params: taskId != null ? { id, taskId } : { id },
   });
   return data;
+}
+
+// 认领任务：POST /processInstance/claim，body ProcessHandleParam（processInstanceId + taskId）。响应只看 code。
+export async function claimProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/claim", { body: payload });
 }
 
 // 发起流程时的定义信息：POST /processDefinition/startInfo，query 参数 processDefinitionId（注意：非 body）。响应 data = ProcessStartInfo。

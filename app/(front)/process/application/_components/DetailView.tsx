@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
-import { getProcessInstanceInfo } from "@/lib/api/process";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
+import {
+  claimProcessTask,
+  getProcessInstanceInfo,
+} from "@/lib/api/process";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,17 +25,23 @@ import {
 } from "./ProcessForm";
 
 // 查看实例详情视图：只读展示（不含创建人，第一版）。审批中心处理/认领进入时带 taskId（info 需回传）。
+// showClaim=true（待认领进入）时，底部提供「确认认领」按钮。
 export function DetailView({
   instanceId,
   taskId,
   onBack,
+  showClaim,
+  onClaimed,
 }: {
   instanceId: number;
-  taskId?: number;
+  taskId?: string;
   onBack: () => void;
+  showClaim?: boolean;
+  onClaimed?: () => void;
 }) {
   const [detail, setDetail] = useState<ProcessInstance | null>(null);
   const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(false);
   // 查看态默认不引入联动规则（全量静态展示已存数据）；切换后严格按联动（该隐就隐），但始终只读。
   const [useLinkage, setUseLinkage] = useState(false);
 
@@ -58,6 +69,20 @@ export function DetailView({
       cancelled = true;
     };
   }, [instanceId, taskId]);
+
+  async function handleClaim() {
+    if (taskId == null || claiming) return;
+    setClaiming(true);
+    try {
+      await claimProcessTask({ processInstanceId: instanceId, taskId });
+      toast.success("认领成功");
+      onClaimed?.();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "认领失败");
+    } finally {
+      setClaiming(false);
+    }
+  }
 
   const st =
     PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
@@ -135,6 +160,14 @@ export function DetailView({
                 errors={{}}
                 onChange={() => {}}
               />
+            </div>
+          )}
+          {showClaim && (
+            <div className="mt-8">
+              <Button disabled={claiming} onClick={handleClaim}>
+                {claiming && <Loader2 className="h-4 w-4 animate-spin" />}
+                确认认领
+              </Button>
             </div>
           )}
         </>

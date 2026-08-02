@@ -41,17 +41,19 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
 }
 
 // 审批列表：tab（待办/待认领/已办）+ 防抖搜索 + 表格 + 分页。
-// 操作列按 tab：待办=处理、待认领=认领（均带 taskId 跳详情），已办=查看。
+// 操作列按 tab：待办=处理、待认领=认领（均带 taskId 跳详情；认领带 claim 标志），已办=查看。
 export function ApprovalListPanel({
   activeTab,
   onTabChange,
+  refreshKey,
   onView,
   onOpenTask,
 }: {
   activeTab: ApprovalInstanceType;
   onTabChange: (t: ApprovalInstanceType) => void;
+  refreshKey: number;
   onView: (instanceId: number) => void;
-  onOpenTask: (instanceId: number, taskId?: number) => void;
+  onOpenTask: (instanceId: number, taskId?: string, claim?: boolean) => void;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -64,13 +66,12 @@ export function ApprovalListPanel({
     setCurrent(1);
   }
   const [size, setSize] = useState(10);
-  // 操作项（审批动作）后续接入时，由父组件传 refreshKey 触发重拉；当前固定 0。
   const { page, loading } = useProcessInstancePage({
     type: activeTab,
     search,
     current,
     size,
-    refreshKey: 0,
+    refreshKey,
   });
 
   // 搜索防抖。
@@ -198,7 +199,8 @@ export function ApprovalListPanel({
                           size="sm"
                           className="h-8"
                           onClick={() =>
-                            r.id != null && onOpenTask(r.id, r.taskId)
+                            r.id != null &&
+                            onOpenTask(r.id, r.taskId, activeTab === "3")
                           }
                         >
                           {activeTab === "3" ? "认领" : "处理"}

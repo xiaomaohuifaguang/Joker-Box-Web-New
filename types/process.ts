@@ -115,7 +115,7 @@ export interface ProcessInstance {
   /** 流程状态：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中 */
   processStatus?: string;
   /** 当前任务id（审批中心列表返回，与 processDefinitionName 同级；详情 info 需回传） */
-  taskId?: number;
+  taskId?: string;
   /** 任务表单（含已存数据 value；无表单缺省） */
   taskForm?: TaskFormVO;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
@@ -143,11 +143,14 @@ export interface ProcessInstancePageParam {
 }
 
 // 发起 / 存草稿请求体（POST /processInstance/start | /processInstance/saveDraft）。响应只看 code。
+// 认领任务（POST /processInstance/claim）也用此结构：processInstanceId + taskId。
 export interface ProcessHandleParam {
-  /** 流程定义id（发起/保存草稿时必填） */
-  processDefinitionId: number;
-  /** 自建流程实例id（编辑/提交既有草稿时携带；新建省略） */
+  /** 流程定义id（发起/保存草稿时必填；认领时不传） */
+  processDefinitionId?: number;
+  /** 自建流程实例id（编辑/提交既有草稿时携带；新建省略；认领时必传） */
   processInstanceId?: number;
+  /** 任务id（认领任务时必传；发起/草稿省略） */
+  taskId?: string;
   /** 流程标题（可空，后端兜底） */
   title?: string;
   /** 表单数据（键=fieldId；无表单省略） */
