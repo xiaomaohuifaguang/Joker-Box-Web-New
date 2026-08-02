@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/Container";
 import type { ProcessInstanceType } from "@/types";
 import { InstanceListPanel } from "./InstanceListPanel";
@@ -40,35 +40,36 @@ function viewToUrl(v: View): string {
 // state 为主（渲染可靠），URL 用原生 pushState 同步（可分享/刷新/前进后退还原）。
 // 不用 router.push：同 path 仅改 query 时静态导出的软导航不可靠。
 export function ApplicationInner() {
-  const pathname = usePathname();
-  const [view, setView] = useState<View>(() =>
-    typeof window === "undefined" ? { name: "list" } : parseView(window.location.search),
-  );
+  const searchParams = useSearchParams();
+  // 权威视图 = 响应式 URL（useSearchParams 由 Next 客户端路由驱动，外部 <Link>/前进后退必更新）。
+  // 解决：兄弟页（申请<->审批）<Link> 软导航不重建组件，纯 useState(快照) 不重算残留详情态。
+  const urlStr = searchParams.toString();
+  const urlView: View = parseView(urlStr);
+  // 内部 go() 跳转的覆盖层：pushState 后 React 不重渲染，靠它立即改视图。
+  const [override, setOverride] = useState<View | null>(null);
+
+  // 响应式 URL 变化（外部软导航 / 前进后退）-> 清覆盖层，回到 urlView。
+  // 注意：go() 的原生 pushState 不经 Next 路由，不触发 useSearchParams，不会误清 override。
+  const [prevUrl, setPrevUrl] = useState(urlStr);
+  if (prevUrl !== urlStr) {
+    setPrevUrl(urlStr);
+    setOverride(null);
+  }
+  const view = override ?? urlView;
+
   const [activeTab, setActiveTab] = useState<ProcessInstanceType>("1");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 与审批中心互跳：静态导出下两个 page 渲染结构相同，Next 软导航可能复用渲染树不重建，
-  // 导致 parseView 初始值不重算、残留上一页详情态。本 path 且 URL 无 query 但 view 非 list
-  // -> 强制回列表（render 期纠偏，同项目 prev-compare 模式的简化版）。
-  if (
-    pathname === "/process/application" &&
-    typeof window !== "undefined" &&
-    window.location.search === "" &&
-    view.name !== "list"
-  ) {
-    setView({ name: "list" });
-  }
-
-  // 前进/后退 -> 同步回 state。
-  useEffect(() => {
-    const onPop = () => setView(parseView(window.location.search));
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
   const go = useCallback((v: View) => {
     window.history.pushState(null, "", viewToUrl(v));
-    setView(v);
+    setOverride(v);
+  }, []);
+
+  // 浏览器前进/后退：popstate 直接用 window.location 重算（useSearchParams 在静态导出下可能滞后）。
+  useEffect(() => {
+    const onPop = () => setOverride(parseView(window.location.search));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   // 发起/编辑/存草稿成功：回列表、切对应 tab、刷新。

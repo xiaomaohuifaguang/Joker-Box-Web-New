@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/Container";
 import type { ApprovalInstanceType } from "@/types";
 import { ApprovalListPanel } from "./ApprovalListPanel";
@@ -43,37 +43,36 @@ function viewToUrl(v: View): string {
 }
 
 // 审批中心视图编排：list / detail 两视图切换；detail 按 kind 分处理/认领/查看。
-// state 为主（渲染可靠），URL 用原生 pushState 同步（可分享/刷新/前进后退还原）。
+// 权威视图 = 响应式 URL（useSearchParams）；内部 go() 用 override 立即生效。同 ApplicationInner。
 export function ApprovalInner() {
-  const pathname = usePathname();
-  const [view, setView] = useState<View>(() =>
-    typeof window === "undefined" ? { name: "list" } : parseView(window.location.search),
-  );
+  const searchParams = useSearchParams();
+  const urlStr = searchParams.toString();
+  const urlView: View = parseView(urlStr);
+  // 内部 go() 跳转的覆盖层：pushState 后 React 不重渲染，靠它立即改视图。
+  const [override, setOverride] = useState<View | null>(null);
+
+  // 响应式 URL 变化（外部 <Link> 软导航 / 前进后退）-> 清覆盖层，回到 urlView。
+  // go() 的原生 pushState 不经 Next 路由，不触发 useSearchParams，不会误清 override。
+  const [prevUrl, setPrevUrl] = useState(urlStr);
+  if (prevUrl !== urlStr) {
+    setPrevUrl(urlStr);
+    setOverride(null);
+  }
+  const view = override ?? urlView;
+
   const [activeTab, setActiveTab] = useState<ApprovalInstanceType>("4");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 与申请中心互跳：静态导出下两个 page 渲染结构相同，Next 软导航可能复用渲染树不重建，
-  // 导致 parseView 初始值不重算、残留上一页详情态。本 path 且 URL 无 query 但 view 非 list
-  // -> 强制回列表（render 期纠偏，同项目 prev-compare 模式的简化版）。
-  if (
-    pathname === "/process/approval" &&
-    typeof window !== "undefined" &&
-    window.location.search === "" &&
-    view.name !== "list"
-  ) {
-    setView({ name: "list" });
-  }
-
-  // 前进/后退 -> 同步回 state。
+  // 浏览器前进/后退：popstate 直接用 window.location 重算（useSearchParams 在静态导出下可能滞后）。
   useEffect(() => {
-    const onPop = () => setView(parseView(window.location.search));
+    const onPop = () => setOverride(parseView(window.location.search));
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   const go = useCallback((v: View) => {
     window.history.pushState(null, "", viewToUrl(v));
-    setView(v);
+    setOverride(v);
   }, []);
 
   // 认领/处理成功：回列表并刷新。
