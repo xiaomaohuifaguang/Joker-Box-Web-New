@@ -86,7 +86,7 @@ export function EditView({
       }
     }
     const globalFormData = showForm
-      ? (rendererRef.current?.collectData() ?? {})
+      ? (rendererRef.current?.collectAllData() ?? {})
       : undefined;
     setSubmitting(kind);
     try {

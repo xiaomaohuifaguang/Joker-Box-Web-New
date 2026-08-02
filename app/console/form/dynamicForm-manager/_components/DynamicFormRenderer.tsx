@@ -34,6 +34,7 @@ export interface DynamicFormRendererProps {
 export interface DynamicFormRendererHandle {
   validate: () => Record<string, string>;
   collectData: () => Record<string, unknown>;
+  collectAllData: () => Record<string, unknown>;
   clearEdgeTriggers: () => void;
 }
 
@@ -132,6 +133,18 @@ export const DynamicFormRenderer = forwardRef<
         const v = valueOf(f);
         if (v === undefined || v === null || v === "") continue;
         data[f.fieldId] = v;
+      }
+      return data;
+    },
+    // 收集提交数据（保留空键）：隐/禁仍不进，但可见可编辑字段即使为空也带键（undefined/null->""）。
+    // 供「键存在即更新」的后端（如流程 globalFormData）用：清空字段需显式发键覆盖旧值。
+    collectAllData() {
+      const data: Record<string, unknown> = {};
+      for (const f of allFields) {
+        const st = effState.get(f.fieldId);
+        if (!st || !st.visible || st.disabled) continue;
+        const v = valueOf(f);
+        data[f.fieldId] = v === undefined || v === null ? "" : v;
       }
       return data;
     },

@@ -80,7 +80,7 @@ export function StartView({
       }
     }
     const globalFormData = showForm
-      ? (rendererRef.current?.collectData() ?? {})
+      ? (rendererRef.current?.collectAllData() ?? {})
       : undefined;
     setSubmitting(kind);
     try {
