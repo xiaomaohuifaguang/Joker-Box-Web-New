@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Container } from "@/components/Container";
 import type { ProcessInstanceType } from "@/types";
 import { InstanceListPanel } from "./InstanceListPanel";
@@ -39,11 +40,24 @@ function viewToUrl(v: View): string {
 // state 为主（渲染可靠），URL 用原生 pushState 同步（可分享/刷新/前进后退还原）。
 // 不用 router.push：同 path 仅改 query 时静态导出的软导航不可靠。
 export function ApplicationInner() {
+  const pathname = usePathname();
   const [view, setView] = useState<View>(() =>
     typeof window === "undefined" ? { name: "list" } : parseView(window.location.search),
   );
   const [activeTab, setActiveTab] = useState<ProcessInstanceType>("1");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // 与审批中心互跳：静态导出下两个 page 渲染结构相同，Next 软导航可能复用渲染树不重建，
+  // 导致 parseView 初始值不重算、残留上一页详情态。本 path 且 URL 无 query 但 view 非 list
+  // -> 强制回列表（render 期纠偏，同项目 prev-compare 模式的简化版）。
+  if (
+    pathname === "/process/application" &&
+    typeof window !== "undefined" &&
+    window.location.search === "" &&
+    view.name !== "list"
+  ) {
+    setView({ name: "list" });
+  }
 
   // 前进/后退 -> 同步回 state。
   useEffect(() => {
