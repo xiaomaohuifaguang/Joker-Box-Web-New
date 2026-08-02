@@ -12,6 +12,11 @@ import {
   PROCESS_INSTANCE_STATUS_FALLBACK,
   type ProcessInstance,
 } from "@/types";
+import {
+  hasProcessForm,
+  seedProcessFormValues,
+  ProcessFormFields,
+} from "./ProcessForm";
 
 // 查看实例详情视图：只读展示（不含创建人，第一版）。
 export function DetailView({
@@ -52,6 +57,9 @@ export function DetailView({
     PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
     PROCESS_INSTANCE_STATUS_FALLBACK;
 
+  const showForm = hasProcessForm(detail?.taskForm);
+  const formValues = seedProcessFormValues(detail?.taskForm);
+
   const rows: { label: string; value: React.ReactNode }[] = detail
     ? [
         { label: "编号", value: detail.code || "-" },
@@ -86,14 +94,28 @@ export function DetailView({
       ) : detail == null ? (
         <p className="py-6 text-sm text-muted-foreground">加载失败</p>
       ) : (
-        <dl className="flex max-w-md flex-col gap-3">
-          {rows.map((r) => (
-            <div key={r.label} className="flex items-start gap-3 text-sm">
-              <dt className="w-20 shrink-0 text-muted-foreground">{r.label}</dt>
-              <dd className="min-w-0 flex-1 break-words">{r.value}</dd>
+        <>
+          <dl className="flex max-w-3xl flex-col gap-3">
+            {rows.map((r) => (
+              <div key={r.label} className="flex items-start gap-3 text-sm">
+                <dt className="w-20 shrink-0 text-muted-foreground">{r.label}</dt>
+                <dd className="min-w-0 flex-1 break-words">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {showForm && detail?.taskForm && (
+            <div className="mt-8">
+              <h2 className="mb-3 text-sm font-medium text-muted-foreground">表单</h2>
+              <ProcessFormFields
+                form={detail.taskForm}
+                readOnly
+                values={formValues}
+                errors={{}}
+                onChange={() => {}}
+              />
             </div>
-          ))}
-        </dl>
+          )}
+        </>
       )}
     </Container>
   );
