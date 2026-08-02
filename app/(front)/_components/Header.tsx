@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu } from "lucide-react";
@@ -41,15 +41,18 @@ function NavLink({
   label,
   active,
   icon,
+  onClick,
 }: {
   href: string;
   label: string;
   active: boolean;
   icon?: string;
+  onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`relative inline-flex items-center gap-1.5 text-sm transition-colors hover:text-foreground ${
         active ? "text-foreground" : "text-muted-foreground"
       }`}
@@ -117,6 +120,17 @@ export function Header() {
   // 首页固定常驻首位（logo 也回首页）；接口若也返回 "/" 则去重。
   const menuItems = (menu ?? []).filter((m) => m.path !== "/");
 
+  // 静态导出下同 path 仅改 query 的软导航不会重建页面组件，详情态（?view=...）的 Inner
+  // 不会自动回列表。同 path 时拦截：pushState 改 URL + 手动补发 popstate，让 Inner 的
+  // popstate 监听响应并 parseView 重算。不同 path 走 Link 默认导航（不拦截）。
+  function navTo(e: MouseEvent<HTMLAnchorElement>, path: string) {
+    if (path !== pathname) return; // 跨页：交给 Link 正常导航
+    if (window.location.search === "") return; // 无 query（已在列表态）：无需处理
+    e.preventDefault();
+    window.history.pushState(null, "", path);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
+
   const initials = (user?.nickname || user?.username || "?")
     .slice(0, 2)
     .toUpperCase();
@@ -169,7 +183,7 @@ export function Header() {
                             active={pathname === c.path}
                             className="flex flex-col items-start gap-0.5 rounded-md px-3 py-2.5 transition-colors hover:bg-felt/15 focus:bg-felt/15 data-[active=true]:bg-transparent"
                           >
-                            <Link href={c.path}>
+                            <Link href={c.path} onClick={(e) => navTo(e, c.path)}>
                               <span
                                 className={`font-display text-[15px] font-medium leading-tight ${
                                   pathname === c.path
@@ -198,6 +212,7 @@ export function Header() {
                     label={item.name}
                     active={pathname === item.path}
                     icon={item.icon}
+                    onClick={(e) => navTo(e, item.path)}
                   />
                 </NavigationMenuItem>
               ),
@@ -287,7 +302,10 @@ export function Header() {
                             <Link
                               key={c.path}
                               href={c.path}
-                              onClick={() => setMobileOpen(false)}
+                              onClick={(e) => {
+                                setMobileOpen(false);
+                                navTo(e, c.path);
+                              }}
                               className={`flex flex-col items-start gap-0.5 rounded-md px-3 py-1.5 transition-colors hover:bg-background ${
                                 pathname === c.path
                                   ? "text-foreground"
@@ -314,7 +332,10 @@ export function Header() {
                     <Link
                       key={item.path}
                       href={item.path}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={(e) => {
+                        setMobileOpen(false);
+                        navTo(e, item.path);
+                      }}
                       className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
                         pathname === item.path
                           ? "text-foreground"
