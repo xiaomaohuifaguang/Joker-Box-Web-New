@@ -108,6 +108,11 @@ export function computeFieldState(
     pattern: field.pattern,
     span: field.span,
   };
+  // 流程字段级只读（permission=READONLY 注入的 __processReadonly）：强制禁用。
+  // 优先级最高，先于联动规则求值。
+  if (field.props?.__processReadonly === true) state.disabled = true;
+  // 流程字段级隐藏（permission=HIDDEN 注入的 __processHidden）：强制隐藏。
+  if (field.props?.__processHidden === true) state.visible = false;
   const relevant = rules
     .filter((r) => r.enable && r.targetFieldId === field.fieldId)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -146,6 +151,10 @@ export function computeFieldState(
         break; // VALUE 走边沿触发（useLinkageValues），不参与状态叠加
     }
   }
+  // 只读优先级高于一切（含联动 ENABLED）：循环结束后复位。
+  if (field.props?.__processReadonly === true) state.disabled = true;
+  // 隐藏优先级高于一切（含联动 SHOW）：循环结束后复位。
+  if (field.props?.__processHidden === true) state.visible = false;
   return state;
 }
 

@@ -1,10 +1,15 @@
 import { api } from "@/lib/api";
 import type {
+  DeployedProcessDefinition,
   Page,
   ProcessDefinition,
   ProcessDefinitionAddPayload,
   ProcessDefinitionPageParam,
   ProcessDefinitionSavePayload,
+  ProcessHandleParam,
+  ProcessInstance,
+  ProcessInstancePageParam,
+  ProcessStartInfo,
   SelectOption,
 } from "@/types";
 
@@ -62,5 +67,90 @@ export async function deployProcessDefinition(id: number): Promise<void> {
 // 服务任务委托表达式下拉：POST /processDefinition/delegateExpressions，无参。响应 data = SelectOption[]。
 export async function getDelegateExpressions(): Promise<SelectOption[]> {
   const { data } = await api.post<SelectOption[]>("/processDefinition/delegateExpressions");
+  return data;
+}
+
+// ===== 申请中心（流程实例，第一版）=====
+
+// 已部署流程列表：POST /processDefinition/deployList，无参。响应 data = DeployedProcessDefinition[]。
+export async function getDeployList(): Promise<DeployedProcessDefinition[]> {
+  const { data } = await api.post<DeployedProcessDefinition[]>(
+    "/processDefinition/deployList",
+  );
+  return data;
+}
+
+// 实例分页：POST /processInstance/queryPage，body ProcessInstancePageParam。
+export async function queryProcessInstancePage(
+  params: ProcessInstancePageParam,
+): Promise<Page<ProcessInstance>> {
+  const { data } = await api.post<Page<ProcessInstance>>(
+    "/processInstance/queryPage",
+    { body: params },
+  );
+  return data;
+}
+
+// 发起流程：POST /processInstance/start，body ProcessHandleParam。响应只看 code。
+export async function startProcessInstance(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/start", { body: payload });
+}
+
+// 保存草稿：POST /processInstance/saveDraft，body ProcessHandleParam。响应只看 code。
+export async function saveProcessDraft(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/saveDraft", { body: payload });
+}
+
+// 实例详情：POST /processInstance/info，query 参数 id（注意：非 body）；审批场景另传 taskId。响应 data = ProcessInstance。
+export async function getProcessInstanceInfo(
+  id: number,
+  taskId?: string,
+): Promise<ProcessInstance> {
+  const { data } = await api.post<ProcessInstance>("/processInstance/info", {
+    params: taskId != null ? { id, taskId } : { id },
+  });
+  return data;
+}
+
+// 认领任务：POST /processInstance/claim，body ProcessHandleParam（processInstanceId + taskId）。响应只看 code。
+export async function claimProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/claim", { body: payload });
+}
+
+// 审批通过：POST /processInstance/pass，body ProcessHandleParam（processInstanceId + taskId + remark? + globalFormData?）。响应只看 code。
+export async function passProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/pass", { body: payload });
+}
+
+// 审批拒绝：POST /processInstance/reject，body ProcessHandleParam（processInstanceId + taskId + remark?）。响应只看 code。
+export async function rejectProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/reject", { body: payload });
+}
+
+// 驳回：POST /processInstance/back，body ProcessHandleParam（processInstanceId + taskId + remark? + targetNodeId(仅 backType=choose)）。响应只看 code。
+export async function backProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/back", { body: payload });
+}
+
+// 发起流程时的定义信息：POST /processDefinition/startInfo，query 参数 processDefinitionId（注意：非 body）。响应 data = ProcessStartInfo。
+export async function getProcessDefinitionStartInfo(
+  processDefinitionId: number,
+): Promise<ProcessStartInfo> {
+  const { data } = await api.post<ProcessStartInfo>(
+    "/processDefinition/startInfo",
+    { params: { processDefinitionId } },
+  );
   return data;
 }
