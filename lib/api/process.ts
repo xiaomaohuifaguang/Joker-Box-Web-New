@@ -137,6 +137,13 @@ export async function rejectProcessTask(
   await api.post<unknown>("/processInstance/reject", { body: payload });
 }
 
+// 驳回：POST /processInstance/back，body ProcessHandleParam（processInstanceId + taskId + remark? + targetNodeId(仅 backType=choose)）。响应只看 code。
+export async function backProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/back", { body: payload });
+}
+
 // 发起流程时的定义信息：POST /processDefinition/startInfo，query 参数 processDefinitionId（注意：非 body）。响应 data = ProcessStartInfo。
 export async function getProcessDefinitionStartInfo(
   processDefinitionId: number,

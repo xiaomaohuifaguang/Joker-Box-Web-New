@@ -118,6 +118,8 @@ export interface ProcessInstance {
   taskId?: string;
   /** 处理页可用的审批按钮（info 返回，与 processDefinitionName 同级）：pass 通过 / back 驳回 / reject 拒绝 */
   buttonActions?: string[];
+  /** 驳回配置（info 返回，与 buttonActions 同级；含驳回按钮时携带） */
+  backConfig?: BackConfig;
   /** 任务表单（含已存数据 value；无表单缺省） */
   taskForm?: TaskFormVO;
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
@@ -150,6 +152,7 @@ export interface ProcessInstancePageParam {
 //   claim:           processInstanceId + taskId
 //   pass:            processInstanceId + taskId + remark? + globalFormData?
 //   reject:          processInstanceId + taskId + remark?
+//   back:            processInstanceId + taskId + remark? + targetNodeId(仅 backType=choose 必填)
 export interface ProcessHandleParam {
   /** 流程定义id（发起/保存草稿时必填；认领/审批不传） */
   processDefinitionId?: number;
@@ -161,6 +164,8 @@ export interface ProcessHandleParam {
   title?: string;
   /** 备注/审批意见（认领/审批时携带；发起/草稿省略） */
   remark?: string;
+  /** 目标节点id（驳回时携带；仅 backType=choose 必填） */
+  targetNodeId?: string;
   /** 表单数据（键=fieldId；无表单省略） */
   globalFormData?: Record<string, unknown>;
 }
@@ -190,6 +195,22 @@ export const PROCESS_BUTTON_ACTIONS: Record<
   back: { label: "驳回", variant: "outline" },
   reject: { label: "拒绝", variant: "destructive" },
 };
+
+// 可驳回的目标节点（BackConfig.availableBackTargets 元素；backType=choose 时有值）。
+export interface BackTargetNode {
+  /** 节点id */
+  nodeId?: string;
+  /** 节点名称 */
+  nodeName?: string;
+}
+
+// 驳回配置（info 返回，与 buttonActions 同级）。
+export interface BackConfig {
+  /** 驳回方式：prev 上一节点 / specific 指定节点（后端定） / choose 由用户选目标节点 */
+  backType?: "prev" | "specific" | "choose";
+  /** 可驳回的目标节点（仅 backType=choose 时有值，需用户手动选择） */
+  availableBackTargets?: BackTargetNode[];
+}
 
 // 列表 tab（顺序：进行中 / 全部 / 草稿）。
 export const INSTANCE_TABS: { value: ProcessInstanceType; label: string }[] = [

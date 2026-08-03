@@ -8,11 +8,19 @@ import {
   getProcessInstanceInfo,
   passProcessTask,
   rejectProcessTask,
+  backProcessTask,
 } from "@/lib/api/process";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -55,12 +63,13 @@ export function HandleView({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const rendererRef = useRef<DynamicFormRendererHandle>(null);
 
-  // 待确认的动作（点开确认框）；提交中；审批意见。
-  const [confirmAction, setConfirmAction] = useState<"pass" | "reject" | null>(
-    null,
-  );
+  // 待确认的动作（点开确认框）；提交中；审批意见；驳回目标节点（仅 backType=choose）。
+  const [confirmAction, setConfirmAction] = useState<
+    "pass" | "reject" | "back" | null
+  >(null);
   const [submitting, setSubmitting] = useState(false);
   const [remark, setRemark] = useState("");
+  const [targetNodeId, setTargetNodeId] = useState("");
 
   const [prevKey, setPrevKey] = useState(`${instanceId}|${taskId ?? ""}`);
   const depKey = `${instanceId}|${taskId ?? ""}`;
@@ -93,18 +102,22 @@ export function HandleView({
     PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
     PROCESS_INSTANCE_STATUS_FALLBACK;
   const showForm = hasProcessForm(detail?.taskForm);
-  // 可用审批按钮（后端 buttonActions 控制）；未知动作不渲染。back 驳回动作待接口，先不渲染。
+  // 可用审批按钮（后端 buttonActions 控制）；未知动作不渲染。
   const actions = (detail?.buttonActions ?? []).filter(
-    (a) => PROCESS_BUTTON_ACTIONS[a] != null && a !== "back",
+    (a) => PROCESS_BUTTON_ACTIONS[a] != null,
   );
+  // 驳回方式：choose 时需用户从 availableBackTargets 选目标节点；prev/specific 直接驳回。
+  const backConfig = detail?.backConfig;
+  const backTargets = backConfig?.availableBackTargets ?? [];
 
-  // 点按钮 -> 开确认框（清空意见）。
-  function openConfirm(action: "pass" | "reject") {
+  // 点按钮 -> 开确认框（清空意见/节点）。
+  function openConfirm(action: "pass" | "reject" | "back") {
     setRemark("");
+    setTargetNodeId("");
     setConfirmAction(action);
   }
 
-  // 确认提交：pass 先校验表单必填 + 带 globalFormData；reject 只带 remark。
+  // 确认提交：pass 校验表单必填带 globalFormData；reject 只带 remark；back 在 choose 时必带 targetNodeId。
   async function submit() {
     if (confirmAction == null || submitting || taskId == null) return;
     let globalFormData: Record<string, unknown> | undefined;
@@ -117,26 +130,39 @@ export function HandleView({
       }
       globalFormData = rendererRef.current?.collectAllData() ?? {};
     }
+    if (
+      confirmAction === "back" &&
+      backConfig?.backType === "choose" &&
+      !targetNodeId
+    ) {
+      toast.error("请选择驳回的目标节点");
+      return;
+    }
     setSubmitting(true);
     const payload = {
       processInstanceId: instanceId,
       taskId,
       remark: remark.trim() || undefined,
       ...(globalFormData ? { globalFormData } : {}),
+      ...(confirmAction === "back" && backConfig?.backType === "choose"
+        ? { targetNodeId }
+        : {}),
+    };
+    const LABEL: Record<"pass" | "reject" | "back", string> = {
+      pass: "通过",
+      reject: "拒绝",
+      back: "驳回",
     };
     try {
       if (confirmAction === "pass") await passProcessTask(payload);
-      else await rejectProcessTask(payload);
-      toast.success(confirmAction === "pass" ? "已通过" : "已拒绝");
+      else if (confirmAction === "reject") await rejectProcessTask(payload);
+      else await backProcessTask(payload);
+      toast.success(`已${LABEL[confirmAction]}`);
       setConfirmAction(null);
       onDone();
     } catch (err) {
       toast.error(
-        err instanceof ApiError
-          ? err.message
-          : confirmAction === "pass"
-            ? "通过失败"
-            : "拒绝失败",
+        err instanceof ApiError ? err.message : `${LABEL[confirmAction]}失败`,
       );
     } finally {
       setSubmitting(false);
@@ -205,7 +231,7 @@ export function HandleView({
                   <Button
                     key={a}
                     variant={meta.variant}
-                    onClick={() => openConfirm(a as "pass" | "reject")}
+                    onClick={() => openConfirm(a as "pass" | "reject" | "back")}
                   >
                     {meta.label}
                   </Button>
@@ -228,10 +254,35 @@ export function HandleView({
             <AlertDialogDescription>
               {confirmAction === "pass"
                 ? "通过后流程将进入下一节点。"
-                : "拒绝后流程将被终止。"}
+                : confirmAction === "back"
+                  ? "驳回后流程将回退到目标节点。"
+                  : "拒绝后流程将被终止。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 py-2">
+            {confirmAction === "back" && backConfig?.backType === "choose" && (
+              <>
+                <label className="text-sm text-muted-foreground">
+                  驳回目标节点
+                </label>
+                <Select
+                  value={targetNodeId}
+                  onValueChange={setTargetNodeId}
+                  disabled={submitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择要驳回到的节点" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {backTargets.map((n) => (
+                      <SelectItem key={n.nodeId} value={n.nodeId ?? ""}>
+                        {n.nodeName ?? n.nodeId}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             <label className="text-sm text-muted-foreground">
               审批意见（可空）
             </label>
