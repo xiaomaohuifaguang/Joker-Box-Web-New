@@ -212,9 +212,13 @@ function RendererGroup({
   forceDisabled?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(!!initCollapsed);
+  // 组内有效可见字段（effState 每渲染重算，联动把字段从隐变显时组会跟着重新出现）。
+  // 组内无字段或字段全部隐藏 -> 整组（含标题/边框）不渲染。
+  const visibleFields = fields.filter((f) => effState.get(f.fieldId)?.visible);
   // 组内有校验错误时强制展开（否则看不到折叠组里的报错）。
   const hasError = fields.some((f) => errors[f.fieldId]);
   const isOpen = !collapsed || hasError;
+  if (visibleFields.length === 0) return null;
   return (
     <div className={cn(title && "rounded-md border")}>
       {title && (
@@ -231,9 +235,9 @@ function RendererGroup({
       {isOpen && (
         // 24 栅格列间隙固定 rem，不随主题 --space-unit 缩放（Minimal 下两 span=12 才能同行）。
         <div className={cn("grid grid-cols-[repeat(24,minmax(0,1fr))] gap-x-[0.75rem] gap-y-4", title && "p-3")}>
-          {fields.map((f) => {
+          {visibleFields.map((f) => {
             const st = effState.get(f.fieldId);
-            if (!st || !st.visible) return null; // 联动隐藏：不渲染（值保留、不校验、不进数据）
+            if (!st) return null;
             const isApi = f.optionSource?.type === "API";
             const status = isApi ? statusOf(f.fieldId) : undefined;
             return (
