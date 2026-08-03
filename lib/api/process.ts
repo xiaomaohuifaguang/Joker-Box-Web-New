@@ -123,6 +123,20 @@ export async function claimProcessTask(
   await api.post<unknown>("/processInstance/claim", { body: payload });
 }
 
+// 审批通过：POST /processInstance/pass，body ProcessHandleParam（processInstanceId + taskId + remark? + globalFormData?）。响应只看 code。
+export async function passProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/pass", { body: payload });
+}
+
+// 审批拒绝：POST /processInstance/reject，body ProcessHandleParam（processInstanceId + taskId + remark?）。响应只看 code。
+export async function rejectProcessTask(
+  payload: ProcessHandleParam,
+): Promise<void> {
+  await api.post<unknown>("/processInstance/reject", { body: payload });
+}
+
 // 发起流程时的定义信息：POST /processDefinition/startInfo，query 参数 processDefinitionId（注意：非 body）。响应 data = ProcessStartInfo。
 export async function getProcessDefinitionStartInfo(
   processDefinitionId: number,

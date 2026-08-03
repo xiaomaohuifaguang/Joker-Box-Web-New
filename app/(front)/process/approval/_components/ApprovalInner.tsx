@@ -88,6 +88,7 @@ export function ApprovalInner() {
           instanceId={view.instanceId}
           taskId={view.taskId}
           onBack={() => go({ name: "list" })}
+          onDone={handleDone}
         />
       );
     }

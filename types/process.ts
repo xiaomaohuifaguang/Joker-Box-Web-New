@@ -144,17 +144,23 @@ export interface ProcessInstancePageParam {
   search?: string;
 }
 
-// 发起 / 存草稿请求体（POST /processInstance/start | /processInstance/saveDraft）。响应只看 code。
-// 认领任务（POST /processInstance/claim）也用此结构：processInstanceId + taskId。
+// 发起 / 存草稿 / 认领 / 审批动作请求体（POST /processInstance/start | /saveDraft | /claim | /pass | /reject）。
+// 响应只看 code。各接口按需取字段：
+//   start/saveDraft: processDefinitionId (+ processInstanceId 编辑既有草稿) + title? + globalFormData?
+//   claim:           processInstanceId + taskId
+//   pass:            processInstanceId + taskId + remark? + globalFormData?
+//   reject:          processInstanceId + taskId + remark?
 export interface ProcessHandleParam {
-  /** 流程定义id（发起/保存草稿时必填；认领时不传） */
+  /** 流程定义id（发起/保存草稿时必填；认领/审批不传） */
   processDefinitionId?: number;
-  /** 自建流程实例id（编辑/提交既有草稿时携带；新建省略；认领时必传） */
+  /** 自建流程实例id（编辑/提交既有草稿、认领、审批时携带；新建省略） */
   processInstanceId?: number;
-  /** 任务id（认领任务时必传；发起/草稿省略） */
+  /** 任务id（认领/审批时必传；发起/草稿省略） */
   taskId?: string;
-  /** 流程标题（可空，后端兜底） */
+  /** 流程标题（可空，后端兜底；仅发起/草稿） */
   title?: string;
+  /** 备注/审批意见（认领/审批时携带；发起/草稿省略） */
+  remark?: string;
   /** 表单数据（键=fieldId；无表单省略） */
   globalFormData?: Record<string, unknown>;
 }
