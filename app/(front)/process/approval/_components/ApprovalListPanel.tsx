@@ -160,8 +160,9 @@ export function ApprovalListPanel({
                   PROCESS_INSTANCE_STATUS[r.processStatus ?? ""] ??
                   PROCESS_INSTANCE_STATUS_FALLBACK;
                 return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableRow key={r.id} className="transition-colors hover:bg-felt/10">
+                    <TableCell className="font-mono text-xs font-medium tracking-wide text-foreground/80">
+                      <span className="mr-0.5 text-muted-foreground">№</span>
                       {r.code || "-"}
                     </TableCell>
                     <TableCell className="max-w-56 truncate text-sm font-medium">

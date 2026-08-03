@@ -8,16 +8,12 @@ import {
   claimProcessTask,
   getProcessInstanceInfo,
 } from "@/lib/api/process";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Container } from "@/components/Container";
-import {
-  PROCESS_INSTANCE_STATUS,
-  PROCESS_INSTANCE_STATUS_FALLBACK,
-  type ProcessInstance,
-} from "@/types";
+import type { ProcessInstance } from "@/types";
+import { ProcessWorkHeader } from "./ProcessWorkHeader";
 import {
   hasProcessForm,
   seedProcessFormValues,
@@ -84,23 +80,15 @@ export function DetailView({
     }
   }
 
-  const st =
-    PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
-    PROCESS_INSTANCE_STATUS_FALLBACK;
-
   const showForm = hasProcessForm(detail?.taskForm);
   const formValues = seedProcessFormValues(detail?.taskForm);
   // 仅当表单定义了联动规则时才提供切换（否则切换无意义）。
   const hasLinkage =
     (detail?.taskForm?.globalForm?.linkageRules?.length ?? 0) > 0;
 
+  // 编号/标题/流程/版本/状态已进工单头；详情区只留时间线。
   const rows: { label: string; value: React.ReactNode }[] = detail
     ? [
-        { label: "编号", value: detail.code || "-" },
-        { label: "标题", value: detail.title || "-" },
-        { label: "流程", value: detail.processDefinitionName || "-" },
-        { label: "版本", value: detail.processDefinitionVersion || "-" },
-        { label: "状态", value: <Badge variant={st.variant}>{st.label}</Badge> },
         { label: "创建时间", value: detail.createTime || "-" },
         { label: "更新时间", value: detail.updateTime || "-" },
       ]
@@ -113,11 +101,20 @@ export function DetailView({
         返回
       </Button>
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">流程详情</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {detail?.processDefinitionName ?? ""}
-          {detail?.processDefinitionVersion ? ` · v${detail.processDefinitionVersion}` : ""}
-        </p>
+        {loading ? (
+          <Skeleton className="h-16 w-72" />
+        ) : (
+          <ProcessWorkHeader
+            code={detail?.code}
+            title={detail?.title}
+            subtitle={`${detail?.processDefinitionName ?? ""}${
+              detail?.processDefinitionVersion
+                ? ` · v${detail.processDefinitionVersion}`
+                : ""
+            }`}
+            processStatus={detail?.processStatus}
+          />
+        )}
       </header>
       {loading ? (
         <div className="flex flex-col gap-3">

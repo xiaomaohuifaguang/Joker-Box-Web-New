@@ -10,7 +10,6 @@ import {
   rejectProcessTask,
   backProcessTask,
 } from "@/lib/api/process";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,10 +36,9 @@ import {
   seedProcessFormValues,
   ProcessFormFields,
 } from "../../application/_components/ProcessForm";
+import { ProcessWorkHeader } from "../../application/_components/ProcessWorkHeader";
 import {
   PROCESS_BUTTON_ACTIONS,
-  PROCESS_INSTANCE_STATUS,
-  PROCESS_INSTANCE_STATUS_FALLBACK,
   type ProcessInstance,
 } from "@/types";
 
@@ -98,9 +96,6 @@ export function HandleView({
     };
   }, [instanceId, taskId]);
 
-  const st =
-    PROCESS_INSTANCE_STATUS[detail?.processStatus ?? ""] ??
-    PROCESS_INSTANCE_STATUS_FALLBACK;
   const showForm = hasProcessForm(detail?.taskForm);
   // 可用审批按钮（后端 buttonActions 控制）；未知动作不渲染。
   const actions = (detail?.buttonActions ?? []).filter(
@@ -180,19 +175,18 @@ export function HandleView({
       </Button>
       <header className="mb-6">
         {loading ? (
-          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-16 w-72" />
         ) : (
-          <>
-            <h1 className="font-display text-2xl font-semibold">
-              处理任务{detail?.title ? ` · ${detail.title}` : ""}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {detail?.processDefinitionName ?? ""}
-              {detail?.processDefinitionVersion ? ` · v${detail.processDefinitionVersion}` : ""}
-              {detail?.code ? ` · ${detail.code}` : ""}
-              <Badge variant={st.variant} className="ml-2 align-middle">{st.label}</Badge>
-            </p>
-          </>
+          <ProcessWorkHeader
+            code={detail?.code}
+            title={detail?.title}
+            subtitle={`${detail?.processDefinitionName ?? ""}${
+              detail?.processDefinitionVersion
+                ? ` · v${detail.processDefinitionVersion}`
+                : ""
+            }`}
+            processStatus={detail?.processStatus}
+          />
         )}
       </header>
 
