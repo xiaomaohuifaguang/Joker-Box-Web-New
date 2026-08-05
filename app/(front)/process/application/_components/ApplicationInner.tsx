@@ -29,17 +29,26 @@ function parseView(search: string): View {
   return { name: "list" };
 }
 
-function viewToUrl(v: View): string {
-  if (v.name === "start") return `/process/application?start=${v.definitionId}`;
-  if (v.name === "detail") return `/process/application?view=${v.instanceId}`;
-  if (v.name === "edit") return `/process/application?edit=${v.instanceId}`;
-  return "/process/application";
+// 基础路径：通用 /process/application；分类 /process/application/{type}。
+function basePath(processType?: string): string {
+  return processType
+    ? `/process/application/${processType}`
+    : "/process/application";
+}
+
+function viewToUrl(v: View, processType?: string): string {
+  const base = basePath(processType);
+  if (v.name === "start") return `${base}?start=${v.definitionId}`;
+  if (v.name === "detail") return `${base}?view=${v.instanceId}`;
+  if (v.name === "edit") return `${base}?edit=${v.instanceId}`;
+  return base;
 }
 
 // 申请中心视图编排：list / start / detail / edit 四视图切换。
 // state 为主（渲染可靠），URL 用原生 pushState 同步（可分享/刷新/前进后退还原）。
 // 不用 router.push：同 path 仅改 query 时静态导出的软导航不可靠。
-export function ApplicationInner() {
+// processType：分类（/process/application/oa -> "oa"）；通用页不传（undefined）。
+export function ApplicationInner({ processType }: { processType?: string }) {
   const searchParams = useSearchParams();
   // 权威视图 = 响应式 URL（useSearchParams 由 Next 客户端路由驱动，外部 <Link>/前进后退必更新）。
   // 解决：兄弟页（申请<->审批）<Link> 软导航不重建组件，纯 useState(快照) 不重算残留详情态。
@@ -60,10 +69,18 @@ export function ApplicationInner() {
   const [activeTab, setActiveTab] = useState<ProcessInstanceType>("1");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const go = useCallback((v: View) => {
-    window.history.pushState(null, "", viewToUrl(v));
-    setOverride(v);
-  }, []);
+  // 确认 processType 生效（后续接 queryPage 传参 prcessType）。
+  useEffect(() => {
+    console.log("[process/application] processType =", processType ?? "(通用)");
+  }, [processType]);
+
+  const go = useCallback(
+    (v: View) => {
+      window.history.pushState(null, "", viewToUrl(v, processType));
+      setOverride(v);
+    },
+    [processType],
+  );
 
   // 浏览器前进/后退：popstate 直接用 window.location 重算（useSearchParams 在静态导出下可能滞后）。
   useEffect(() => {
