@@ -1,6 +1,15 @@
 // AI 模型管理相关类型（对应 /ai/model/* 接口）。
 // 列表项 AiModel 无 apiKey/baseUrl/paths；编辑需走 /ai/model/info 拉 AiModelDetail 回填。
 
+/** 模型类型枚举（后端字典值）。 */
+export type AiModelType = "CHAT" | "EMBEDDING";
+
+/** 模型类型 -> 中文名（tab 筛选、表格列、表单 Select 共用）。 */
+export const AI_MODEL_TYPE_LABELS: Record<AiModelType, string> = {
+  CHAT: "对话模型",
+  EMBEDDING: "向量模型",
+};
+
 /** 模型列表项（/ai/model/queryPage records 元素）。 */
 export interface AiModel {
   /** id */
@@ -9,6 +18,8 @@ export interface AiModel {
   name: string;
   /** 模型 */
   model: string;
+  /** 类型（CHAT 对话 / EMBEDDING 向量） */
+  type: AiModelType;
   /** 描述 */
   description: string;
 }
@@ -21,6 +32,8 @@ export interface AiModelDetail {
   name: string;
   /** 模型 */
   model: string;
+  /** 类型（CHAT 对话 / EMBEDDING 向量） */
+  type: AiModelType;
   /** API密钥（可空） */
   apiKey: string;
   /** 基础URL */
@@ -33,9 +46,10 @@ export interface AiModelDetail {
   description: string;
 }
 
-/** /ai/model/queryPage body。 */
+/** /ai/model/queryPage body。type 缺省=全部。 */
 export interface AiModelPageParam {
   search?: string;
+  type?: AiModelType;
   current: number;
   size: number;
 }
@@ -44,6 +58,7 @@ export interface AiModelPageParam {
 export interface AiModelPayload {
   name: string;
   model: string;
+  type: AiModelType;
   baseUrl: string;
   completionsPath: string;
   embeddingsPath: string;

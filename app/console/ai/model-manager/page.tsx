@@ -15,6 +15,7 @@ import { useAiModelPage } from "@/hooks/useAiModelPage";
 import { removeAiModel } from "@/lib/api/aiModel";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -32,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,10 +44,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { AiModel } from "@/types";
+import type { AiModel, AiModelType } from "@/types";
+import { AI_MODEL_TYPE_LABELS } from "@/types";
 import { AiModelFormDialog } from "./_components/AiModelFormDialog";
 
 const PAGE_SIZES = [10, 20, 50];
+
+// 类型 tab：__all=全部（分页不传 type），其余按枚举值筛选。
+// Radix ToggleGroup 空串 value 有歧义（点击已选项会回传 ""），故「全部」用哨兵 __all。
+type TypeTab = AiModelType | "__all";
+const TYPE_TABS: { value: TypeTab; label: string }[] = [
+  { value: "__all", label: "全部" },
+  { value: "CHAT", label: AI_MODEL_TYPE_LABELS.CHAT },
+  { value: "EMBEDDING", label: AI_MODEL_TYPE_LABELS.EMBEDDING },
+];
 
 function getPageNumbers(current: number, total: number): (number | "…")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -60,6 +72,7 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
 export default function ModelManagerPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [type, setType] = useState<TypeTab>("__all");
   const [current, setCurrent] = useState(1);
   const [size, setSize] = useState(10);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -76,7 +89,13 @@ export default function ModelManagerPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const { page, loading } = useAiModelPage({ search, current, size, refreshKey });
+  const { page, loading } = useAiModelPage({
+    search,
+    type: type === "__all" ? "" : type,
+    current,
+    size,
+    refreshKey,
+  });
 
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
@@ -110,6 +129,7 @@ export default function ModelManagerPage() {
   function reset() {
     setSearchInput("");
     setSearch("");
+    setType("__all");
     setCurrent(1);
   }
 
@@ -117,6 +137,27 @@ export default function ModelManagerPage() {
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-lg font-semibold">模型管理</h1>
+        {/* 类型分段：全部 / 对话模型 / 向量模型 */}
+        <ToggleGroup
+          type="single"
+          value={type}
+          onValueChange={(v) => {
+            if (!v) return; // 点击已选项回传 ""，忽略以保持单选
+            setType(v as TypeTab);
+            setCurrent(1);
+          }}
+          className="rounded-lg border bg-surface p-0.5"
+        >
+          {TYPE_TABS.map((t) => (
+            <ToggleGroupItem
+              key={t.value}
+              value={t.value}
+              className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
+            >
+              {t.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
         <Button onClick={openAdd} size="sm" className="ml-auto">
           <Plus className="h-4 w-4" />
           新增模型
@@ -147,6 +188,7 @@ export default function ModelManagerPage() {
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-xs font-medium text-muted-foreground">名称</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground">模型</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">类型</TableHead>
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">描述</TableHead>
               <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
             </TableRow>
@@ -155,8 +197,8 @@ export default function ModelManagerPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 4 }).map((_, j) => (
-                    <TableCell key={j} className={j === 2 ? "hidden lg:table-cell" : ""}>
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <TableCell key={j} className={j === 3 ? "hidden lg:table-cell" : ""}>
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   ))}
@@ -164,7 +206,7 @@ export default function ModelManagerPage() {
               ))
             ) : records.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={4} className="h-40 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="h-40 text-center text-sm text-muted-foreground">
                   暂无模型
                 </TableCell>
               </TableRow>
@@ -173,6 +215,11 @@ export default function ModelManagerPage() {
                 <TableRow key={record.id} className="group">
                   <TableCell className="text-sm font-medium">{record.name}</TableCell>
                   <TableCell className="font-mono text-xs">{record.model}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {AI_MODEL_TYPE_LABELS[record.type] ?? record.type}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="hidden max-w-64 truncate text-xs text-muted-foreground lg:table-cell">
                     {record.description || "-"}
                   </TableCell>

@@ -15,21 +15,35 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import type { AiModel, AiModelPayload } from "@/types";
+import type { AiModel, AiModelPayload, AiModelType } from "@/types";
+import { AI_MODEL_TYPE_LABELS } from "@/types";
 
 type FormState = AiModelPayload;
 
 const EMPTY: FormState = {
   name: "",
   model: "",
+  type: "CHAT",
   baseUrl: "",
   completionsPath: "",
   embeddingsPath: "",
   apiKey: "",
   description: "",
 };
+
+const MODEL_TYPES = Object.entries(AI_MODEL_TYPE_LABELS) as [
+  AiModelType,
+  string,
+][];
 
 // 新增 / 编辑模型。editing 非 null 时为编辑：开弹窗即 loading，/ai/model/info 返回后回填全量。
 // name/model 必填；baseUrl/completionsPath/embeddingsPath/apiKey/description 可空。
@@ -88,6 +102,7 @@ export function AiModelFormDialog({
         setForm({
           name: d.name,
           model: d.model,
+          type: d.type ?? "CHAT",
           baseUrl: d.baseUrl ?? "",
           completionsPath: d.completionsPath ?? "",
           embeddingsPath: d.embeddingsPath ?? "",
@@ -127,6 +142,7 @@ export function AiModelFormDialog({
       const payload: AiModelPayload = {
         name: form.name.trim(),
         model: form.model.trim(),
+        type: form.type,
         baseUrl: form.baseUrl.trim(),
         completionsPath: form.completionsPath.trim(),
         embeddingsPath: form.embeddingsPath.trim(),
@@ -140,6 +156,7 @@ export function AiModelFormDialog({
           id: editing.id,
           name: payload.name,
           model: payload.model,
+          type: payload.type,
           baseUrl: payload.baseUrl,
           completionsPath: payload.completionsPath,
           embeddingsPath: payload.embeddingsPath,
@@ -207,6 +224,22 @@ export function AiModelFormDialog({
                 placeholder="如 gpt-4o"
                 className="font-mono text-sm"
               />
+              <Label className="text-sm text-muted-foreground">类型 *</Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => set("type", v as AiModelType)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择类型" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  {MODEL_TYPES.map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Label className="text-sm text-muted-foreground">基础URL</Label>
               <Input
                 value={form.baseUrl}
