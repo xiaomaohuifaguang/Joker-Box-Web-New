@@ -8,11 +8,12 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Star,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAiModelPage } from "@/hooks/useAiModelPage";
-import { removeAiModel } from "@/lib/api/aiModel";
+import { removeAiModel, setDefaultModel } from "@/lib/api/aiModel";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +81,7 @@ export default function ModelManagerPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AiModel | null>(null);
   const [deleting, setDeleting] = useState<AiModel | null>(null);
+  const [settingDefault, setSettingDefault] = useState<AiModel | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -89,13 +91,18 @@ export default function ModelManagerPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const { page, loading } = useAiModelPage({
+  const { page, defaults, loading } = useAiModelPage({
     search,
     type: type === "__all" ? "" : type,
     current,
     size,
     refreshKey,
   });
+
+  // 唯一权威派生：该行是否其类型的默认模型（不存行内冗余标志）。
+  function isDefault(r: AiModel): boolean {
+    return defaults?.[r.type]?.id === r.id;
+  }
 
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
@@ -123,6 +130,18 @@ export default function ModelManagerPage() {
       handleMutated();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "删除失败");
+    }
+  }
+
+  async function confirmSetDefault() {
+    if (!settingDefault) return;
+    try {
+      await setDefaultModel(settingDefault.type, settingDefault.id);
+      toast.success("已设为默认");
+      setSettingDefault(null);
+      handleMutated();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "设置默认失败");
     }
   }
 
@@ -213,7 +232,16 @@ export default function ModelManagerPage() {
             ) : (
               records.map((record) => (
                 <TableRow key={record.id} className="group">
-                  <TableCell className="text-sm font-medium">{record.name}</TableCell>
+                  <TableCell className="text-sm font-medium">
+                    <span className="inline-flex items-center gap-1.5">
+                      {record.name}
+                      {isDefault(record) && (
+                        <Badge variant="secondary">
+                          {AI_MODEL_TYPE_LABELS[record.type]}默认
+                        </Badge>
+                      )}
+                    </span>
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{record.model}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
@@ -225,6 +253,18 @@ export default function ModelManagerPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
+                      {!isDefault(record) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setSettingDefault(record)}
+                          aria-label="设为默认"
+                          title="设为默认"
+                        >
+                          <Star className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -330,6 +370,30 @@ export default function ModelManagerPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>删除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!settingDefault}
+        onOpenChange={(o) => !o && setSettingDefault(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              设为{settingDefault ? AI_MODEL_TYPE_LABELS[settingDefault.type] : ""}默认
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              将「{settingDefault?.name}」设为
+              {settingDefault ? AI_MODEL_TYPE_LABELS[settingDefault.type] : ""}
+              默认？同类型当前默认将被替换。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSetDefault}>
+              设为默认
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

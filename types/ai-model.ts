@@ -10,6 +10,23 @@ export const AI_MODEL_TYPE_LABELS: Record<AiModelType, string> = {
   EMBEDDING: "向量模型",
 };
 
+/** 默认模型条目（/ai/model/defaultModelSettings value，精简信息）。 */
+export interface AiModelDefaultEntry {
+  /** id */
+  id: string;
+  /** 名称 */
+  name: string;
+  /** 模型 */
+  model: string;
+}
+
+/**
+ * 默认模型配置集合（/ai/model/defaultModelSettings data：Map<String, AiModel>）。
+ * key=类型，value=该类型默认模型；某类型未设默认则缺该 key（value 可能为空）。
+ * 唯一权威：每行是否默认由 defaults[row.type]?.id === row.id 现算，不在行里存冗余标志。
+ */
+export type AiModelDefaultMap = Partial<Record<AiModelType, AiModelDefaultEntry>>;
+
 /** 模型列表项（/ai/model/queryPage records 元素）。 */
 export interface AiModel {
   /** id */
