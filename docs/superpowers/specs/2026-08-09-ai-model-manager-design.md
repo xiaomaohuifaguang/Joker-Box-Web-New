@@ -15,6 +15,7 @@
 | `/ai/model/info` | POST | `{id}` | `AiModelDetail` |
 | `/ai/model/add` | POST | 7 字段（无 id） | 判断 code |
 | `/ai/model/update` | POST | `{id}` + 7 字段 | 判断 code |
+| `/ai/model/remove` | POST | `{id}` | 判断 code |
 
 `AiModel`（列表项）= `{id, name, model, description}`。
 `AiModelDetail`（info）= `{id, name, model, apiKey, baseUrl, completionsPath, embeddingsPath, description}`。
@@ -23,7 +24,7 @@
 ## 决策（已与用户确认）
 
 - **编辑回填**：点编辑先开弹窗、弹窗内 loading、`/ai/model/info` 返回后填表单。列表项没有 apiKey/baseUrl/paths，必须走 info 拉全量。
-- **删除**：不做（无 delete 接口）。操作列只有「编辑」。
+- **删除**：操作列加「删除」（Trash2 icon），AlertDialog 二次确认（同 website-manager），`removeAiModel(id)` → POST `/ai/model/remove` body `{id}`，成功 toast + `setRefreshKey` 重拉。
 - **apiKey 展示**：普通 `Input`（不打码、无眼睛切换）。
 
 ## 文件改动（5 个）
@@ -35,11 +36,12 @@
    - `AiModelPayload` — add/update 共用 7 字段；update 额外带 `id`。
    - 在 `types/index.ts` barrel 增加 `export * from "./ai-model"`。
 
-2. **`lib/api/aiModel.ts`**（新建）— 4 个 typed wrapper（`api.post`，destructure `.data`；业务错误抛 `ApiError`）：
+2. **`lib/api/aiModel.ts`**（新建）— 5 个 typed wrapper（`api.post`，destructure `.data`；业务错误抛 `ApiError`）：
    - `queryAiModelPage(params: AiModelPageParam): Promise<Page<AiModel>>` → POST `/ai/model/queryPage` body。
    - `getAiModelInfo(id: string): Promise<AiModelDetail>` → POST `/ai/model/info` body `{id}`。
    - `addAiModel(payload: AiModelPayload): Promise<void>` → POST `/ai/model/add` body。
    - `updateAiModel(payload: AiModelPayload & {id: string}): Promise<void>` → POST `/ai/model/update` body。
+   - `removeAiModel(id: string): Promise<void>` → POST `/ai/model/remove` body `{id}`。
    - `id` 为 `String`（后端字符串 id，非 number）。
 
 3. **`hooks/useAiModelPage.ts`**（新建）— 收 `{search, current, size, refreshKey}`，返回 `{page, loading}`。
@@ -47,9 +49,10 @@
    - `search` 空串传 `undefined`。
 
 4. **`app/console/ai/model-manager/page.tsx`**（重写，去 ComingSoon）
-   - `"use client"`。状态：searchInput/search（防抖 300ms）、current/size、refreshKey、formOpen、editing(`AiModel | null`)。
+   - `"use client"`。状态：searchInput/search（防抖 300ms）、current/size、refreshKey、formOpen、editing(`AiModel | null`)、deleting(`AiModel | null`)。
    - 布局：标题 + 「新增模型」按钮 / 搜索框 / 表格 / 分页（页码 + 省略号 + 每页条数 Select）。
-   - 表格列：**名称 / 模型（mono）/ 描述 / 操作**。操作列只有「编辑」（Pencil icon，无删除）。
+   - 表格列：**名称 / 模型（mono）/ 描述 / 操作**。操作列 = 编辑（Pencil）+ 删除（Trash2，destructive）。
+   - 删除：点删除 → `setDeleting(record)` 开 AlertDialog（「确认删除「{name}」？此操作不可撤销。」）→ 确认调 `removeAiModel(deleting.id)`，成功 toast「已删除」+ 关弹窗 + `setRefreshKey` 重拉；失败 `ApiError` toast。
    - loading 骨架行、空态「暂无模型」、`getPageNumbers` 省略号逻辑复用 website-manager 同款。
    - 编辑 → 开弹窗并传 `editing`（弹窗内自取 info）；新增 → `editing=null`。`onSuccess` → `setRefreshKey(k=>k+1)`。
 
@@ -72,4 +75,4 @@
 - `npx tsc --noEmit` 类型检查通过。
 - `npm run lint` 无新增告警（重点：`react-hooks/set-state-in-effect`、`react-hooks/static-components`）。
 - `npm run build` 静态导出成功。
-- 手动：列表分页/搜索、新增、编辑（info 回填、可空字段留空提交）、刷新后重拉。
+- 手动：列表分页/搜索、新增、编辑（info 回填、可空字段留空提交）、删除（AlertDialog 确认）、刷新后重拉。
