@@ -1,0 +1,227 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { addAiModel, getAiModelInfo, updateAiModel } from "@/lib/api/aiModel";
+import { ApiError } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import type { AiModel, AiModelPayload } from "@/types";
+
+type FormState = AiModelPayload;
+
+const EMPTY: FormState = {
+  name: "",
+  model: "",
+  baseUrl: "",
+  completionsPath: "",
+  embeddingsPath: "",
+  apiKey: "",
+  description: "",
+};
+
+// 新增 / 编辑模型。editing 非 null 时为编辑：开弹窗即 loading，/ai/model/info 返回后回填全量。
+// name/model 必填；baseUrl/completionsPath/embeddingsPath/apiKey/description 可空。
+export function AiModelFormDialog({
+  open,
+  onOpenChange,
+  editing,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editing: AiModel | null;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [busy, setBusy] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const editingId = editing?.id ?? null;
+  const [prev, setPrev] = useState<{ open: boolean; id: string | null }>({
+    open: false,
+    id: null,
+  });
+  if (prev.open !== open || prev.id !== editingId) {
+    setPrev({ open, id: editingId });
+    if (open) {
+      if (editing) {
+        // 编辑：先 loading（清旧值防闪现），effect 异步拉详情回填。
+        setDetailLoading(true);
+        setForm(EMPTY);
+      } else {
+        setDetailLoading(false);
+        setForm(EMPTY);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!open || !editingId) return;
+    let cancelled = false;
+    getAiModelInfo(editingId)
+      .then((d) => {
+        if (cancelled) return;
+        setForm({
+          name: d.name,
+          model: d.model,
+          baseUrl: d.baseUrl ?? "",
+          completionsPath: d.completionsPath ?? "",
+          embeddingsPath: d.embeddingsPath ?? "",
+          apiKey: d.apiKey ?? "",
+          description: d.description ?? "",
+        });
+      })
+      .catch((err) => {
+        if (!cancelled)
+          toast.error(err instanceof ApiError ? err.message : "加载详情失败");
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, editingId]);
+
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function submit() {
+    if (!form.name.trim()) {
+      toast.error("请输入名称");
+      return;
+    }
+    if (!form.model.trim()) {
+      toast.error("请输入模型");
+      return;
+    }
+    setBusy(true);
+    try {
+      const payload: AiModelPayload = {
+        name: form.name.trim(),
+        model: form.model.trim(),
+        baseUrl: form.baseUrl.trim(),
+        completionsPath: form.completionsPath.trim(),
+        embeddingsPath: form.embeddingsPath.trim(),
+        apiKey: form.apiKey.trim(),
+        description: form.description,
+      };
+      if (editing) {
+        await updateAiModel({ id: editing.id, ...payload });
+        toast.success("已保存");
+      } else {
+        await addAiModel(payload);
+        toast.success("已新增");
+      }
+      onOpenChange(false);
+      onSuccess();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "操作失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{editing ? "编辑模型" : "新增模型"}</DialogTitle>
+          <DialogDescription>
+            {editing ? "修改模型配置。" : "新建一个 AI 模型。"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {detailLoading ? (
+          <div className="flex flex-col gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-[96px_1fr] items-center gap-x-4 gap-y-3">
+              <Label className="text-sm text-muted-foreground">名称 *</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                placeholder="如 GPT-4o"
+              />
+              <Label className="text-sm text-muted-foreground">模型 *</Label>
+              <Input
+                value={form.model}
+                onChange={(e) => set("model", e.target.value)}
+                placeholder="如 gpt-4o"
+                className="font-mono text-sm"
+              />
+              <Label className="text-sm text-muted-foreground">基础URL</Label>
+              <Input
+                value={form.baseUrl}
+                onChange={(e) => set("baseUrl", e.target.value)}
+                placeholder="https://api.example.com"
+                className="font-mono text-sm"
+              />
+              <Label className="text-sm text-muted-foreground">
+                completions
+              </Label>
+              <Input
+                value={form.completionsPath}
+                onChange={(e) => set("completionsPath", e.target.value)}
+                placeholder="/v1/chat/completions"
+                className="font-mono text-sm"
+              />
+              <Label className="text-sm text-muted-foreground">
+                embeddings
+              </Label>
+              <Input
+                value={form.embeddingsPath}
+                onChange={(e) => set("embeddingsPath", e.target.value)}
+                placeholder="/v1/embeddings"
+                className="font-mono text-sm"
+              />
+              <Label className="text-sm text-muted-foreground">API密钥</Label>
+              <Input
+                value={form.apiKey}
+                onChange={(e) => set("apiKey", e.target.value)}
+                placeholder="sk-..."
+                className="font-mono text-sm"
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm text-muted-foreground">描述</Label>
+              <Textarea
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                rows={3}
+                placeholder="一句话描述（可选）"
+              />
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            取消
+          </Button>
+          <Button onClick={submit} disabled={busy || detailLoading}>
+            {busy ? "保存中…" : "保存"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
