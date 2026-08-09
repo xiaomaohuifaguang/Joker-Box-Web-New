@@ -51,6 +51,8 @@ export function AiModelFormDialog({
   const [infoError, setInfoError] = useState(false);
   // 重试计数：+1 触发 effect 重新拉详情。
   const [reloadKey, setReloadKey] = useState(0);
+  // 编辑时详情返回的原始 apiKey：提交时比对，仅当被修改才传 apiKey（未改不带该字段）。
+  const [originalApiKey, setOriginalApiKey] = useState("");
 
   const editingId = editing?.id ?? null;
   const [prev, setPrev] = useState<{ open: boolean; id: string | null }>({
@@ -65,10 +67,12 @@ export function AiModelFormDialog({
         setDetailLoading(true);
         setInfoError(false);
         setForm(EMPTY);
+        setOriginalApiKey("");
       } else {
         setDetailLoading(false);
         setInfoError(false);
         setForm(EMPTY);
+        setOriginalApiKey("");
       }
     }
   }
@@ -79,13 +83,15 @@ export function AiModelFormDialog({
     getAiModelInfo(editingId)
       .then((d) => {
         if (cancelled) return;
+        const apiKey = d.apiKey ?? "";
+        setOriginalApiKey(apiKey);
         setForm({
           name: d.name,
           model: d.model,
           baseUrl: d.baseUrl ?? "",
           completionsPath: d.completionsPath ?? "",
           embeddingsPath: d.embeddingsPath ?? "",
-          apiKey: d.apiKey ?? "",
+          apiKey,
           description: d.description ?? "",
         });
       })
@@ -128,7 +134,18 @@ export function AiModelFormDialog({
         description: form.description,
       };
       if (editing) {
-        await updateAiModel({ id: editing.id, ...payload });
+        const trimmedKey = form.apiKey.trim();
+        // apiKey 仅当被修改才传；未改（与详情原值一致）则不带该字段（故不并入下方 body）。
+        await updateAiModel({
+          id: editing.id,
+          name: payload.name,
+          model: payload.model,
+          baseUrl: payload.baseUrl,
+          completionsPath: payload.completionsPath,
+          embeddingsPath: payload.embeddingsPath,
+          description: payload.description,
+          ...(trimmedKey !== originalApiKey ? { apiKey: trimmedKey } : {}),
+        });
         toast.success("已保存");
       } else {
         await addAiModel(payload);

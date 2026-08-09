@@ -51,5 +51,8 @@ export interface AiModelPayload {
   description: string;
 }
 
-/** 修改（/ai/model/update）= 共用字段 + id。 */
-export type AiModelUpdatePayload = AiModelPayload & { id: string };
+/** 修改（/ai/model/update）= 共用字段 + id。apiKey 可省——仅当被修改时才传，未改则不带该字段。 */
+export type AiModelUpdatePayload = Omit<AiModelPayload, "apiKey"> & {
+  id: string;
+  apiKey?: string;
+};
