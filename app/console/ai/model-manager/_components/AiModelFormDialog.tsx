@@ -47,6 +47,10 @@ export function AiModelFormDialog({
   const [form, setForm] = useState<FormState>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  // 详情加载失败标记：失败时不展示空表单（防覆盖连接配置），给重试入口。
+  const [infoError, setInfoError] = useState(false);
+  // 重试计数：+1 触发 effect 重新拉详情。
+  const [reloadKey, setReloadKey] = useState(0);
 
   const editingId = editing?.id ?? null;
   const [prev, setPrev] = useState<{ open: boolean; id: string | null }>({
@@ -59,9 +63,11 @@ export function AiModelFormDialog({
       if (editing) {
         // 编辑：先 loading（清旧值防闪现），effect 异步拉详情回填。
         setDetailLoading(true);
+        setInfoError(false);
         setForm(EMPTY);
       } else {
         setDetailLoading(false);
+        setInfoError(false);
         setForm(EMPTY);
       }
     }
@@ -84,8 +90,10 @@ export function AiModelFormDialog({
         });
       })
       .catch((err) => {
-        if (!cancelled)
+        if (!cancelled) {
           toast.error(err instanceof ApiError ? err.message : "加载详情失败");
+          setInfoError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false);
@@ -93,7 +101,7 @@ export function AiModelFormDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, editingId]);
+  }, [open, editingId, reloadKey]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -150,6 +158,21 @@ export function AiModelFormDialog({
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-9 w-full" />
             ))}
+          </div>
+        ) : infoError ? (
+          // 详情加载失败：不展示空表单，避免保存时覆盖已存连接配置。
+          <div className="flex flex-col items-center gap-3 py-6">
+            <p className="text-sm text-muted-foreground">加载模型详情失败</p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setInfoError(false);
+                setDetailLoading(true);
+                setReloadKey((k) => k + 1);
+              }}
+            >
+              重试
+            </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -217,7 +240,7 @@ export function AiModelFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             取消
           </Button>
-          <Button onClick={submit} disabled={busy || detailLoading}>
+          <Button onClick={submit} disabled={busy || detailLoading || infoError}>
             {busy ? "保存中…" : "保存"}
           </Button>
         </DialogFooter>
