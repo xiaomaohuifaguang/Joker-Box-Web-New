@@ -27,12 +27,13 @@ import { Textarea } from "@/components/ui/textarea";
 import type { AiModel, AiModelPayload, AiModelType } from "@/types";
 import { AI_MODEL_TYPE_LABELS } from "@/types";
 
-type FormState = AiModelPayload;
+type FormState = Omit<AiModelPayload, "dimension"> & { dimension: string };
 
 const EMPTY: FormState = {
   name: "",
   model: "",
   type: "CHAT",
+  dimension: "",
   baseUrl: "",
   completionsPath: "",
   embeddingsPath: "",
@@ -46,7 +47,8 @@ const MODEL_TYPES = Object.entries(AI_MODEL_TYPE_LABELS) as [
 ][];
 
 // 新增 / 编辑模型。editing 非 null 时为编辑：开弹窗即 loading，/ai/model/info 返回后回填全量。
-// name/model 必填；baseUrl/completionsPath/embeddingsPath/apiKey/description 可空。
+// name/model/type 必填；baseUrl/completionsPath/embeddingsPath/apiKey/description 可空；
+// dimension 向量维度仅 EMBEDDING 显示且必填（正整数），CHAT 不传。
 export function AiModelFormDialog({
   open,
   onOpenChange,
@@ -103,6 +105,7 @@ export function AiModelFormDialog({
           name: d.name,
           model: d.model,
           type: d.type ?? "CHAT",
+          dimension: d.dimension != null ? String(d.dimension) : "",
           baseUrl: d.baseUrl ?? "",
           completionsPath: d.completionsPath ?? "",
           embeddingsPath: d.embeddingsPath ?? "",
@@ -137,12 +140,24 @@ export function AiModelFormDialog({
       toast.error("请输入模型");
       return;
     }
+    // 向量维度仅 EMBEDDING 必填；CHAT 不校验、不传。
+    let dimension: number | undefined;
+    if (form.type === "EMBEDDING") {
+      const raw = form.dimension.trim();
+      const n = Number(raw);
+      if (!raw || !Number.isInteger(n) || n <= 0) {
+        toast.error("请输入向量维度（正整数）");
+        return;
+      }
+      dimension = n;
+    }
     setBusy(true);
     try {
       const payload: AiModelPayload = {
         name: form.name.trim(),
         model: form.model.trim(),
         type: form.type,
+        ...(dimension !== undefined ? { dimension } : {}),
         baseUrl: form.baseUrl.trim(),
         completionsPath: form.completionsPath.trim(),
         embeddingsPath: form.embeddingsPath.trim(),
@@ -157,6 +172,9 @@ export function AiModelFormDialog({
           name: payload.name,
           model: payload.model,
           type: payload.type,
+          ...(payload.dimension !== undefined
+            ? { dimension: payload.dimension }
+            : {}),
           baseUrl: payload.baseUrl,
           completionsPath: payload.completionsPath,
           embeddingsPath: payload.embeddingsPath,
@@ -240,6 +258,20 @@ export function AiModelFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {form.type === "EMBEDDING" && (
+                <>
+                  <Label className="text-sm text-muted-foreground">
+                    向量维度 *
+                  </Label>
+                  <Input
+                    value={form.dimension}
+                    onChange={(e) => set("dimension", e.target.value)}
+                    placeholder="如 1536"
+                    inputMode="numeric"
+                    className="font-mono text-sm"
+                  />
+                </>
+              )}
               <Label className="text-sm text-muted-foreground">基础URL</Label>
               <Input
                 value={form.baseUrl}

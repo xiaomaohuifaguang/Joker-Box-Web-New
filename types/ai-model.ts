@@ -20,6 +20,8 @@ export interface AiModel {
   model: string;
   /** 类型（CHAT 对话 / EMBEDDING 向量） */
   type: AiModelType;
+  /** 向量维度（仅 EMBEDDING 有值） */
+  dimension?: number;
   /** 描述 */
   description: string;
 }
@@ -42,6 +44,8 @@ export interface AiModelDetail {
   completionsPath: string;
   /** embeddings请求路径（可空） */
   embeddingsPath: string;
+  /** 向量维度（仅 EMBEDDING 有值） */
+  dimension?: number;
   /** 描述（可空） */
   description: string;
 }
@@ -54,11 +58,13 @@ export interface AiModelPageParam {
   size: number;
 }
 
-/** 新增/修改共用字段（completionsPath/embeddingsPath/apiKey/description 可空）。 */
+/** 新增/修改共用字段（completionsPath/embeddingsPath/apiKey/description 可空；dimension 仅 EMBEDDING 必填）。 */
 export interface AiModelPayload {
   name: string;
   model: string;
   type: AiModelType;
+  /** 向量维度：仅 type=EMBEDDING 时传（必填），CHAT 不传。 */
+  dimension?: number;
   baseUrl: string;
   completionsPath: string;
   embeddingsPath: string;
