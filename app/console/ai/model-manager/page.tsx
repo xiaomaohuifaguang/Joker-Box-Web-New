@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAiModelPage } from "@/hooks/useAiModelPage";
-import { removeAiModel, setDefaultModel } from "@/lib/api/aiModel";
+import { removeAiModel, setDefaultModel, clearDefaultModel } from "@/lib/api/aiModel";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +82,7 @@ export default function ModelManagerPage() {
   const [editing, setEditing] = useState<AiModel | null>(null);
   const [deleting, setDeleting] = useState<AiModel | null>(null);
   const [settingDefault, setSettingDefault] = useState<AiModel | null>(null);
+  const [clearingDefault, setClearingDefault] = useState<AiModel | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -142,6 +143,18 @@ export default function ModelManagerPage() {
       handleMutated();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "设置默认失败");
+    }
+  }
+
+  async function confirmClearDefault() {
+    if (!clearingDefault) return;
+    try {
+      await clearDefaultModel(clearingDefault.type);
+      toast.success("已解除默认");
+      setClearingDefault(null);
+      handleMutated();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "解除默认失败");
     }
   }
 
@@ -236,8 +249,18 @@ export default function ModelManagerPage() {
                     <span className="inline-flex items-center gap-1.5">
                       {record.name}
                       {isDefault(record) && (
-                        <Badge variant="secondary">
-                          {AI_MODEL_TYPE_LABELS[record.type]}默认
+                        <Badge
+                          className="gap-1 border text-brand"
+                          style={{
+                            borderColor:
+                              "color-mix(in oklab, var(--brand) 30%, transparent)",
+                            backgroundColor:
+                              "color-mix(in oklab, var(--brand) 10%, transparent)",
+                          }}
+                        >
+                          <Star className="h-3 w-3 fill-current" />
+                          {AI_MODEL_TYPE_LABELS[record.type].replace("模型", "")}
+                          默认
                         </Badge>
                       )}
                     </span>
@@ -253,7 +276,18 @@ export default function ModelManagerPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
-                      {!isDefault(record) && (
+                      {isDefault(record) ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-brand"
+                          onClick={() => setClearingDefault(record)}
+                          aria-label="解除默认"
+                          title="解除默认"
+                        >
+                          <Star className="h-4 w-4 fill-current" />
+                        </Button>
+                      ) : (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -393,6 +427,30 @@ export default function ModelManagerPage() {
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSetDefault}>
               设为默认
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!clearingDefault}
+        onOpenChange={(o) => !o && setClearingDefault(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              解除{clearingDefault ? AI_MODEL_TYPE_LABELS[clearingDefault.type] : ""}默认
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              解除「{clearingDefault?.name}」的
+              {clearingDefault ? AI_MODEL_TYPE_LABELS[clearingDefault.type] : ""}
+              默认？解除后该类型暂无默认模型。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClearDefault}>
+              解除默认
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

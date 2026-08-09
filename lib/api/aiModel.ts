@@ -67,3 +67,10 @@ export async function setDefaultModel(
     params: { type, modelId },
   });
 }
+
+// 解绑默认：POST /ai/model/clearDefaultModel，**query 传参** type，判断 code。
+export async function clearDefaultModel(type: AiModelType): Promise<void> {
+  await api.post<unknown>("/ai/model/clearDefaultModel", {
+    params: { type },
+  });
+}
