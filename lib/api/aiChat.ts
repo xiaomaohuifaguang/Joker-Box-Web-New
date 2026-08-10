@@ -62,6 +62,13 @@ export function chatStream(
   param: Omit<ChatRequestParam, "stream">,
   handlers: ChatStreamHandlers,
 ): () => void {
+  // [DONE] 帧与流自然结束都会触发 onDone——去重，避免重复收尾（如重复刷新会话列表）。
+  let doneFired = false;
+  const fireDone = () => {
+    if (doneFired) return;
+    doneFired = true;
+    handlers.onDone();
+  };
   return streamSSE(
     `${BASE}/ai/completions/chat`,
     { ...param, stream: true },
@@ -73,7 +80,7 @@ export function chatStream(
             data: Partial<ChatMessage> | string;
           };
           if (frame.data === "[DONE]") {
-            handlers.onDone();
+            fireDone();
             return;
           }
           if (frame.code !== 200) {
@@ -86,7 +93,7 @@ export function chatStream(
         }
       },
       onError: handlers.onError,
-      onDone: handlers.onDone,
+      onDone: fireDone,
     },
     getToken(),
   );

@@ -38,7 +38,7 @@ export function useAiChat() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const abortRef = useRef<(() => void) | null>(null);
 
-  // 首挂：拉模型（默认选第一个）+ 会话列表。
+  // 首挂：拉模型（默认选第一个）+ 会话列表。模型拉取失败提示（否则 send 被静默禁用）。
   useEffect(() => {
     let cancelled = false;
     getChatModels()
@@ -47,7 +47,9 @@ export function useAiChat() {
         setModels(list);
         setModelId((cur) => cur || list[0]?.id || "");
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) toast.error("加载模型失败");
+      });
     getChatSessions()
       .then((list) => {
         if (!cancelled) setSessions(list);
