@@ -18,7 +18,7 @@ export function AiChatHeader({
   onToggleSessions: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 border-b px-4 py-3">
+    <div className="flex items-center gap-2 border-b py-3 pl-4 pr-12">
       <Select value={modelId} onValueChange={onModelChange}>
         <SelectTrigger className="h-8 flex-1 text-sm">
           <SelectValue placeholder="选择模型" />
