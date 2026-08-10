@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  chatOnce,
   chatStream,
   getChatMessages,
   getChatModels,
@@ -35,6 +36,20 @@ export function useAiChat() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
+  // 流式/非流式偏好，localStorage 持久化（默认流式）。惰性初始化避免 effect 同步 setState；
+  // window 仅在客户端（组件已 useMounted 守卫）访问。
+  const [stream, setStreamState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("ai-chat-stream") !== "false";
+  });
+  const setStream = useCallback((v: boolean) => {
+    setStreamState(v);
+    try {
+      localStorage.setItem("ai-chat-stream", String(v));
+    } catch {
+      // 隐私模式写失败忽略（保持当次会话内状态）。
+    }
+  }, []);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const abortRef = useRef<(() => void) | null>(null);
 
@@ -132,6 +147,38 @@ export function useAiChat() {
       setStreaming(true);
 
       const sidAtSend = sessionId;
+
+      // 非流式：一次性返回完整消息（chatOnce 走 api.post，自动 token/401/ApiError）。
+      if (!stream) {
+        chatOnce({ modelId, sessionId: sidAtSend ?? undefined, content: text })
+          .then((msg) => {
+            if (!sidAtSend && msg.sessionId) setSessionId(msg.sessionId);
+            setMessages((ms) =>
+              ms.map((m) =>
+                m.key === "streaming"
+                  ? {
+                      ...m,
+                      pending: false,
+                      key: msg.messageId || `a-${Date.now()}`,
+                      content: msg.content ?? "",
+                      reason: msg.reasonContent ?? "",
+                      time: msg.createTime ?? null,
+                    }
+                  : m,
+              ),
+            );
+            refreshSessions();
+          })
+          .catch((err) => {
+            setMessages((ms) => ms.filter((m) => m.key !== "streaming"));
+            toast.error(
+              err instanceof ApiError ? err.message : "发送失败",
+            );
+          })
+          .finally(() => setStreaming(false));
+        return;
+      }
+
       abortRef.current = chatStream(
         { modelId, sessionId: sidAtSend ?? undefined, content: text },
         {
@@ -173,7 +220,7 @@ export function useAiChat() {
         },
       );
     },
-    [modelId, sessionId, streaming, refreshSessions],
+    [modelId, sessionId, streaming, stream, refreshSessions],
   );
 
   return {
@@ -184,6 +231,8 @@ export function useAiChat() {
     sessionId,
     messages,
     streaming,
+    stream,
+    setStream,
     loadingMessages,
     send,
     stop,

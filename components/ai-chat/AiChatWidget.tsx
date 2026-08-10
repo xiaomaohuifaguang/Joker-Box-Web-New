@@ -46,6 +46,8 @@ function AiChatPanel() {
             models={chat.models}
             modelId={chat.modelId}
             onModelChange={chat.setModelId}
+            stream={chat.stream}
+            onStreamChange={chat.setStream}
             onNewSession={() => {
               chat.newSession();
               setShowSessions(false);

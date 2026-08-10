@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { ChatModel } from "@/types";
 
 // 抽屉顶栏：模型选择 + 新建会话 + 历史会话切换。
 export function AiChatHeader({
-  models, modelId, onModelChange, onNewSession, onToggleSessions,
+  models, modelId, onModelChange, stream, onStreamChange, onNewSession, onToggleSessions,
 }: {
   models: ChatModel[];
   modelId: string;
   onModelChange: (id: string) => void;
+  stream: boolean;
+  onStreamChange: (v: boolean) => void;
   onNewSession: () => void;
   onToggleSessions: () => void;
 }) {
@@ -31,6 +34,15 @@ export function AiChatHeader({
           ))}
         </SelectContent>
       </Select>
+      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        <Switch
+          size="sm"
+          checked={stream}
+          onCheckedChange={onStreamChange}
+          aria-label="流式输出"
+        />
+        流式
+      </label>
       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNewSession} aria-label="新建会话" title="新建会话">
         <SquarePen className="h-4 w-4" />
       </Button>
