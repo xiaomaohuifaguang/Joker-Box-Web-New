@@ -15,9 +15,10 @@
 - 多数是 `POST body`。
 - 部分是 **POST 却用 query 传参**（如 dynamicForm 的 `deploy`/`stop`/`publishedForms` 传 `formId`）——写新接口时对齐后端，别默认全走 body。
 - `file.ts` 例外：**upload 走 multipart、download 走 GET blob+token**，都是直接 `fetch` + `getToken()` + `buildQuery()`，不经 `api.*`。
+- `aiChat.ts` 流式例外：`chatStream`（SSE）直接 `fetch` + `getToken()`，经 `lib/sse.ts` 的 `streamSSE` 读 `body.getReader()` 解 `data:` 帧（`api.*` 不支持流）；非流式 `chatOnce`/models/sessions/messages 仍走 `api.*`。
 
 ## 文件 → 后端模块
 
-`client.ts`(请求基建) · `auth`(getToken/register/mailCode) · `menu`(menuTree，前后台导航) · `menuManage` · `org` · `user` · `roleManage` · `apiPath` · `codeTable` · `website`(前台分组) · `websiteManage`(后台 CRUD) · `mail` · `ganDaShi` · `dynamicForm` · `dynamicFormFile`(上传/下载) · `process`(流程定义 queryPage/add/save/info/remove/stop/delegateExpressions(服务任务委托表达式下拉)，发布 deploy 走 **query 传参 id**——非 body，见「传参风格」) · `user`(queryPage/CRUD/角色机构绑定/selectorUserWithInfo/selectorInitByIds) · `org`(queryPage/getOrgTree/CRUD/info) · `file`(云盘) · `index.ts`(汇出 `api`/`ApiError` 等)
+`client.ts`(请求基建) · `auth`(getToken/register/mailCode) · `menu`(menuTree，前后台导航) · `menuManage` · `org` · `user` · `roleManage` · `apiPath` · `codeTable` · `website`(前台分组) · `websiteManage`(后台 CRUD) · `mail` · `ganDaShi` · `dynamicForm` · `dynamicFormFile`(上传/下载) · `process`(流程定义 queryPage/add/save/info/remove/stop/delegateExpressions(服务任务委托表达式下拉)，发布 deploy 走 **query 传参 id**——非 body，见「传参风格」) · `user`(queryPage/CRUD/角色机构绑定/selectorUserWithInfo/selectorInitByIds) · `org`(queryPage/getOrgTree/CRUD/info) · `file`(云盘) · `aiChat`(AI 会话 models/sessions/messages + chat；流式走 `lib/sse.ts`，见「传参风格」) · `index.ts`(汇出 `api`/`ApiError` 等)
 
 类型在 `types/`（按域分文件）。新增接口：在对应模块文件加 wrapper + 在 `types/` 加请求/响应类型。

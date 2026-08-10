@@ -7,7 +7,7 @@ export interface SSEMessage {
 }
 
 /**
- * 流式读取 SSE。手动带 token。返回响应（调用方先看 content-type 决定是否调本函数）。
+ * 流式读取 SSE。手动带 token。
  * onMessage 每帧回调（data 为整行 JSON 文本）；onError 网络/解析错误；onDone 流自然结束。
  * 返回 abort 函数用于中途取消。
  */
