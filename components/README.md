@@ -16,6 +16,7 @@ shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `li
 - `ThemeSelect`：主题预设切换（前台 Header / 后台顶栏共享）。
 - `ComingSoon`：占位页（Server）。
 - `Container`：流式内容容器 `w-[85%] max-w-[1600px]`，`className` 可覆盖（全宽页用 `w-full max-w-none`）。
+- `ai-chat/`：AI 会话助手（前后台共用，两个 layout 各挂一份）。右下角悬浮钮 + 右侧 Sheet 抽屉。`AiChatWidget` 总装（`useMounted`+`useAuth` 守卫，登录可见）+ Header（模型 Select 默认第一个/新建/历史）+ Messages（user 右 assistant 左，思考块流式展开、出 content 自动折叠，滚动到底）+ Input（Enter 发/Shift+Enter 换行/流式停止）+ SessionList。状态机 `hooks/useAiChat`（sessionId=null 首发后端隐式建会话，SSE 增量累积 content/reasonContent），数据层 `lib/api/aiChat`（流式走 `lib/sse.ts` fetch+ReadableStream 解 data: 帧）。
 
 ## 业务共享件（多管理页共用）
 - `menuIcons.tsx`：Menu 图标注册表（`MENU_ICON_GROUPS` 14 类 ~149 个）+ `MenuIcon` switch 渲染（菜单管理选择 + 前台/后台导航渲染共用；硬编码 switch 规避 react-hooks static-components）。

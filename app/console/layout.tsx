@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
+import { AiChatWidget } from "@/components/ai-chat/AiChatWidget";
 import { RequireAdmin } from "@/components/RequireAdmin";
 import { ThemeSelect } from "@/components/ThemeSelect";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
           </header>
           <div className="flex-1 overflow-y-auto p-6">{children}</div>
         </SidebarInset>
+        <AiChatWidget />
       </SidebarProvider>
     </RequireAdmin>
   );
