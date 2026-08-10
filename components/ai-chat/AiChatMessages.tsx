@@ -8,7 +8,8 @@ import type { UiMessage } from "@/hooks/useAiChat";
 import { AiMarkdown } from "./AiMarkdown";
 
 // 单条思考块（signature「进程终端」）：mono 字体 + felt 左竖线 + 弱化底。
-// 流式思考中（无 content）默认展开 + 呼吸微光；开始输出 content 自动折叠（可手开）。
+// 打字机效果：pending 一进来就亮卡（哪怕 reason 还空），标题实时计时「思考中 · Ns」，
+// reason 逐字往外冒 + 跟随光标；正文 content 一出现自动折叠（可手开）。
 function ReasonBlock({
   reason,
   thinking,
@@ -29,6 +30,15 @@ function ReasonBlock({
     setPrevHasContent(hasContent);
     if (hasContent) setOpen(false);
   }
+
+  // 静默期/思考中的已用秒数：thinking 期间每秒 +1（异步回调 setState），结束后定格。
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!thinking) return;
+    const iv = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(iv);
+  }, [thinking]);
+
   return (
     <div
       className={cn(
@@ -43,12 +53,23 @@ function ReasonBlock({
         className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-muted-foreground"
       >
         <Terminal className="h-3 w-3 text-felt" />
-        <span className="tracking-wide">{thinking ? "思考中…" : "思考过程"}</span>
+        <span className="tracking-wide">
+          {thinking ? `思考中 · ${elapsed}s` : "思考过程"}
+        </span>
         {thinking && <Loader2 className="h-3 w-3 animate-spin text-felt" />}
         <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="whitespace-pre-wrap px-2.5 pb-2.5 pt-0.5 leading-relaxed text-muted-foreground/90">{reason}</div>
+        <div className="whitespace-pre-wrap px-2.5 pb-2.5 pt-0.5 leading-relaxed text-muted-foreground/90">
+          {reason}
+          {thinking && (
+            // 跟随光标：文字逐字增长时贴在末尾，营造打字机感。
+            <span className="ml-0.5 inline-block h-3 w-[2px] animate-pulse bg-felt align-middle" />
+          )}
+          {thinking && !reason && (
+            <span className="text-muted-foreground/60">正在整理思路…</span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -103,7 +124,8 @@ export function AiChatMessages({
             ) : (
               // 助手：无气泡——felt 左竖线 + 裸 markdown 散文，读起来像正在书写的文档（编辑感）。
               <div className="max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
-                {m.reason && (
+                {(m.reason || m.pending) && (
+                  // pending 即渲染（静默期也亮卡计时）；历史/完成后只在有 reason 时显示。
                   <ReasonBlock
                     reason={m.reason}
                     thinking={!!m.pending && !m.content}
@@ -117,9 +139,6 @@ export function AiChatMessages({
                       <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-current align-middle" />
                     )}
                   </div>
-                )}
-                {m.pending && !m.content && !m.reason && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}
               </div>
             )}
