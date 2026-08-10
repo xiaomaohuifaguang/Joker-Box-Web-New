@@ -5,6 +5,11 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 // react-markdown 直接渲染（输出 React 树，XSS 安全）。仅供 AiMarkdown 懒加载封装内部用。
+
+// 提升到模块作用域：每次渲染新建 [remarkGfm] 会让 unified 因插件引用变化而重跑管线，
+// 导致已落定（非流式）的 markdown 消息也被无谓重解析。
+const REMARK_PLUGINS = [remarkGfm];
+
 export function MarkdownRenderer({
   content,
   className,
@@ -26,7 +31,7 @@ export function MarkdownRenderer({
         className,
       )}
     >
-      <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+      <Markdown remarkPlugins={REMARK_PLUGINS}>{content}</Markdown>
     </div>
   );
 }
