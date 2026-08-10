@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, Terminal } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { UiMessage } from "@/hooks/useAiChat";
 import { AiMarkdown } from "./AiMarkdown";
 
-// 单条思考块：有 reason 才显示。流式思考中（无 content）默认展开+呼吸；开始输出 content 自动折叠（可手开）。
+// 单条思考块（signature「进程终端」）：mono 字体 + felt 左竖线 + 弱化底。
+// 流式思考中（无 content）默认展开 + 呼吸微光；开始输出 content 自动折叠（可手开）。
 function ReasonBlock({
   reason,
   thinking,
@@ -29,18 +30,25 @@ function ReasonBlock({
     if (hasContent) setOpen(false);
   }
   return (
-    <div className="mb-1 rounded-md border border-border/60 bg-muted/40 text-xs">
+    <div
+      className={cn(
+        "mb-2 rounded-r-md border-l-2 border-felt/60 bg-muted/40 font-mono text-xs",
+        // 思考中的呼吸微光（felt 淡染，随主题）。
+        thinking && "animate-pulse",
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1 px-2 py-1 text-left text-muted-foreground"
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-muted-foreground"
       >
-        {thinking && <Loader2 className="h-3 w-3 animate-spin" />}
-        <span>{thinking ? "思考中…" : "思考过程"}</span>
+        <Terminal className="h-3 w-3 text-felt" />
+        <span className="tracking-wide">{thinking ? "思考中…" : "思考过程"}</span>
+        {thinking && <Loader2 className="h-3 w-3 animate-spin text-felt" />}
         <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="whitespace-pre-wrap px-2 pb-2 pt-0.5 text-muted-foreground/90">{reason}</div>
+        <div className="whitespace-pre-wrap px-2.5 pb-2.5 pt-0.5 leading-relaxed text-muted-foreground/90">{reason}</div>
       )}
     </div>
   );
@@ -74,8 +82,10 @@ export function AiChatMessages({
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
-        开始新的对话吧
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+        <Terminal className="h-5 w-5 text-felt" />
+        <p className="font-display text-lg tracking-tight text-foreground">开始新的对话</p>
+        <p className="text-sm text-muted-foreground">输入问题，Enter 发送</p>
       </div>
     );
   }
@@ -85,38 +95,34 @@ export function AiChatMessages({
       <div className="flex flex-col gap-3">
         {messages.map((m) => (
           <div key={m.key} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-            <div
-              className={cn(
-                "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                m.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted",
-              )}
-            >
-              {m.role === "assistant" && m.reason && (
-                <ReasonBlock
-                  reason={m.reason}
-                  thinking={!!m.pending && !m.content}
-                  hasContent={!!m.content}
-                />
-              )}
-              {m.content &&
-                (m.role === "assistant" ? (
+            {m.role === "user" ? (
+              // 用户：唯一实心气泡（brand），右侧。
+              <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+              </div>
+            ) : (
+              // 助手：无气泡——felt 左竖线 + 裸 markdown 散文，读起来像正在书写的文档（编辑感）。
+              <div className="max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
+                {m.reason && (
+                  <ReasonBlock
+                    reason={m.reason}
+                    thinking={!!m.pending && !m.content}
+                    hasContent={!!m.content}
+                  />
+                )}
+                {m.content && (
                   <div className="relative">
                     <AiMarkdown content={m.content} />
                     {m.pending && (
                       <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-current align-middle" />
                     )}
                   </div>
-                ) : (
-                  <div className="whitespace-pre-wrap break-words">
-                    {m.content}
-                  </div>
-                ))}
-              {m.pending && !m.content && !m.reason && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              )}
-            </div>
+                )}
+                {m.pending && !m.content && !m.reason && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+            )}
           </div>
         ))}
         <div ref={bottomRef} />
