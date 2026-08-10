@@ -5,6 +5,7 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { UiMessage } from "@/hooks/useAiChat";
+import { AiMarkdown } from "./AiMarkdown";
 
 // 单条思考块：有 reason 才显示。流式思考中（无 content）默认展开+呼吸；开始输出 content 自动折叠（可手开）。
 function ReasonBlock({
@@ -99,12 +100,19 @@ export function AiChatMessages({
                   hasContent={!!m.content}
                 />
               )}
-              {m.content && (
-                <div className="whitespace-pre-wrap break-words">
-                  {m.content}
-                  {m.pending && <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-current align-middle" />}
-                </div>
-              )}
+              {m.content &&
+                (m.role === "assistant" ? (
+                  <div className="relative">
+                    <AiMarkdown content={m.content} />
+                    {m.pending && (
+                      <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-current align-middle" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap break-words">
+                    {m.content}
+                  </div>
+                ))}
               {m.pending && !m.content && !m.reason && (
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               )}
