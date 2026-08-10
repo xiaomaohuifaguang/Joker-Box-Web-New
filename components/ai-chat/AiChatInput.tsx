@@ -30,6 +30,8 @@ export function AiChatInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
+            // IME 组合中（拼音选词）按 Enter 不发送。
+            if (e.nativeEvent.isComposing) return;
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               submit();

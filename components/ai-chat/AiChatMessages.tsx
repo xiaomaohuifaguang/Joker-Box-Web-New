@@ -6,11 +6,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { UiMessage } from "@/hooks/useAiChat";
 
-// 单条思考块：有 reason 才显示。流式思考中（无 content）默认展开+呼吸；开始输出 content 自动折叠。
-function ReasonBlock({ reason, streaming }: { reason: string; streaming: boolean }) {
-  const thinking = streaming && reason.length > 0;
+// 单条思考块：有 reason 才显示。流式思考中（无 content）默认展开+呼吸；开始输出 content 自动折叠（可手开）。
+function ReasonBlock({
+  reason,
+  thinking,
+  hasContent,
+}: {
+  reason: string;
+  /** 仍在思考（流式且无 content）。 */
+  thinking: boolean;
+  /** 已开始输出正文 content。 */
+  hasContent: boolean;
+}) {
+  // 思考中默认展开；content 一出现自动折叠（render 期条件 setState，避开 set-state-in-effect）。
   const [open, setOpen] = useState(true);
-  // 思考结束（开始输出 content）时自动折叠：streaming 转 false 或 content 出现由父级控制 open 初始。
+  const [prevHasContent, setPrevHasContent] = useState(hasContent);
+  if (prevHasContent !== hasContent) {
+    setPrevHasContent(hasContent);
+    if (hasContent) setOpen(false);
+  }
   return (
     <div className="mb-1 rounded-md border border-border/60 bg-muted/40 text-xs">
       <button
@@ -39,10 +53,14 @@ export function AiChatMessages({
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // 消息/流式内容变化时滚到底（effect 只操作 DOM，不 setState）。
+  // 新消息到达平滑滚到底；流式追加（pending）用 auto 避免叠加动画（effect 只操作 DOM，不 setState）。
+  const anyPending = messages.some((m) => m.pending);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({
+      behavior: anyPending ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [messages, anyPending]);
 
   if (loading) {
     return (
@@ -74,7 +92,11 @@ export function AiChatMessages({
               )}
             >
               {m.role === "assistant" && m.reason && (
-                <ReasonBlock reason={m.reason} streaming={!!m.pending && !m.content} />
+                <ReasonBlock
+                  reason={m.reason}
+                  thinking={!!m.pending && !m.content}
+                  hasContent={!!m.content}
+                />
               )}
               {m.content && (
                 <div className="whitespace-pre-wrap break-words">

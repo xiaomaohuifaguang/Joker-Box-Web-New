@@ -14,14 +14,19 @@ import { AiChatSessionList } from "./AiChatSessionList";
 
 // AI 会话助手：右下角悬浮钮 + 右侧抽屉。前后台各挂一份（共享本组件）。
 // 仅登录后可见（接口需 token）；useMounted 防 hydration（token 是 client-only）。
+// 面板拆成 AiChatPanel 内层组件：仅登录挂载——useAiChat 的首挂请求（models/sessions）才不会对未登录空跑。
 export function AiChatWidget() {
   const mounted = useMounted();
   const { authenticated } = useAuth();
+
+  if (!mounted || !authenticated) return null;
+  return <AiChatPanel />;
+}
+
+function AiChatPanel() {
   const [open, setOpen] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const chat = useAiChat();
-
-  if (!mounted || !authenticated) return null;
 
   return (
     <>
@@ -41,14 +46,20 @@ export function AiChatWidget() {
             models={chat.models}
             modelId={chat.modelId}
             onModelChange={chat.setModelId}
-            onNewSession={() => { chat.newSession(); }}
+            onNewSession={() => {
+              chat.newSession();
+              setShowSessions(false);
+            }}
             onToggleSessions={() => setShowSessions((s) => !s)}
           />
           {showSessions ? (
             <AiChatSessionList
               sessions={chat.sessions}
               activeId={chat.sessionId}
-              onSelect={(sid) => { chat.selectSession(sid); setShowSessions(false); }}
+              onSelect={(sid) => {
+                chat.selectSession(sid);
+                setShowSessions(false);
+              }}
               onRefresh={chat.refreshSessions}
             />
           ) : (
