@@ -19,7 +19,9 @@ function ReasonBlock({
   hasContent: boolean;
 }) {
   // 思考中默认展开；content 一出现自动折叠（render 期条件 setState，避开 set-state-in-effect）。
-  const [open, setOpen] = useState(true);
+  // 初始 open 由 hasContent 定：流式完成 key 变更触发 remount、或历史消息（本就有 content）时默认折叠，
+  // 不会把已折叠的思考块又展开。
+  const [open, setOpen] = useState(() => !hasContent);
   const [prevHasContent, setPrevHasContent] = useState(hasContent);
   if (prevHasContent !== hasContent) {
     setPrevHasContent(hasContent);
@@ -48,7 +50,6 @@ export function AiChatMessages({
   messages, loading,
 }: {
   messages: UiMessage[];
-  streaming: boolean;
   loading: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -79,7 +80,7 @@ export function AiChatMessages({
   }
 
   return (
-    <ScrollArea className="flex-1 px-4 py-3">
+    <ScrollArea className="min-h-0 flex-1 px-4 py-3">
       <div className="flex flex-col gap-3">
         {messages.map((m) => (
           <div key={m.key} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>

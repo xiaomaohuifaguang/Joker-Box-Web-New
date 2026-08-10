@@ -96,9 +96,12 @@ export function useAiChat() {
     abortRef.current?.();
     abortRef.current = null;
     setStreaming(false);
-    // 把流式消息落为完成态。
+    // 把流式消息落为完成态（同时改掉 "streaming" 固定 key——否则下次 send 再插一条
+    // key==="streaming"，onChunk 会同时往两条追加、onError 会误删这条已停的旧消息）。
     setMessages((ms) =>
-      ms.map((m) => (m.pending ? { ...m, pending: false } : m)),
+      ms.map((m) =>
+        m.pending ? { ...m, pending: false, key: `a-${Date.now()}` } : m,
+      ),
     );
   }, []);
 

@@ -66,12 +66,11 @@ function AiChatPanel() {
             <>
               <AiChatMessages
                 messages={chat.messages}
-                streaming={chat.streaming}
                 loading={chat.loadingMessages}
               />
               <AiChatInput
                 streaming={chat.streaming}
-                disabled={!chat.modelId}
+                disabled={!chat.modelId || chat.loadingMessages}
                 onSend={chat.send}
                 onStop={chat.stop}
               />

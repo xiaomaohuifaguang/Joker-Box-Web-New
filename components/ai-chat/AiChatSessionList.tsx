@@ -22,7 +22,7 @@ export function AiChatSessionList({
   }, []);
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="min-h-0 flex-1">
       <div className="flex flex-col p-2">
         {sessions.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">暂无会话</div>
