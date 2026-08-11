@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import Markdown from "react-markdown";
+import { MarkdownHooks } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeShiki from "@shikijs/rehype";
@@ -51,8 +51,7 @@ const MdTable = ({ node: _node, className, children, ...props }: React.Component
   );
 };
 
-// 落定态组件表：代码块卡（复制/语言标签/滚动 + mermaid 分流成图）。
-// node = hast pre 节点，AiCodeBlock 用它提取语言/源码。
+// 落定/流式两条管线的 rehype 链 + 组件表对应（REHYPE_PLUGINS↔MD_COMPONENTS、REHYPE_PLAIN↔MD_COMPONENTS_PLAIN）。
 const MD_COMPONENTS = {
   table: MdTable,
   pre: ({ node, children }: { node?: unknown; children?: ReactNode }) => (
@@ -80,6 +79,9 @@ export function MarkdownRenderer({
   /** 流式降级：true 时跳过 Shiki 高亮（pending 每帧重跑太贵），落定后恢复高亮。 */
   plain?: boolean;
 }) {
+  // 异步高亮（@shikijs/rehype transformer 是 async）让 react-markdown 默认 Markdown(runSync) 必抛
+  // `runSync finished async`。改用官方 MarkdownHooks——内部 processor.run() 异步跑管线，支持 async 插件。
+  // 代价：每次 render 都 createProcessor 新建（每条消息首次高亮时初始化一次 Shiki 单例），换取官方 async 支持。
   return (
     <div
       data-ai-md=""
@@ -95,7 +97,15 @@ export function MarkdownRenderer({
         className,
       )}
     >
-      <Markdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={plain ? REHYPE_PLAIN : REHYPE_PLUGINS} components={plain ? MD_COMPONENTS_PLAIN : MD_COMPONENTS}>{content}</Markdown>
+      {/* fallback：树未就绪（异步管线首跑/内容变化）时先显原文——流式期即逐字增长的打字机文本。 */}
+      <MarkdownHooks
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={plain ? REHYPE_PLAIN : REHYPE_PLUGINS}
+        components={plain ? MD_COMPONENTS_PLAIN : MD_COMPONENTS}
+        fallback={content}
+      >
+        {content}
+      </MarkdownHooks>
     </div>
   );
 }
