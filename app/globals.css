@@ -732,3 +732,7 @@
 
 /* KaTeX 公式颜色跟随前景（暗色可读）。 */
 [data-ai-md] .katex { color: var(--foreground); font-size: 1.02em; }
+
+/* Mermaid 图内文字随前景；svg 自适应宽度。 */
+[data-ai-md] .ai-md-mermaid svg { max-width: 100%; height: auto; }
+[data-ai-md] .ai-md-mermaid .nodeLabel, [data-ai-md] .ai-md-mermaid .edgeLabel { color: var(--foreground); }

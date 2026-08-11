@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+
+// Mermaid 图组件懒加载（mermaid 库很重，仅出现 mermaid 代码块时才拉取；模块级满足 static-components）。
+const AiMermaid = dynamic(() => import("./AiMermaid").then((m) => ({ default: m.AiMermaid })), {
+  ssr: false,
+});
 
 // 从 hast 节点递归提取纯文本（复制用原始码，非高亮后的标签）。
 function extractText(node: unknown): string {
@@ -59,6 +65,9 @@ export function AiCodeBlock({
       toast.error("复制失败");
     }
   }
+
+  // mermaid 代码块分流：渲成图而非代码卡（extractText 取的是原始图源，高亮 span 不影响 .value 拼接）。
+  if (lang === "mermaid") return <AiMermaid code={codeText} />;
 
   return (
     <div className="group/code relative mb-2 overflow-hidden rounded-md border border-border/60 bg-muted">
