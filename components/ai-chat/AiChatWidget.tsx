@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { BotMessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,11 +36,11 @@ function AiChatPanel() {
         className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg"
         aria-label="AI 助手"
       >
-        <MessageCircle className="h-5 w-5" />
+        <BotMessageSquare className="h-5 w-5" />
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md">
+        <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-lg">
           <SheetTitle className="sr-only">AI 助手</SheetTitle>
           <AiChatHeader
             models={chat.models}
@@ -53,6 +53,7 @@ function AiChatPanel() {
               setShowSessions(false);
             }}
             onToggleSessions={() => setShowSessions((s) => !s)}
+            sessionsActive={showSessions}
           />
           {showSessions ? (
             <AiChatSessionList

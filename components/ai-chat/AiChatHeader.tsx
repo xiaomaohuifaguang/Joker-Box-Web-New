@@ -6,11 +6,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import type { ChatModel } from "@/types";
 
-// 抽屉顶栏：模型选择 + 新建会话 + 历史会话切换。
+// 抽屉顶栏：模型选择 + 流式开关 + 新建会话（主操作，带文字） + 历史会话（激活态高亮）。
 export function AiChatHeader({
-  models, modelId, onModelChange, stream, onStreamChange, onNewSession, onToggleSessions,
+  models, modelId, onModelChange, stream, onStreamChange, onNewSession, onToggleSessions, sessionsActive,
 }: {
   models: ChatModel[];
   modelId: string;
@@ -19,6 +20,8 @@ export function AiChatHeader({
   onStreamChange: (v: boolean) => void;
   onNewSession: () => void;
   onToggleSessions: () => void;
+  /** 会话列表是否打开（历史钮高亮）。 */
+  sessionsActive: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 border-b py-3 pl-4 pr-12">
@@ -43,10 +46,20 @@ export function AiChatHeader({
         />
         流式
       </label>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNewSession} aria-label="新建会话" title="新建会话">
-        <SquarePen className="h-4 w-4" />
+      {/* 新建会话：主操作，描边带文字更醒目。 */}
+      <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1 text-xs" onClick={onNewSession}>
+        <SquarePen className="h-3.5 w-3.5" />
+        新会话
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleSessions} aria-label="历史会话" title="历史会话">
+      {/* 历史会话：悬停底色 + 列表打开时高亮（激活态）。 */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn("h-8 w-8 shrink-0", sessionsActive && "bg-accent text-accent-foreground")}
+        onClick={onToggleSessions}
+        aria-label="历史会话"
+        title="历史会话"
+      >
         <History className="h-4 w-4" />
       </Button>
     </div>
