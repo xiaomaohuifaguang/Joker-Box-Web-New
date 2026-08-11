@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Loader2, Terminal } from "lucide-react";
+import { Check, ChevronDown, Copy, Loader2, Terminal } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { UiMessage } from "@/hooks/useAiChat";
@@ -75,6 +77,28 @@ function ReasonBlock({
   );
 }
 
+// 单条助手消息的「复制全文」钮：hover 浮现（移动端常驻，见 globals.css .ai-md-msgops）。
+function CopyMsgBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+      toast.success("已复制");
+    } catch {
+      toast.error("复制失败");
+    }
+  }
+  return (
+    <div className="ai-md-msgops mt-1 flex justify-end">
+      <Button variant="ghost" size="icon-xs" onClick={copy} aria-label="复制全文" title="复制全文">
+        {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+      </Button>
+    </div>
+  );
+}
+
 // 消息流：user 右 / assistant 左；滚动容器，新消息自动滚到底。
 export function AiChatMessages({
   messages, loading,
@@ -83,15 +107,39 @@ export function AiChatMessages({
   loading: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  // 是否贴着底部（贴底才跟随新消息滚动；用户上翻后不被拽回）。
+  const stickToBottomRef = useRef(true);
+  const [showBackToBottom, setShowBackToBottom] = useState(false);
 
   // 新消息到达平滑滚到底；流式追加（pending）用 auto 避免叠加动画（effect 只操作 DOM，不 setState）。
+  // 仅在贴底时跟随——用户上翻阅读历史时不强拉到底。
   const anyPending = messages.some((m) => m.pending);
   useEffect(() => {
+    if (!stickToBottomRef.current) return;
     bottomRef.current?.scrollIntoView({
       behavior: anyPending ? "auto" : "smooth",
       block: "end",
     });
   }, [messages, anyPending]);
+
+  // 监听 ScrollArea viewport 滚动，更新贴底标记 + 回到底部浮钮显隐。
+  // setState 只在 scroll 事件回调里（异步），不违反 set-state-in-effect。
+  // 依赖 loading/有无消息：loading 态与空态提前 return，viewport 会随之卸载/重建，需重新绑定。
+  const hasMessages = messages.length > 0;
+  useEffect(() => {
+    const viewport = bottomRef.current?.closest<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (!viewport) return;
+    const onScroll = () => {
+      const nearBottom =
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
+      stickToBottomRef.current = nearBottom;
+      setShowBackToBottom(!nearBottom);
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", onScroll);
+  }, [loading, hasMessages]);
 
   if (loading) {
     return (
@@ -123,7 +171,8 @@ export function AiChatMessages({
               </div>
             ) : (
               // 助手：无气泡——felt 左竖线 + 裸 markdown 散文，读起来像正在书写的文档（编辑感）。
-              <div className="max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
+              // group/msg：hover 浮现消息操作条（复制全文）。
+              <div className="group/msg relative max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
                 {(m.reason || m.pending) && (
                   // pending 即渲染（静默期也亮卡计时）；历史/完成后只在有 reason 时显示。
                   <ReasonBlock
@@ -140,12 +189,27 @@ export function AiChatMessages({
                     )}
                   </div>
                 )}
+                {!m.pending && m.content && <CopyMsgBtn text={m.content} />}
               </div>
             )}
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
+      {showBackToBottom && (
+        // 回到底部浮钮：ScrollArea 根已 relative，绝对定位于消息区右下（不随 viewport 滚动）。
+        <Button
+          variant="outline"
+          size="sm"
+          className="absolute bottom-2 right-4 z-10 shadow-md"
+          onClick={() => {
+            stickToBottomRef.current = true;
+            bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+          }}
+        >
+          <ChevronDown className="h-3.5 w-3.5" /> 回到底部
+        </Button>
+      )}
     </ScrollArea>
   );
 }

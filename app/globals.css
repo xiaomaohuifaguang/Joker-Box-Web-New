@@ -703,6 +703,14 @@
   [data-ai-md] .group\/code:focus-within .ai-md-codebar { opacity: 1; }
 }
 
+/* 消息操作条（复制全文）：桌面 hover/focus-within 浮现；触屏常驻。
+   消息容器不在 [data-ai-md] 内（markdown 渲染区才打该标记），故挂 .group\/msg。 */
+@media (hover: hover) {
+  .ai-md-msgops { opacity: 0; transition: opacity var(--motion-duration) var(--motion-ease); }
+  .group\/msg:hover .ai-md-msgops,
+  .group\/msg:focus-within .ai-md-msgops { opacity: 1; }
+}
+
 /* Shiki 语法高亮：css-variables 主题（createCssVariablesTheme 工厂）把 token 颜色发成
    color: var(--shiki-*) 内联到 span；此处把槽位映射到项目语义 token。
    token 本身随 5 预设 × .dark 变，故高亮天然跟随主题——亮暗无需两份映射。
