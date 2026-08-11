@@ -173,8 +173,9 @@ export function AiChatMessages({
               </div>
             ) : (
               // 助手：无气泡——felt 左竖线 + 裸 markdown 散文，读起来像正在书写的文档（编辑感）。
-              // group/msg：hover 浮现消息操作条（复制全文）。
-              <div className="group/msg relative max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
+              // group/msg：hover 浮现消息操作条（复制全文）。min-w-0：flex 项默认 min-width:auto，
+              // 内容（宽代码/mermaid）会把容器撑破导致右侧被裁——给 0 让 flex 收缩、内部靠 overflow-x 滚动。
+              <div className="group/msg relative min-w-0 max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
                 {(m.reason || m.pending) && (
                   // pending 即渲染（静默期也亮卡计时）；历史/完成后只在有 reason 时显示。
                   <ReasonBlock

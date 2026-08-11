@@ -628,7 +628,7 @@
 }
 .react-flow__controls-button:last-child { border-bottom: 0; }
 .react-flow__controls-button:hover {
-  background: var(--muted);
+  background: var(--surface);
   color: var(--foreground);
 }
 .react-flow__controls-button svg { fill: currentColor; }
@@ -644,7 +644,7 @@
   color: var(--foreground);
 }
 .dark .react-flow__controls-button:hover {
-  background: var(--muted);
+  background: var(--surface);
 }
 
 /* MiniMap：工程小图，去重阴影、用边框定位。 */
@@ -712,6 +712,11 @@
   .group\/msg:focus-within .ai-md-msgops { opacity: 1; }
 }
 
+/* 普通文字长单行（无空格 URL/Token/长标识符）：break-words 只在软换行点断，连续长串不断 -> 溢出。
+   anywhere 允许任意点断开（比 break-all 更保表格布局）；inline code 同保。 */
+[data-ai-md] { overflow-wrap: anywhere; }
+[data-ai-md] code { overflow-wrap: anywhere; }
+
 /* Shiki 语法高亮：css-variables 主题（createCssVariablesTheme 工厂）把 token 颜色发成
    color: var(--shiki-*) 内联到 span；此处把槽位映射到项目语义 token。
    token 本身随 5 预设 × .dark 变，故高亮天然跟随主题——亮暗无需两份映射。
@@ -721,13 +726,15 @@
   --shiki-foreground: var(--foreground);
   --shiki-background: transparent;
   --shiki-token-keyword: var(--brand);
-  --shiki-token-constant: var(--felt);
+  /* 常量/数字/内置对象方法（support）：warning 琥珀，与 string(success 绿) 拉开。 */
+  --shiki-token-constant: var(--warning);
   --shiki-token-function: var(--info);
   --shiki-token-string: var(--success);
   --shiki-token-string-expression: var(--success);
   --shiki-token-comment: var(--muted-foreground);
   --shiki-token-link: var(--brand);
-  --shiki-token-parameter: var(--foreground);
+  /* 参数/变量给独立色（felt），不再是 foreground——普通标识符也有层次。 */
+  --shiki-token-parameter: var(--felt);
   --shiki-token-punctuation: var(--muted-foreground);
 }
 
@@ -736,6 +743,7 @@
 /* 块级数学公式横向滚动（窄抽屉不溢出）。 */
 [data-ai-md] .katex-display { overflow-x: auto; }
 
-/* Mermaid 图内文字随前景（SVG 文本用 fill，非 color）；svg 自适应宽度。 */
+/* Mermaid 图内文字随前景（SVG 文本用 fill，非 color）；svg 限宽防撑破窄抽屉（超出部分容器 overflow-x 滚动）。 */
+[data-ai-md] .ai-md-mermaid { max-width: 100%; }
 [data-ai-md] .ai-md-mermaid svg { max-width: 100%; height: auto; }
 [data-ai-md] .ai-md-mermaid .nodeLabel, [data-ai-md] .ai-md-mermaid .edgeLabel { fill: var(--foreground); }
