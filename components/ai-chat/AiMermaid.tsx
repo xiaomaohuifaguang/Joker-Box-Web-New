@@ -14,6 +14,7 @@ export function AiMermaid({ code }: { code: string }) {
     (async () => {
       if (typeof window === "undefined" || !ref.current) return;
       try {
+        setError(false); // 每次尝试前复位：流式中间态失败后，fence 闭合 code 变合法可自愈。
         const mermaid = (await import("mermaid")).default;
         const cs = getComputedStyle(document.documentElement);
         const v = (n: string) => cs.getPropertyValue(n).trim();
@@ -33,7 +34,7 @@ export function AiMermaid({ code }: { code: string }) {
             fontFamily: v("--body-font") || "inherit",
           },
         });
-        const id = `mmd-${Math.abs(hash(code))}`;
+        const id = `mmd-${Math.abs(hash(code))}-${mmdSeq++}`; // 序号防同会话重复图/hash 碰撞时并发 render 共享临时元素。
         const { svg } = await mermaid.render(id, code);
         if (!cancelled && ref.current) {
           ref.current.innerHTML = DOMPurify.sanitize(svg, {
@@ -50,18 +51,19 @@ export function AiMermaid({ code }: { code: string }) {
     // code 变化重渲；主题/明暗切换初版不监听（打开抽屉时按当前主题渲）。
   }, [code]);
 
-  if (error) {
-    return (
-      <div className="mb-2 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
-        图表渲染失败
-      </div>
-    );
-  }
+  // 容器常驻：ref 始终非空，错误仅作旁注（隐藏空容器），流式中间态失败后 code 变合法可自愈。
   return (
-    <div
-      ref={ref}
-      className="ai-md-mermaid mb-2 overflow-x-auto rounded-md border border-border/60 bg-surface p-3"
-    />
+    <>
+      {error && (
+        <div className="mb-2 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
+          图表渲染失败
+        </div>
+      )}
+      <div
+        ref={ref}
+        className={`ai-md-mermaid mb-2 overflow-x-auto rounded-md border border-border/60 bg-surface p-3${error ? " hidden" : ""}`}
+      />
+    </>
   );
 }
 
@@ -73,3 +75,6 @@ function hash(s: string): number {
   }
   return h;
 }
+
+// 渲染 id 序号（模块级）：同会话重复图/hash 碰撞时并发 render 不共享临时元素。
+let mmdSeq = 0;
