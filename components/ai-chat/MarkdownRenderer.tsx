@@ -10,6 +10,18 @@ import { cn } from "@/lib/utils";
 // 导致已落定（非流式）的 markdown 消息也被无谓重解析。
 const REMARK_PLUGINS = [remarkGfm];
 
+// GFM 排版适配：表格横向滚动包裹；hr 主题化。模块级常量（避开 react-hooks/static-components）。
+// 语言标签/复制等的 pre 映射在后续 Task 加入本对象。
+const MD_COMPONENTS = {
+  // 表格包一层可横向滚动的容器（窄抽屉不溢出）。
+  // react-markdown v10 不再给组件传 node（类型上标 node?: unknown 兼容旧签名）。
+  table: ({ className, children, ...props }: React.ComponentProps<"table"> & { node?: unknown }) => (
+    <div className="ai-md-table-wrap overflow-x-auto">
+      <table className={className} {...props}>{children}</table>
+    </div>
+  ),
+};
+
 export function MarkdownRenderer({
   content,
   className,
@@ -19,6 +31,7 @@ export function MarkdownRenderer({
 }) {
   return (
     <div
+      data-ai-md=""
       className={cn(
         "prose prose-sm dark:prose-invert max-w-none break-words",
         // 代码块/inline code 用主题 token；去 prose 给 code 加的引号。
@@ -31,7 +44,7 @@ export function MarkdownRenderer({
         className,
       )}
     >
-      <Markdown remarkPlugins={REMARK_PLUGINS}>{content}</Markdown>
+      <Markdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>{content}</Markdown>
     </div>
   );
 }

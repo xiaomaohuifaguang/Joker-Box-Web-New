@@ -670,3 +670,26 @@
 @media (prefers-reduced-motion: reduce) {
   .flow-edge-animated .react-flow__edge-path { animation: none; }
 }
+
+/* ===== AI 会话 markdown 内容区（[data-ai-md] 作用域，随 5 预设 × 明暗）===== */
+/* 表格：边框/表头/斑马纹走 token；横向滚动由 .ai-md-table-wrap 提供。 */
+[data-ai-md] .ai-md-table-wrap { margin: 0.5rem 0; border: 1px solid var(--border); border-radius: var(--radius-md); }
+[data-ai-md] table { margin: 0; border-collapse: collapse; width: 100%; font-size: 0.85em; }
+[data-ai-md] table th,
+[data-ai-md] table td { border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: left; }
+[data-ai-md] table thead th { background: color-mix(in oklab, var(--muted) 60%, transparent); color: var(--foreground); font-weight: 600; }
+[data-ai-md] table tbody tr:nth-child(even) { background: color-mix(in oklab, var(--muted) 30%, transparent); }
+
+/* 引用块：felt 左线 + 弱化文字。 */
+[data-ai-md] blockquote { border-left: 2px solid color-mix(in oklab, var(--felt) 55%, transparent); padding-left: 0.75rem; color: var(--muted-foreground); font-style: normal; margin: 0.5rem 0; }
+[data-ai-md] blockquote p { margin: 0.25rem 0; }
+
+/* 分割线：border token。 */
+[data-ai-md] hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+
+/* GFM 任务列表复选框：accent 化 + 禁原生 margin 怪异。 */
+[data-ai-md] input[type="checkbox"] { accent-color: var(--brand); margin: 0 0.35rem 0 0; vertical-align: middle; }
+[data-ai-md] li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.25rem; }
+
+/* 删除线颜色弱化。 */
+[data-ai-md] del { color: var(--muted-foreground); }
