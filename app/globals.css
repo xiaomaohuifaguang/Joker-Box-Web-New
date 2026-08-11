@@ -729,3 +729,6 @@
   --shiki-token-parameter: var(--foreground);
   --shiki-token-punctuation: var(--muted-foreground);
 }
+
+/* KaTeX 公式颜色跟随前景（暗色可读）。 */
+[data-ai-md] .katex { color: var(--foreground); font-size: 1.02em; }

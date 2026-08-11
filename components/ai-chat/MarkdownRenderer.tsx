@@ -3,17 +3,22 @@
 import { type ReactNode } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeShiki from "@shikijs/rehype";
+import rehypeKatex from "rehype-katex";
 import { createCssVariablesTheme } from "shiki/core";
 import type { PluggableList } from "unified";
 import { cn } from "@/lib/utils";
 import { AiCodeBlock } from "./AiCodeBlock";
+// KaTeX 样式随本懒加载模块（AiMarkdown next/dynamic ssr:false）进包，不进首屏 bundle。
+import "katex/dist/katex.min.css";
 
 // react-markdown 直接渲染（输出 React 树，XSS 安全）。仅供 AiMarkdown 懒加载封装内部用。
 
 // 提升到模块作用域：每次渲染新建 [remarkGfm] 会让 unified 因插件引用变化而重跑管线，
 // 导致已落定（非流式）的 markdown 消息也被无谓重解析。
-const REMARK_PLUGINS = [remarkGfm];
+// remarkMath 在 remark 侧解析 $…$ / $$…$$ 为 math 节点，交给 rehype-katex 渲染。
+const REMARK_PLUGINS = [remarkGfm, remarkMath];
 
 // Shiki 高亮：css-variables 主题把 token 颜色发成 var(--shiki-*)，实际取值由
 // app/globals.css [data-ai-md] 的 token 映射决定（随 5 预设 × 明暗）。
@@ -23,12 +28,16 @@ const REMARK_PLUGINS = [remarkGfm];
 // addLanguageClass: 把 language-xxx 类加回 <code>，AiCodeBlock 的语言标签提取依赖它。
 // 不设 fallbackLanguage/defaultLanguage：未知/无语言代码块保持原样（不高亮、标签正确）。
 // 模块级常量：主题/插件数组引用稳定，避免 unified 因引用变化重跑管线（已落定消息被重高亮）。
+// 顺序关键：Shiki 必须先于 KaTeX——Shiki 只处理代码节点，先跑可避免它触碰 math 节点；
+// rehype-katex 随后把 remark-math 产出的 math 节点渲染为 .katex。
 const SHIKI_THEME = createCssVariablesTheme({ variablePrefix: "--shiki-" });
 const REHYPE_PLUGINS: PluggableList = [
   [rehypeShiki, { theme: SHIKI_THEME, addLanguageClass: true }],
+  rehypeKatex,
 ];
-// 流式降级：pending 消息内容每帧变，跑 Shiki 会每帧重高亮；传空表跳过（代码卡仍在，仅无着色）。
-const EMPTY: PluggableList = [];
+// 流式降级：pending 消息内容每帧变，跑 Shiki 会每帧重高亮；仅跳过 Shiki（代码卡仍在，仅无着色）。
+// 数学仍渲染——KaTeX 开销远低于 Shiki，流式期保留公式可读性。
+const REHYPE_PLAIN: PluggableList = [rehypeKatex];
 
 // GFM 排版适配：表格横向滚动包裹；hr 主题化。模块级常量（避开 react-hooks/static-components）。
 // 语言标签/复制等的 pre 映射在后续 Task 加入本对象。
@@ -74,7 +83,7 @@ export function MarkdownRenderer({
         className,
       )}
     >
-      <Markdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={plain ? EMPTY : REHYPE_PLUGINS} components={MD_COMPONENTS}>{content}</Markdown>
+      <Markdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={plain ? REHYPE_PLAIN : REHYPE_PLUGINS} components={MD_COMPONENTS}>{content}</Markdown>
     </div>
   );
 }
