@@ -7,7 +7,6 @@ import remarkMath from "remark-math";
 import rehypeShiki from "@shikijs/rehype";
 import rehypeKatex from "rehype-katex";
 import { createCssVariablesTheme } from "shiki/core";
-import { bundledLanguages } from "shiki";
 import { visit } from "unist-util-visit";
 import type { Node } from "unist";
 import type { PluggableList } from "unified";
@@ -18,23 +17,35 @@ import "katex/dist/katex.min.css";
 
 // react-markdown 直接渲染（输出 React 树，XSS 安全）。仅供 AiMarkdown 懒加载封装内部用。
 
-// ---- 模型 fence 笔误容错 -----------------------------------------------------------------
-// 模型常把代码 fence 写成 ```html<!DOCTYPE html>… / ```javascriptconst …——语言名后没换行，
-// info string 把首行内容吞进语言名：lang 变成 "html<!DOCTYPE"/"javascriptconst"。后果：
-// Shiki 拿未知语言不高亮、被吞的首行丢失（显示不全）、复制缺首行。此处容错拆开。
-// SHIKI_LANGS：known fence 语言集合（346 种），仅计算一次（进程内缓存）。
+// ---- 模型 fence 笔误容错 + Shiki 语言裁剪 ------------------------------------------------
+// 两件事共用一份「聊天常见语言」白名单：
+// 1) fence 容错：模型常写成 ```html<!DOCTYPE>…/```javascriptconst…（语言名后没换行），info string
+//    把首行吞进语言名。用白名单做前缀匹配拆出真语言 + 补回被吞首行；拆出的语言必在白名单内 → 能高亮。
+// 2) Shiki 裁剪：@shikijs/rehype 默认加载全部 346 种语法（dev 下 ~489 个 chunk 请求、全量 wasm 初始化，
+//    历史消息首渲染延迟数秒）。传 langs 白名单只加载这些 → 请求数与初始化体积大降，高亮更快出现。
+// HIGHLIGHT_LANGS：聊天高频语言（fence 直写 + 常见别名归一后的 grammar key 都覆盖）。
+const HIGHLIGHT_LANGS = [
+  // 文本/兜底
+  "text",
+  // Web 三件套 + 框架
+  "html", "css", "scss", "less", "javascript", "typescript", "jsx", "tsx", "vue", "svelte", "json", "jsonc",
+  // 后端/系统
+  "python", "java", "go", "rust", "c", "cpp", "csharp", "php", "ruby", "kotlin", "swift", "sql",
+  // 脚本/配置/数据
+  "bash", "shellscript", "powershell", "yaml", "toml", "ini", "xml", "markdown", "dockerfile", "makefile", "graphql", "regex",
+] as const;
+
+// fence 容错用的语言识别集合 = 高亮白名单 + 高频 fence 别名（模型爱写的简写，非 grammar key）。
 const SHIKI_LANGS: ReadonlySet<string> = new Set([
-  ...Object.keys(bundledLanguages),
-  // 高频 fence 别名（模型爱写）：不属于 shiki grammar key，但应被识别为语言而非内容。
-  "vue", "react", "jsx", "tsx", "ts", "js", "py", "rb", "sh", "shell", "bash", "zsh",
-  "yml", "yaml", "md", "markdown", "plaintext", "text", "txt", "docker", "makefile",
+  ...HIGHLIGHT_LANGS,
+  "react", "ts", "js", "py", "rb", "sh", "shell", "zsh", "yml", "md", "plaintext", "txt", "docker",
 ]);
 
-// 语言别名 → shiki grammar key（拆出别名后映射回真实高亮语言；无映射则保留原名，Shiki 不认识则不高亮）。
+// 语言别名 → shiki grammar key（拆出别名后映射回真实高亮语言；无映射则保留原名）。
 const LANG_ALIAS: Record<string, string> = {
-  vue: "vue", react: "jsx", ts: "typescript", js: "javascript", py: "python", rb: "ruby",
+  react: "jsx", ts: "typescript", js: "javascript", py: "python", rb: "ruby",
   sh: "bash", shell: "bash", zsh: "bash", yml: "yaml", md: "markdown",
-  plaintext: "text", txt: "text", docker: "dockerfile", makefile: "makefile",
+  plaintext: "text", txt: "text", docker: "dockerfile",
 };
 
 // 把 lang 规范化为 shiki 可识别的语言（别名 → grammar key）；未知原样返回。
@@ -93,7 +104,8 @@ const REMARK_PLUGINS: PluggableList = [remarkGfm, remarkMath, remarkMendFence];
 // rehype-katex 随后把 remark-math 产出的 math 节点渲染为 .katex。
 const SHIKI_THEME = createCssVariablesTheme({ variablePrefix: "--shiki-" });
 const REHYPE_PLUGINS: PluggableList = [
-  [rehypeShiki, { theme: SHIKI_THEME, addLanguageClass: true }],
+  // langs 白名单：只加载聊天常见语法（默认全量 346 → dev ~489 chunk 请求、首渲染延迟数秒）。
+  [rehypeShiki, { theme: SHIKI_THEME, addLanguageClass: true, langs: HIGHLIGHT_LANGS as unknown as string[] }],
   rehypeKatex,
 ];
 // 流式降级：pending 消息内容每帧变，跑 Shiki 会每帧重高亮；仅跳过 Shiki（代码卡仍在，仅无着色）。
