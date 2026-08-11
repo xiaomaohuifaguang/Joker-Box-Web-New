@@ -163,9 +163,12 @@ export function AiChatMessages({
     // relative 容器：回到底部浮钮的定位祖先（不滚动），ScrollArea 仍 flex-1 内部滚动。
     <div className="relative flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1 px-4 py-3">
-        <div className="flex flex-col gap-3">
+        {/* min-w-0：flex 容器/项默认 min-width:auto，会被宽代码卡(<pre> 超长行)顶破、
+            把超出部分顶到 viewport(overflowX:hidden)被裁 → 显示不全。补 0 让链收缩，
+            宽内容交给代码卡 <pre> 内部 overflow-x-auto 滚动。 */}
+        <div className="flex min-w-0 flex-col gap-3">
         {messages.map((m) => (
-          <div key={m.key} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+          <div key={m.key} className={cn("flex min-w-0", m.role === "user" ? "justify-end" : "justify-start")}>
             {m.role === "user" ? (
               // 用户：唯一实心气泡（brand），右侧。
               <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">

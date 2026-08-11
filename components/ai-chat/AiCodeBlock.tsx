@@ -76,7 +76,9 @@ export function AiCodeBlock({
   if (allowMermaid && lang === "mermaid") return <AiMermaid code={codeText} />;
 
   return (
-    <div className="group/code relative mb-2 overflow-hidden rounded-md border border-border/60 bg-muted">
+    // max-w-full + overflow-hidden：block 容器会被 <pre> 里的超长行顶宽（min-w-0 对 block 无效），
+    // 把卡片钳回父宽、长行交给内部 <pre> 的 overflow-x-auto 滚动，不向上传导撑破消息列。
+    <div className="group/code relative mb-2 w-full max-w-full overflow-hidden rounded-md border border-border/60 bg-muted">
       {/* 顶栏：hover 浮现（移动端常驻，靠全局 CSS [data-ai-md] 下 hover:none 处理）。 */}
       <div className="ai-md-codebar flex items-center justify-between border-b border-border/60 bg-muted/80 px-2.5 py-1">
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{lang || "code"}</span>

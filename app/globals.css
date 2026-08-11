@@ -717,6 +717,14 @@
 [data-ai-md] { overflow-wrap: anywhere; }
 [data-ai-md] code { overflow-wrap: anywhere; }
 
+/* 宽内容（代码卡 <pre> 超长行 / mermaid 宽图）会沿 block 容器链把 prose/消息列顶宽，
+   最终被 ScrollArea viewport(overflowX:hidden) 裁掉右侧 ->「显示不全」。
+   block 容器的 min-w-0/max-w-full/width:100% 都拦不住这种宽度向上传导（% 参照互相循环），
+   唯一可靠截断：给消息列一个独立 inline-size 上下文 contain:inline-size——
+   元素尺寸不再受内部内容影响、钳回父宽，宽内容交给代码卡 <pre> 内部 overflow-x 滚动。 */
+.group\/msg { contain: inline-size; }
+[data-ai-md] .group\/code { max-width: 100%; }
+
 /* Shiki 语法高亮：css-variables 主题（createCssVariablesTheme 工厂）把 token 颜色发成
    color: var(--shiki-*) 内联到 span；此处把槽位映射到项目语义 token。
    token 本身随 5 预设 × .dark 变，故高亮天然跟随主题——亮暗无需两份映射。
