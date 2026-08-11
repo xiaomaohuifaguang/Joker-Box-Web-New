@@ -44,12 +44,17 @@ function extractLang(node: unknown): string {
 
 // 代码块卡：顶栏（语言标签 + 复制钮，hover 浮现 / 移动端常驻）+ 横向滚动代码区。
 // 作为 react-markdown 的 pre 组件接入（children = 高亮后的 <code>，node = hast pre 节点）。
+// allowMermaid=false（流式 pending 期）：mermaid 源码按普通代码卡渲染，避免每个 chunk
+// 都让 AiMermaid 拿半截非法源码重渲染（错误卡闪烁 + 布局抖动）；落定后再分流成图。
 export function AiCodeBlock({
   node,
   children,
+  allowMermaid = true,
 }: {
   node?: unknown;
   children?: ReactNode;
+  /** mermaid 代码块是否分流成图；false 时按普通代码卡渲染（流式降级）。 */
+  allowMermaid?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const lang = extractLang(node);
@@ -67,7 +72,8 @@ export function AiCodeBlock({
   }
 
   // mermaid 代码块分流：渲成图而非代码卡（extractText 取的是原始图源，高亮 span 不影响 .value 拼接）。
-  if (lang === "mermaid") return <AiMermaid code={codeText} />;
+  // 流式期 allowMermaid=false：fence 未闭合时半截图源是非法的，分流会让错误卡每 chunk 闪——按普通代码卡渲染。
+  if (allowMermaid && lang === "mermaid") return <AiMermaid code={codeText} />;
 
   return (
     <div className="group/code relative mb-2 overflow-hidden rounded-md border border-border/60 bg-muted">

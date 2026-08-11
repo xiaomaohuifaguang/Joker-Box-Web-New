@@ -677,8 +677,9 @@
 [data-ai-md] table { margin: 0; border-collapse: collapse; width: 100%; font-size: 0.85em; }
 [data-ai-md] table th,
 [data-ai-md] table td { border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: left; }
-[data-ai-md] table thead th { background: color-mix(in oklab, var(--muted) 60%, transparent); color: var(--foreground); font-weight: 600; }
-[data-ai-md] table tbody tr:nth-child(even) { background: color-mix(in oklab, var(--muted) 30%, transparent); }
+/* 注：项目无原始 --muted token（仅 --color-muted 别名 → --surface），直接用 --surface。 */
+[data-ai-md] table thead th { background: color-mix(in oklab, var(--surface) 60%, transparent); color: var(--foreground); font-weight: 600; }
+[data-ai-md] table tbody tr:nth-child(even) { background: color-mix(in oklab, var(--surface) 30%, transparent); }
 
 /* 引用块：felt 左线 + 弱化文字。 */
 [data-ai-md] blockquote { border-left: 2px solid color-mix(in oklab, var(--felt) 55%, transparent); padding-left: 0.75rem; color: var(--muted-foreground); font-style: normal; margin: 0.5rem 0; }
@@ -732,7 +733,9 @@
 
 /* KaTeX 公式颜色跟随前景（暗色可读）。 */
 [data-ai-md] .katex { color: var(--foreground); font-size: 1.02em; }
+/* 块级数学公式横向滚动（窄抽屉不溢出）。 */
+[data-ai-md] .katex-display { overflow-x: auto; }
 
-/* Mermaid 图内文字随前景；svg 自适应宽度。 */
+/* Mermaid 图内文字随前景（SVG 文本用 fill，非 color）；svg 自适应宽度。 */
 [data-ai-md] .ai-md-mermaid svg { max-width: 100%; height: auto; }
-[data-ai-md] .ai-md-mermaid .nodeLabel, [data-ai-md] .ai-md-mermaid .edgeLabel { color: var(--foreground); }
+[data-ai-md] .ai-md-mermaid .nodeLabel, [data-ai-md] .ai-md-mermaid .edgeLabel { fill: var(--foreground); }

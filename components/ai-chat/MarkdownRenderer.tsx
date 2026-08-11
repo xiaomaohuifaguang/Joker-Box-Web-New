@@ -40,21 +40,33 @@ const REHYPE_PLUGINS: PluggableList = [
 const REHYPE_PLAIN: PluggableList = [rehypeKatex];
 
 // GFM 排版适配：表格横向滚动包裹；hr 主题化。模块级常量（避开 react-hooks/static-components）。
-// 语言标签/复制等的 pre 映射在后续 Task 加入本对象。
+// 表格包装在落定/流式两种组件表间共享，定义一次引用两处（DRY）。
+// react-markdown v10 仍传 hast node（passNode:true）；本 table 包装不需要，仅剥离防污染 DOM。
+const MdTable = ({ node: _node, className, children, ...props }: React.ComponentProps<"table"> & { node?: unknown }) => {
+  void _node; // 剥离 react-markdown 传入的 hast node，避免落进 ...props 污染 DOM
+  return (
+    <div className="ai-md-table-wrap overflow-x-auto">
+      <table className={className} {...props}>{children}</table>
+    </div>
+  );
+};
+
+// 落定态组件表：代码块卡（复制/语言标签/滚动 + mermaid 分流成图）。
+// node = hast pre 节点，AiCodeBlock 用它提取语言/源码。
 const MD_COMPONENTS = {
-  // 表格包一层可横向滚动的容器（窄抽屉不溢出）。
-  // react-markdown v10 仍传 hast node（passNode:true）；本 table 包装不需要，仅剥离防污染 DOM。后续 pre 组件会用 node 提取语言/源码。
-  table: ({ node: _node, className, children, ...props }: React.ComponentProps<"table"> & { node?: unknown }) => {
-    void _node; // 剥离 react-markdown 传入的 hast node，避免落进 ...props 污染 DOM
-    return (
-      <div className="ai-md-table-wrap overflow-x-auto">
-        <table className={className} {...props}>{children}</table>
-      </div>
-    );
-  },
-  // 代码块卡（复制/语言标签/滚动）。node = hast pre 节点，AiCodeBlock 用它提取语言/源码。
+  table: MdTable,
   pre: ({ node, children }: { node?: unknown; children?: ReactNode }) => (
     <AiCodeBlock node={node}>{children}</AiCodeBlock>
+  ),
+};
+
+// 流式降级组件表（pending）：mermaid 不分流成图（fence 未闭合的半截图源每 chunk 触发
+// AiMermaid 重渲染，错误卡闪烁 + 布局抖动），按普通代码卡渲染；落定（plain→false）后换 MD_COMPONENTS 自动出图。
+// 与 REHYPE_PLAIN 配套：KaTeX 仍在，仅无 Shiki 着色 + 无 mermaid 图。
+const MD_COMPONENTS_PLAIN = {
+  table: MdTable,
+  pre: ({ node, children }: { node?: unknown; children?: ReactNode }) => (
+    <AiCodeBlock allowMermaid={false} node={node}>{children}</AiCodeBlock>
   ),
 };
 
@@ -83,7 +95,7 @@ export function MarkdownRenderer({
         className,
       )}
     >
-      <Markdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={plain ? REHYPE_PLAIN : REHYPE_PLUGINS} components={MD_COMPONENTS}>{content}</Markdown>
+      <Markdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={plain ? REHYPE_PLAIN : REHYPE_PLUGINS} components={plain ? MD_COMPONENTS_PLAIN : MD_COMPONENTS}>{content}</Markdown>
     </div>
   );
 }
