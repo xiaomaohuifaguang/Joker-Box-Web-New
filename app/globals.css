@@ -693,3 +693,12 @@
 
 /* 删除线颜色弱化。 */
 [data-ai-md] del { color: var(--muted-foreground); }
+
+/* 代码卡内 pre：清掉卡片边框/背景重叠，仅留滚动与留白；字号 mono。 */
+[data-ai-md] pre.ai-md-pre { margin: 0; border: none; background: transparent; font-family: var(--mono-font); }
+/* 顶栏 hover 浮现（桌面）；触屏常驻。 */
+@media (hover: hover) {
+  [data-ai-md] .ai-md-codebar { opacity: 0; transition: opacity var(--motion-duration) var(--motion-ease); }
+  [data-ai-md] .group\/code:hover .ai-md-codebar,
+  [data-ai-md] .group\/code:focus-within .ai-md-codebar { opacity: 1; }
+}

@@ -1,8 +1,10 @@
 "use client";
 
+import { type ReactNode } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { AiCodeBlock } from "./AiCodeBlock";
 
 // react-markdown 直接渲染（输出 React 树，XSS 安全）。仅供 AiMarkdown 懒加载封装内部用。
 
@@ -23,6 +25,10 @@ const MD_COMPONENTS = {
       </div>
     );
   },
+  // 代码块卡（复制/语言标签/滚动）。node = hast pre 节点，AiCodeBlock 用它提取语言/源码。
+  pre: ({ node, children }: { node?: unknown; children?: ReactNode }) => (
+    <AiCodeBlock node={node}>{children}</AiCodeBlock>
+  ),
 };
 
 export function MarkdownRenderer({
