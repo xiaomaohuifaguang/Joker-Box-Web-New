@@ -160,8 +160,10 @@ export function AiChatMessages({
   }
 
   return (
-    <ScrollArea className="min-h-0 flex-1 px-4 py-3">
-      <div className="flex flex-col gap-3">
+    // relative 容器：回到底部浮钮的定位祖先（不滚动），ScrollArea 仍 flex-1 内部滚动。
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <ScrollArea className="min-h-0 flex-1 px-4 py-3">
+        <div className="flex flex-col gap-3">
         {messages.map((m) => (
           <div key={m.key} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
             {m.role === "user" ? (
@@ -195,13 +197,15 @@ export function AiChatMessages({
           </div>
         ))}
         <div ref={bottomRef} />
-      </div>
+        </div>
+      </ScrollArea>
       {showBackToBottom && (
-        // 回到底部浮钮：ScrollArea 根已 relative，绝对定位于消息区右下（不随 viewport 滚动）。
+        // 回到底部浮钮：作 ScrollArea 的兄弟节点（viewport 会随内容滚动，不能放其内），
+        // 绝对定位于外层 relative 容器右下，任何滚动位置都钉在消息区角落。
         <Button
           variant="outline"
           size="sm"
-          className="absolute bottom-2 right-4 z-10 shadow-md"
+          className="absolute bottom-3 right-3 z-10 shadow-md"
           onClick={() => {
             stickToBottomRef.current = true;
             bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -210,6 +214,6 @@ export function AiChatMessages({
           <ChevronDown className="h-3.5 w-3.5" /> 回到底部
         </Button>
       )}
-    </ScrollArea>
+    </div>
   );
 }
