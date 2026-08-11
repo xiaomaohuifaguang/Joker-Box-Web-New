@@ -7,6 +7,9 @@ import remarkMath from "remark-math";
 import rehypeShiki from "@shikijs/rehype";
 import rehypeKatex from "rehype-katex";
 import { createCssVariablesTheme } from "shiki/core";
+import { bundledLanguages } from "shiki";
+import { visit } from "unist-util-visit";
+import type { Node } from "unist";
 import type { PluggableList } from "unified";
 import { cn } from "@/lib/utils";
 import { AiCodeBlock } from "./AiCodeBlock";
@@ -15,10 +18,68 @@ import "katex/dist/katex.min.css";
 
 // react-markdown 直接渲染（输出 React 树，XSS 安全）。仅供 AiMarkdown 懒加载封装内部用。
 
+// ---- 模型 fence 笔误容错 -----------------------------------------------------------------
+// 模型常把代码 fence 写成 ```html<!DOCTYPE html>… / ```javascriptconst …——语言名后没换行，
+// info string 把首行内容吞进语言名：lang 变成 "html<!DOCTYPE"/"javascriptconst"。后果：
+// Shiki 拿未知语言不高亮、被吞的首行丢失（显示不全）、复制缺首行。此处容错拆开。
+// SHIKI_LANGS：known fence 语言集合（346 种），仅计算一次（进程内缓存）。
+const SHIKI_LANGS: ReadonlySet<string> = new Set([
+  ...Object.keys(bundledLanguages),
+  // 高频 fence 别名（模型爱写）：不属于 shiki grammar key，但应被识别为语言而非内容。
+  "vue", "react", "jsx", "tsx", "ts", "js", "py", "rb", "sh", "shell", "bash", "zsh",
+  "yml", "yaml", "md", "markdown", "plaintext", "text", "txt", "docker", "makefile",
+]);
+
+// 语言别名 → shiki grammar key（拆出别名后映射回真实高亮语言；无映射则保留原名，Shiki 不认识则不高亮）。
+const LANG_ALIAS: Record<string, string> = {
+  vue: "vue", react: "jsx", ts: "typescript", js: "javascript", py: "python", rb: "ruby",
+  sh: "bash", shell: "bash", zsh: "bash", yml: "yaml", md: "markdown",
+  plaintext: "text", txt: "text", docker: "dockerfile", makefile: "makefile",
+};
+
+// 把 lang 规范化为 shiki 可识别的语言（别名 → grammar key）；未知原样返回。
+function normalizeLang(lang: string): string {
+  const lower = lang.toLowerCase();
+  if (SHIKI_LANGS.has(lower) && LANG_ALIAS[lower]) return LANG_ALIAS[lower];
+  return lang;
+}
+
+// remark transformer（mdast 阶段）：修正 code 节点的 lang 与 value。
+// 1) 容错拆分：lang 以某已知语言开头但其后还拼了内容（```html<!DOCTYPE）→ 拆出语言 + 被吞部分补回代码开头。
+// 2) 别名归一：lang 是已知别名（```ts ```py）→ 映射到 shiki grammar key，恢复高亮。
+function remarkMendFence() {
+  return (tree: Node) => {
+    visit(tree, "code", (node: Node & { lang?: string | null; value?: string }) => {
+      const lang = node.lang;
+      if (!lang || typeof node.value !== "string") return;
+      const lower = lang.toLowerCase();
+      if (SHIKI_LANGS.has(lower)) {
+        // 已是合法语言：仅别名归一（ts→typescript 等），value 不动。
+        node.lang = normalizeLang(lang);
+        return;
+      }
+      // 找「已知语言前缀 + 拼接内容」：取能整除 lang 前缀的最长已知语言。
+      let splitAt = -1;
+      let matched = "";
+      for (const cand of SHIKI_LANGS) {
+        if (lower.startsWith(cand) && cand.length > matched.length) {
+          matched = cand;
+          splitAt = cand.length;
+        }
+      }
+      if (splitAt < 0) return; // 不含已知语言前缀：保持原样（Shiki 不高亮，但不臆改）。
+      const swallowed = lang.slice(splitAt); // 被吞进语言名的首行内容片段。
+      node.lang = normalizeLang(matched);
+      node.value = swallowed + node.value; // 补回（原 value 首行缺了这部分 + 换行）。
+    });
+  };
+}
+
 // 提升到模块作用域：每次渲染新建 [remarkGfm] 会让 unified 因插件引用变化而重跑管线，
 // 导致已落定（非流式）的 markdown 消息也被无谓重解析。
 // remarkMath 在 remark 侧解析 $…$ / $$…$$ 为 math 节点，交给 rehype-katex 渲染。
-const REMARK_PLUGINS = [remarkGfm, remarkMath];
+// remarkMendFence 修模型 fence 笔误（见上），须在 Shiki 前把 lang 修正。
+const REMARK_PLUGINS: PluggableList = [remarkGfm, remarkMath, remarkMendFence];
 
 // Shiki 高亮：css-variables 主题把 token 颜色发成 var(--shiki-*)，实际取值由
 // app/globals.css [data-ai-md] 的 token 映射决定（随 5 预设 × 明暗）。
