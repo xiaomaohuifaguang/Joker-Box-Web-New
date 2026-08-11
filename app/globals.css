@@ -702,3 +702,22 @@
   [data-ai-md] .group\/code:hover .ai-md-codebar,
   [data-ai-md] .group\/code:focus-within .ai-md-codebar { opacity: 1; }
 }
+
+/* Shiki 语法高亮：css-variables 主题（createCssVariablesTheme 工厂）把 token 颜色发成
+   color: var(--shiki-*) 内联到 span；此处把槽位映射到项目语义 token。
+   token 本身随 5 预设 × .dark 变，故高亮天然跟随主题——亮暗无需两份映射。
+   槽位清单以主题工厂源码为准（@shikijs/core theme-css-variables.ts）；
+   pre 上的 --shiki-background 内联 style 被 AiCodeBlock 自渲染的 pre 丢弃（卡片 bg-muted 为准）。 */
+[data-ai-md] {
+  --shiki-foreground: var(--foreground);
+  --shiki-background: transparent;
+  --shiki-token-keyword: var(--brand);
+  --shiki-token-constant: var(--felt);
+  --shiki-token-function: var(--info);
+  --shiki-token-string: var(--success);
+  --shiki-token-string-expression: var(--success);
+  --shiki-token-comment: var(--muted-foreground);
+  --shiki-token-link: var(--brand);
+  --shiki-token-parameter: var(--foreground);
+  --shiki-token-punctuation: var(--muted-foreground);
+}

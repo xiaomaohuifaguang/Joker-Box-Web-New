@@ -134,7 +134,7 @@ export function AiChatMessages({
                 )}
                 {m.content && (
                   <div className="relative">
-                    <AiMarkdown content={m.content} />
+                    <AiMarkdown content={m.content} plain={!!m.pending} />
                     {m.pending && (
                       <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-current align-middle" />
                     )}

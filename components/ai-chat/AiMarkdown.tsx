@@ -16,10 +16,13 @@ const MarkdownRenderer = dynamic(
 export function AiMarkdown({
   content,
   className,
+  plain,
 }: {
   content: string;
   className?: string;
+  /** 流式降级：pending 时跳过 Shiki 高亮（透传给 MarkdownRenderer）。 */
+  plain?: boolean;
 }) {
   if (!content) return null;
-  return <MarkdownRenderer content={content} className={cn("text-sm", className)} />;
+  return <MarkdownRenderer content={content} className={cn("text-sm", className)} plain={plain} />;
 }
