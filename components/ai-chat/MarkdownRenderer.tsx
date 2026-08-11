@@ -14,12 +14,15 @@ const REMARK_PLUGINS = [remarkGfm];
 // 语言标签/复制等的 pre 映射在后续 Task 加入本对象。
 const MD_COMPONENTS = {
   // 表格包一层可横向滚动的容器（窄抽屉不溢出）。
-  // react-markdown v10 不再给组件传 node（类型上标 node?: unknown 兼容旧签名）。
-  table: ({ className, children, ...props }: React.ComponentProps<"table"> & { node?: unknown }) => (
-    <div className="ai-md-table-wrap overflow-x-auto">
-      <table className={className} {...props}>{children}</table>
-    </div>
-  ),
+  // react-markdown v10 仍传 hast node（passNode:true）；本 table 包装不需要，仅剥离防污染 DOM。后续 pre 组件会用 node 提取语言/源码。
+  table: ({ node: _node, className, children, ...props }: React.ComponentProps<"table"> & { node?: unknown }) => {
+    void _node; // 剥离 react-markdown 传入的 hast node，避免落进 ...props 污染 DOM
+    return (
+      <div className="ai-md-table-wrap overflow-x-auto">
+        <table className={className} {...props}>{children}</table>
+      </div>
+    );
+  },
 };
 
 export function MarkdownRenderer({
