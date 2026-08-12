@@ -32,19 +32,26 @@ function parseView(search: string): View {
   return { name: "list" };
 }
 
-function viewToUrl(v: View): string {
+// 基础路径：通用 /process/approval；分类 /process/approval/{type}。
+function basePath(processType?: string): string {
+  return processType ? `/process/approval/${processType}` : "/process/approval";
+}
+
+function viewToUrl(v: View, processType?: string): string {
+  const base = basePath(processType);
   if (v.name === "detail") {
-    let url = `/process/approval?view=${v.instanceId}`;
+    let url = `${base}?view=${v.instanceId}`;
     if (v.taskId != null) url += `&taskId=${v.taskId}`;
     if (v.kind !== "view") url += `&kind=${v.kind}`;
     return url;
   }
-  return "/process/approval";
+  return base;
 }
 
 // 审批中心视图编排：list / detail 两视图切换；detail 按 kind 分处理/认领/查看。
 // 权威视图 = 响应式 URL（useSearchParams）；内部 go() 用 override 立即生效。同 ApplicationInner。
-export function ApprovalInner() {
+// processType：分类（/process/approval/oa -> "oa"）；通用页不传（undefined）。
+export function ApprovalInner({ processType }: { processType?: string }) {
   const searchParams = useSearchParams();
   const urlStr = searchParams.toString();
   const urlView: View = parseView(urlStr);
@@ -63,6 +70,11 @@ export function ApprovalInner() {
   const [activeTab, setActiveTab] = useState<ApprovalInstanceType>("4");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // 确认 processType 生效（后续接 queryPage 传参 prcessType）。
+  useEffect(() => {
+    console.log("[process/approval] processType =", processType ?? "(通用)");
+  }, [processType]);
+
   // 浏览器前进/后退：popstate 直接用 window.location 重算（useSearchParams 在静态导出下可能滞后）。
   useEffect(() => {
     const onPop = () => setOverride(parseView(window.location.search));
@@ -70,10 +82,13 @@ export function ApprovalInner() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const go = useCallback((v: View) => {
-    window.history.pushState(null, "", viewToUrl(v));
-    setOverride(v);
-  }, []);
+  const go = useCallback(
+    (v: View) => {
+      window.history.pushState(null, "", viewToUrl(v, processType));
+      setOverride(v);
+    },
+    [processType],
+  );
 
   // 认领/处理成功：回列表并刷新。
   const handleDone = useCallback(() => {

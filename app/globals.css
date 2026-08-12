@@ -628,7 +628,7 @@
 }
 .react-flow__controls-button:last-child { border-bottom: 0; }
 .react-flow__controls-button:hover {
-  background: var(--muted);
+  background: var(--surface);
   color: var(--foreground);
 }
 .react-flow__controls-button svg { fill: currentColor; }
@@ -644,7 +644,7 @@
   color: var(--foreground);
 }
 .dark .react-flow__controls-button:hover {
-  background: var(--muted);
+  background: var(--surface);
 }
 
 /* MiniMap：工程小图，去重阴影、用边框定位。 */
@@ -670,3 +670,88 @@
 @media (prefers-reduced-motion: reduce) {
   .flow-edge-animated .react-flow__edge-path { animation: none; }
 }
+
+/* ===== AI 会话 markdown 内容区（[data-ai-md] 作用域，随 5 预设 × 明暗）===== */
+/* 表格：边框/表头/斑马纹走 token；横向滚动由 .ai-md-table-wrap 提供。 */
+[data-ai-md] .ai-md-table-wrap { margin: 0.5rem 0; border: 1px solid var(--border); border-radius: var(--radius-md); }
+[data-ai-md] table { margin: 0; border-collapse: collapse; width: 100%; font-size: 0.85em; }
+[data-ai-md] table th,
+[data-ai-md] table td { border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: left; }
+/* 注：项目无原始 --muted token（仅 --color-muted 别名 → --surface），直接用 --surface。 */
+[data-ai-md] table thead th { background: color-mix(in oklab, var(--surface) 60%, transparent); color: var(--foreground); font-weight: 600; }
+[data-ai-md] table tbody tr:nth-child(even) { background: color-mix(in oklab, var(--surface) 30%, transparent); }
+
+/* 引用块：felt 左线 + 弱化文字。 */
+[data-ai-md] blockquote { border-left: 2px solid color-mix(in oklab, var(--felt) 55%, transparent); padding-left: 0.75rem; color: var(--muted-foreground); font-style: normal; margin: 0.5rem 0; }
+[data-ai-md] blockquote p { margin: 0.25rem 0; }
+
+/* 分割线：border token。 */
+[data-ai-md] hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+
+/* GFM 任务列表复选框：accent 化 + 禁原生 margin 怪异。 */
+[data-ai-md] input[type="checkbox"] { accent-color: var(--brand); margin: 0 0.35rem 0 0; vertical-align: middle; }
+[data-ai-md] li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.25rem; }
+
+/* 删除线颜色弱化。 */
+[data-ai-md] del { color: var(--muted-foreground); }
+
+/* 代码卡内 pre：清掉卡片边框/背景重叠，仅留滚动与留白；字号 mono。 */
+[data-ai-md] pre.ai-md-pre { margin: 0; border: none; background: transparent; font-family: var(--mono-font); }
+/* 顶栏 hover 浮现（桌面）；触屏常驻。 */
+@media (hover: hover) {
+  [data-ai-md] .ai-md-codebar { opacity: 0; transition: opacity var(--motion-duration) var(--motion-ease); }
+  [data-ai-md] .group\/code:hover .ai-md-codebar,
+  [data-ai-md] .group\/code:focus-within .ai-md-codebar { opacity: 1; }
+}
+
+/* 消息操作条（复制全文）：桌面 hover/focus-within 浮现；触屏常驻。
+   消息容器不在 [data-ai-md] 内（markdown 渲染区才打该标记），故挂 .group\/msg。 */
+@media (hover: hover) {
+  .ai-md-msgops { opacity: 0; transition: opacity var(--motion-duration) var(--motion-ease); }
+  .group\/msg:hover .ai-md-msgops,
+  .group\/msg:focus-within .ai-md-msgops { opacity: 1; }
+}
+
+/* 普通文字长单行（无空格 URL/Token/长标识符）：break-words 只在软换行点断，连续长串不断 -> 溢出。
+   anywhere 允许任意点断开（比 break-all 更保表格布局）；inline code 同保。 */
+[data-ai-md] { overflow-wrap: anywhere; }
+[data-ai-md] code { overflow-wrap: anywhere; }
+
+/* 宽内容（代码卡 <pre> 超长行 / mermaid 宽图）会沿 block 容器链把 prose/消息列顶宽，
+   最终被 ScrollArea viewport(overflowX:hidden) 裁掉右侧 ->「显示不全」。
+   block 容器的 min-w-0/max-w-full/width:100% 都拦不住这种宽度向上传导（% 参照互相循环），
+   唯一可靠截断：给消息列一个独立 inline-size 上下文 contain:inline-size——
+   元素尺寸不再受内部内容影响、钳回父宽，宽内容交给代码卡 <pre> 内部 overflow-x 滚动。 */
+.group\/msg { contain: inline-size; }
+[data-ai-md] .group\/code { max-width: 100%; }
+
+/* Shiki 语法高亮：css-variables 主题（createCssVariablesTheme 工厂）把 token 颜色发成
+   color: var(--shiki-*) 内联到 span；此处把槽位映射到项目语义 token。
+   token 本身随 5 预设 × .dark 变，故高亮天然跟随主题——亮暗无需两份映射。
+   槽位清单以主题工厂源码为准（@shikijs/core theme-css-variables.ts）；
+   pre 上的 --shiki-background 内联 style 被 AiCodeBlock 自渲染的 pre 丢弃（卡片 bg-muted 为准）。 */
+[data-ai-md] {
+  --shiki-foreground: var(--foreground);
+  --shiki-background: transparent;
+  --shiki-token-keyword: var(--brand);
+  /* 常量/数字/内置对象方法（support）：warning 琥珀，与 string(success 绿) 拉开。 */
+  --shiki-token-constant: var(--warning);
+  --shiki-token-function: var(--info);
+  --shiki-token-string: var(--success);
+  --shiki-token-string-expression: var(--success);
+  --shiki-token-comment: var(--muted-foreground);
+  --shiki-token-link: var(--brand);
+  /* 参数/变量给独立色（felt），不再是 foreground——普通标识符也有层次。 */
+  --shiki-token-parameter: var(--felt);
+  --shiki-token-punctuation: var(--muted-foreground);
+}
+
+/* KaTeX 公式颜色跟随前景（暗色可读）。 */
+[data-ai-md] .katex { color: var(--foreground); font-size: 1.02em; }
+/* 块级数学公式横向滚动（窄抽屉不溢出）。 */
+[data-ai-md] .katex-display { overflow-x: auto; }
+
+/* Mermaid 图内文字随前景（SVG 文本用 fill，非 color）；svg 限宽防撑破窄抽屉（超出部分容器 overflow-x 滚动）。 */
+[data-ai-md] .ai-md-mermaid { max-width: 100%; }
+[data-ai-md] .ai-md-mermaid svg { max-width: 100%; height: auto; }
+[data-ai-md] .ai-md-mermaid .nodeLabel, [data-ai-md] .ai-md-mermaid .edgeLabel { fill: var(--foreground); }
