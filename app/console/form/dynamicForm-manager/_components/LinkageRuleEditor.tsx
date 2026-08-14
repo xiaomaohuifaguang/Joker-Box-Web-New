@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import type {
   DynamicFormField,
@@ -155,6 +155,42 @@ function newGroup(): DynamicFormLinkageNode {
   return { nodeType: "AND", children: [] };
 }
 
+// 字段的一个分组（条件/目标字段下拉按「未分组/各分组」分组展示用；选值仍是单个 fieldId）。
+export interface LinkageFieldGroup {
+  key: string;
+  title: string;
+  fields: DynamicFormField[];
+}
+
+// 分组字段下拉：按「未分组/各分组」分节展示（SelectGroup/SelectLabel），选值=单个 fieldId。
+function GroupedFieldSelect({
+  groups, value, placeholder, triggerClassName, onChange,
+}: {
+  groups: LinkageFieldGroup[];
+  value: string | undefined;
+  placeholder: string;
+  triggerClassName: string;
+  onChange: (fieldId: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className={triggerClassName}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {groups.map((g) => (
+          <SelectGroup key={g.key}>
+            <SelectLabel>{g.title}</SelectLabel>
+            {g.fields.map((f) => (
+              <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function emptyRule(targetFieldId = ""): DynamicFormLinkageRule {
   return {
     name: "",
@@ -169,12 +205,14 @@ export function LinkageRuleEditor({
   open,
   onClose,
   fields,
+  fieldGroups,
   initial,
   onSave,
 }: {
   open: boolean;
   onClose: () => void;
-  fields: DynamicFormField[];
+  fields: DynamicFormField[]; // 拍平字段（查字段定义/摘要/校验用）
+  fieldGroups: LinkageFieldGroup[]; // 带组字段（条件/目标字段下拉分组展示用）
   initial: { index: number; rule: DynamicFormLinkageRule } | null;
   onSave: (index: number | null, rule: DynamicFormLinkageRule) => void;
 }) {
@@ -230,6 +268,7 @@ export function LinkageRuleEditor({
             <ConditionGroupNode
               node={root}
               fields={fields}
+              fieldGroups={fieldGroups}
               depth={0}
               onChange={(newRoot) => setRule((r) => ({ ...r, conditionTree: [newRoot] }))}
             />
@@ -252,19 +291,13 @@ export function LinkageRuleEditor({
                   ))}
                 </SelectContent>
               </Select>
-              <Select
+              <GroupedFieldSelect
+                groups={fieldGroups}
                 value={rule.targetFieldId}
-                onValueChange={(v) => setRule((r) => ({ ...r, targetFieldId: v, actionValue: undefined }))}
-              >
-                <SelectTrigger className="h-8 w-44">
-                  <SelectValue placeholder="目标字段" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fields.map((f) => (
-                    <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="目标字段"
+                triggerClassName="h-8 w-44"
+                onChange={(v) => setRule((r) => ({ ...r, targetFieldId: v, actionValue: undefined }))}
+              />
             </div>
             {/* 动作参数（按动作类型） */}
             {rule.actionType === "SET_PATTERN" && (
@@ -327,10 +360,11 @@ export function LinkageRuleEditor({
 // 主体 = children（CONDITION 条件行 / AND/OR 递归子组，缩进）；底部 = 添加条件 / 添加子组。
 // 不可变更新：每层 onChange(newNode) 向上冒泡，由根统一 setRule。
 function ConditionGroupNode({
-  node, fields, depth, onChange, onRemove,
+  node, fields, fieldGroups, depth, onChange, onRemove,
 }: {
   node: DynamicFormLinkageNode; // nodeType 为 AND / OR
-  fields: DynamicFormField[];
+  fields: DynamicFormField[]; // 拍平字段（查字段定义用）
+  fieldGroups: LinkageFieldGroup[]; // 带组字段（条件字段下拉分组展示）
   depth: number;
   onChange: (n: DynamicFormLinkageNode) => void;
   onRemove?: () => void;
@@ -380,6 +414,7 @@ function ConditionGroupNode({
               key={`${child.triggerFieldId ?? "cond"}-${i}`}
               node={child}
               fields={fields}
+              fieldGroups={fieldGroups}
               onChange={(n) => patchChild(i, n)}
               onRemove={() => removeChild(i)}
             />
@@ -388,6 +423,7 @@ function ConditionGroupNode({
               key={`group-${i}`}
               node={child}
               fields={fields}
+              fieldGroups={fieldGroups}
               depth={depth + 1}
               onChange={(n) => patchChild(i, n)}
               onRemove={() => removeChild(i)}
@@ -415,10 +451,11 @@ function ConditionGroupNode({
 
 // 单个条件行：触发字段 + 操作符 + 条件值输入 + 删除。
 function ConditionRow({
-  node, fields, onChange, onRemove,
+  node, fields, fieldGroups, onChange, onRemove,
 }: {
   node: DynamicFormLinkageNode; // nodeType 为 CONDITION
-  fields: DynamicFormField[];
+  fields: DynamicFormField[]; // 拍平字段（查字段定义用）
+  fieldGroups: LinkageFieldGroup[]; // 带组字段（字段下拉分组展示）
   onChange: (n: DynamicFormLinkageNode) => void;
   onRemove: () => void;
 }) {
@@ -429,9 +466,12 @@ function ConditionRow({
   return (
     <div className="flex flex-col gap-1.5 rounded-md border bg-surface p-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Select
+        <GroupedFieldSelect
+          groups={fieldGroups}
           value={node.triggerFieldId}
-          onValueChange={(v) => {
+          placeholder="触发字段"
+          triggerClassName="h-8 w-40"
+          onChange={(v) => {
             // 切触发字段：操作符若不在新字段可用列表内则重置为首项，并清空值
             const nextAvail = conditionsOf(fields.find((f) => f.fieldId === v));
             const cur = node.triggerCondition ?? "EQ";
@@ -442,16 +482,7 @@ function ConditionRow({
               triggerValue: "",
             });
           }}
-        >
-          <SelectTrigger className="h-8 w-40">
-            <SelectValue placeholder="触发字段" />
-          </SelectTrigger>
-          <SelectContent>
-            {fields.map((f) => (
-              <SelectItem key={f.fieldId} value={f.fieldId}>{f.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
         <Select
           value={node.triggerCondition}
           onValueChange={(v) => {

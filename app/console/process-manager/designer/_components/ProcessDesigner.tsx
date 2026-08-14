@@ -30,7 +30,7 @@ import {
 } from "@/lib/api/process";
 import { getPublishedForms } from "@/lib/api/dynamicForm";
 import { ApiError } from "@/lib/api";
-import type { DynamicFormPublishedVersion, ProcessRawData } from "@/types";
+import type { DynamicFormPublishedVersion, ProcessRawData, ProcessGatewayConditionNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +64,7 @@ import {
 import { UserTaskConfig } from "./UserTaskConfig";
 import { ServiceTaskConfig } from "./ServiceTaskConfig";
 import { InheritMainFormField } from "./InheritMainFormField";
+import { GatewayConditionEditor } from "./GatewayConditionEditor";
 
 const initialNodes: ProcessFlowNode[] = [
   { id: "start", type: "startEvent", position: { x: 120, y: 140 }, data: { label: "开始" } },
@@ -114,6 +115,16 @@ function stripNode(n: ProcessFlowNode) {
   return { ...rest, data };
 }
 
+// 归一化自定义条件树：同级按下标写 sort；CONDITION 补 category=FORM_FIELD；AND/OR 递归 children。
+// stripEdge 保存时调用，保证 ruleTree 必传字段显式入库（不依赖 UI 是否触发过 onChange）。
+function normalizeConditionTree(nodes: ProcessGatewayConditionNode[]): ProcessGatewayConditionNode[] {
+  return nodes.map((n, i) =>
+    n.nodeType === "CONDITION"
+      ? { ...n, category: n.category ?? "FORM_FIELD", sort: i }
+      : { ...n, sort: i, children: normalizeConditionTree(n.children ?? []) },
+  );
+}
+
 // 保存前剥离连线：只留语义字段（id/source/target/handle/label/data），剥掉 style/markerEnd/selected。
 // 样式是渲染细节（React Flow 特有 + Tailwind token），不该进 rawData——加载回填时由 createEdge 统一补。
 // 排他/包容网关出边：按源节点类型归一化，保证必须字段显式入库（不依赖 UI 是否触发过 onChange）——
@@ -128,7 +139,12 @@ function stripEdge(e: Edge, sourceKind?: string) {
     const conditionType = isDefault ? undefined : (d.conditionType ?? "CUSTOM");
     const nativeExpression =
       !isDefault && conditionType === "NATIVE" ? (d.nativeExpression ?? "${false}") : undefined;
-    data = { ...d, isDefault, conditionType, nativeExpression };
+    // CUSTOM：ruleTree 归一化（sort/category 补全）；默认分支或 NATIVE 时置空（与 nativeExpression 互斥）。
+    const ruleTree =
+      !isDefault && conditionType === "CUSTOM"
+        ? normalizeConditionTree(d.ruleTree ?? [{ nodeType: "AND", children: [] }])
+        : undefined;
+    data = { ...d, isDefault, conditionType, nativeExpression, ruleTree };
   }
   return {
     id: e.id,
@@ -226,7 +242,8 @@ function DesignerInner({
 
   const editing = !readOnly && !sim;
 
-  // 清空/换表单/换版本后，各节点「继承主表单字段」失去前提——重置所有节点勾选 + 字段权限（开关同步禁用/失效）。
+  // 清空/换表单/换版本后重置依赖主表单的配置：
+  //   节点「继承主表单字段」勾选 + 字段权限（失去前提）；网关出边 CUSTOM 的 ruleTree（字段=主表单字段，已失效）。
   const resetNodesInheritMainForm = useCallback(() => {
     setNodes((nds) =>
       nds.map((n) =>
@@ -235,7 +252,14 @@ function DesignerInner({
           : n,
       ),
     );
-  }, [setNodes]);
+    setEdges((eds) =>
+      eds.map((e) =>
+        ((e.data?.ruleTree as unknown[] | undefined)?.length ?? 0) > 0
+          ? { ...e, data: { ...e.data, ruleTree: undefined } }
+          : e,
+      ),
+    );
+  }, [setNodes, setEdges]);
 
   // 加载详情（编辑/查看，id!=null）：拉 info 回填元信息 + 画布（nodes/edges 由 rawData 还原）。
   // loading 初值在 state 声明算好（id!=null 即 true），effect 只做异步拉取——避免 effect 内同步 setState（见通用坑）。
@@ -791,7 +815,7 @@ function DesignerInner({
           ) : selectedEdge && !paneActive ? (
             <>
               <h2 className="text-xs font-medium text-muted-foreground">连线配置</h2>
-              <EdgeConfig edge={selectedEdge} nodes={nodes} readOnly={readOnly} onChange={updateSelectedEdge} />
+              <EdgeConfig edge={selectedEdge} nodes={nodes} readOnly={readOnly} mainFormBound={formId !== "" && formVersion !== ""} formId={formId} formVersion={formVersion} onChange={updateSelectedEdge} />
             </>
           ) : (
             <>
@@ -1075,12 +1099,21 @@ function EdgeConfig({
   edge,
   nodes,
   readOnly,
+  mainFormBound,
+  formId,
+  formVersion,
   onChange,
 }: {
   edge: Edge;
   /** 画布全部节点（判断源节点是否排他/包容网关，决定是否显示条件配置） */
   nodes: ProcessFlowNode[];
   readOnly: boolean;
+  /** 流程是否已绑定表单+版本（决定自定义条件可否配置；条件字段=主表单字段） */
+  mainFormBound: boolean;
+  /** 主表单 id（自定义条件的字段来源） */
+  formId: string;
+  /** 主表单版本 */
+  formVersion: string;
   onChange: (patch: { label?: string; data?: Partial<ProcessEdgeData> }) => void;
 }) {
   const data = (edge.data ?? {}) as ProcessEdgeData;
@@ -1135,11 +1168,11 @@ function EdgeConfig({
               checked={isDefault}
               disabled={readOnly}
               onCheckedChange={(c) =>
-                // 默认分支不可配条件：选默认时清掉 conditionType/nativeExpression；取消默认时按缺省 CUSTOM。
+                // 默认分支不可配条件：选默认时清掉 conditionType/nativeExpression/ruleTree；取消默认时按缺省 CUSTOM。
                 onChange({
                   data:
                     c === true
-                      ? { isDefault: true, conditionType: undefined, nativeExpression: undefined }
+                      ? { isDefault: true, conditionType: undefined, nativeExpression: undefined, ruleTree: undefined }
                       : { isDefault: false, conditionType: "CUSTOM" },
                 })
               }
@@ -1154,12 +1187,18 @@ function EdgeConfig({
                 <Select
                   value={conditionType}
                   onValueChange={(v) =>
-                    // 切到 NATIVE 时，nativeExpression 为空则补默认 ${false}（不只是显示兜底，写入数据随 rawData 保存）。
+                    // 切换条件类型时清掉另一类型的字段（互斥）。
+                    // 切到 NATIVE：清 ruleTree；nativeExpression 为空则补默认 ${false}（不只是显示兜底，写入数据随 rawData 保存）。
+                    // 切到 CUSTOM：清 nativeExpression。
                     onChange({
                       data:
-                        v === "NATIVE" && !(data.nativeExpression ?? "").trim()
-                          ? { conditionType: v, nativeExpression: "${false}" }
-                          : { conditionType: v },
+                        v === "NATIVE"
+                          ? {
+                              conditionType: v,
+                              ruleTree: undefined,
+                              ...(!(data.nativeExpression ?? "").trim() ? { nativeExpression: "${false}" } : {}),
+                            }
+                          : { conditionType: v, nativeExpression: undefined },
                     })
                   }
                   disabled={readOnly}
@@ -1185,6 +1224,26 @@ function EdgeConfig({
                     placeholder="如 ${amount > 1000}"
                     className="h-9 font-mono"
                   />
+                </div>
+              )}
+
+              {/* 自定义条件：条件字段=主表单字段，故需流程已绑定表单+版本；未绑定时禁用并提示。 */}
+              {conditionType === "CUSTOM" && (
+                <div className="grid gap-1.5">
+                  <Label className="text-xs">条件规则</Label>
+                  {mainFormBound ? (
+                    <GatewayConditionEditor
+                      formId={formId}
+                      formVersion={formVersion}
+                      value={data.ruleTree ?? []}
+                      readOnly={readOnly}
+                      onChange={(next) => onChange({ data: { ruleTree: next } })}
+                    />
+                  ) : (
+                    <p className="rounded-md border border-dashed px-2.5 py-2 text-[11px] text-muted-foreground">
+                      需先在「流程配置」选好绑定表单和版本，才能配置自定义条件。
+                    </p>
+                  )}
                 </div>
               )}
             </>
