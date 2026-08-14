@@ -20,6 +20,17 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
   const { state, addRule, updateRule, removeRule, moveRule } = designer;
   const rules = state.linkageRules;
   const allFields = [...state.fields, ...state.groups.flatMap((g) => g.fields)];
+  // 带组字段（条件/目标字段下拉按「未分组/各分组」分组展示用；选值仍是单个 fieldId）。
+  const fieldGroups = [
+    ...(state.fields.length > 0
+      ? [{ key: "__ungrouped__", title: "未分组", fields: state.fields }]
+      : []),
+    ...state.groups.map((g) => ({
+      key: g.id ?? g.clientId ?? g.name,
+      title: g.name || "分组",
+      fields: g.fields,
+    })),
+  ];
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<{ index: number; rule: DynamicFormLinkageRule } | null>(null);
@@ -106,6 +117,7 @@ export function LinkagePanel({ designer }: { designer: DesignerApi }) {
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         fields={allFields}
+        fieldGroups={fieldGroups}
         initial={editing}
         onSave={handleSave}
       />

@@ -3,7 +3,7 @@
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { Play, Square, Settings, User, X, Plus, CircleDot, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ProcessNodeFieldPermission } from "@/types/process";
+import type { ProcessNodeFieldPermission, ProcessGatewayConditionNode } from "@/types/process";
 
 // 节点「带电/选中」信号色：与画布连线同一工程蓝（恒定，不随主题预设），保证任何预设下反馈一致。
 // 选中=中性 ring（克制，随主题 --ring）；运行/高亮=蓝色实心 glow（图纸「通电」）。
@@ -87,6 +87,8 @@ export interface ProcessEdgeData extends Record<string, unknown> {
   conditionType?: string;
   /** 传统表达式内容（仅 conditionType=NATIVE 时显示/有效） */
   nativeExpression?: string;
+  /** 自定义条件树（仅 conditionType=CUSTOM 时有效；根为 AND/OR 组，元素见 types/process ProcessGatewayConditionNode） */
+  ruleTree?: ProcessGatewayConditionNode[];
 }
 
 /** 节点分组（左栏分组展示 + 后续扩展用） */

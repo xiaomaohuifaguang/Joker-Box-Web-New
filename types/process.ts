@@ -54,6 +54,35 @@ export interface ProcessNodeFieldPermission {
   permission: "READONLY" | "HIDDEN" | "REQUIRED";
 }
 
+// ---- 网关出边自定义条件（conditionType=CUSTOM 时 edge.data.ruleTree）----
+
+// 条件字段来源分类（当前仅 FORM_FIELD=绑定的全局表单；后续可扩展申请人/部门/流程变量等）。
+export type ProcessGatewayConditionCategory = "FORM_FIELD";
+
+// 条件运算符。
+export type ProcessGatewayConditionOperator =
+  | "EQ" | "NE" | "GT" | "LT" | "GE" | "LE"
+  | "IN" | "NOT_IN" | "EMPTY" | "NOT_EMPTY" | "REGEX";
+
+// 网关条件树节点（edge.data.ruleTree 元素，根为 AND/OR 组，可嵌套）。
+// 与动态表单联动条件树同构，但字段独立（triggerFieldId/triggerCondition/triggerValue → fieldKey/operator/value）。
+export interface ProcessGatewayConditionNode {
+  /** 节点类型：AND / OR / CONDITION */
+  nodeType: "AND" | "OR" | "CONDITION";
+  /** 条件字段来源分类（仅 CONDITION；当前仅 FORM_FIELD） */
+  category?: ProcessGatewayConditionCategory;
+  /** 字段标识 fieldId（仅 CONDITION） */
+  fieldKey?: string;
+  /** 运算符（仅 CONDITION） */
+  operator?: ProcessGatewayConditionOperator;
+  /** 比较值（仅 CONDITION；单值串或数组(IN/NOT_IN)，EMPTY/NOT_EMPTY 省略） */
+  value?: unknown;
+  /** 同级排序（保存时按下标归一化写入） */
+  sort?: number;
+  /** 子节点（仅 AND/OR 组） */
+  children?: ProcessGatewayConditionNode[];
+}
+
 // 画布数据（ProcessDefinition.rawData）。React Flow 标准图 JSON，后端据此转 BPMN。
 // nodes[].type 即 BPMN 元素名（startEvent/serviceTask/...），属性在 nodes[].data。
 export interface ProcessRawData {
