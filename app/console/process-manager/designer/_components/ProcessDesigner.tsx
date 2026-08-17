@@ -21,7 +21,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ArrowLeft, Database, Play, Save, Search, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, randomId } from "@/lib/utils";
 import { useIsDark } from "@/hooks/useIsDark";
 import {
   addProcessDefinition,
@@ -97,6 +97,12 @@ function createEdge(source: string, target: string, base?: Partial<Edge>): Edge 
     target,
     ...base,
   };
+}
+
+// 生成节点 id 后缀：randomId() 去连字符；crypto.randomUUID 是安全上下文(Secure Context)限定 API，
+// nginx 部署后走 http://<内网IP/域名> 非安全上下文时没有它（randomId 内已兜底时间戳+随机数）。结果仍以 n_ 字母开头、仅字母数字，符合 NCName。
+function newNodeIdSuffix(): string {
+  return randomId().replace(/-/g, "");
 }
 
 // 保存前剥离节点运行时字段（__active/__names/selected/dragging/measured 等），只留业务结构。
@@ -567,8 +573,8 @@ function DesignerInner({
       }
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const node: ProcessFlowNode = {
-        // 节点 id：n_ 前缀（randomUUID 可能数字开头）+ 去连字符，符合 NCName（字母开头、仅字母数字）。
-        id: `n_${crypto.randomUUID().replace(/-/g, "")}`,
+        // 节点 id：n_ 前缀（字母开头）+ newNodeIdSuffix（NCName；http 内网非安全上下文时 crypto.randomUUID 不可用，走兜底）。
+        id: `n_${newNodeIdSuffix()}`,
         type: kind,
         position,
         // 默认名=类型标签+下一个同类序号（用户任务2），画布与配置面板名称同读 label，天然一致。

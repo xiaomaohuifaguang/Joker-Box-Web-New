@@ -6,7 +6,7 @@
 - `page.tsx`：视图路由（`parseView` 解析 `design`/`view`/`version` query，`popstate` 同步）。
 - `FormListPanel`：搜索+分页+表格+CRUD，操作列按 status 开放。
 - `FormDesigner`：设计器/只读查看。h1 + 三栏（字段库 `FieldPalette` | 画布 `FormCanvas` | 配置 `FieldConfigPanel`/`LinkagePanel` Tab）+ 顶栏（版本切换/预览/保存）。
-- `designer-state.ts`：`useDesignerState` 管 fields/groups/linkageRules（**纯客户端 state，仅「保存」落库**）；`stateFromForm`/`toPayload`（存前剥 clientId）、`UNGROUPED_ID`、`groupKey`、`ruleReferencesField`。fieldId=`crypto.randomUUID()`。
+- `designer-state.ts`：`useDesignerState` 管 fields/groups/linkageRules（**纯客户端 state，仅「保存」落库**）；`stateFromForm`/`toPayload`（存前剥 clientId）、`UNGROUPED_ID`、`groupKey`、`ruleReferencesField`。fieldId=`randomId()`（`@/lib/utils`，http 内网非安全上下文无 `crypto.randomUUID` 时兜底）。
 - `DynamicFormRenderer.tsx`：填写态渲染引擎（受控 forwardRef）。从 `FormPreviewDialog` 抽出——取值/联动求值(`computeFieldState`)/远程选项(`useRemoteOptions`)/校验(`validate`)/收集(`collectData`)/VALUE 边沿 + 24 栅格 + 分组折叠。props `{fields,groups,linkageRules,values,errors,onChange}`，handle `{validate,collectData,clearEdgeTriggers}`。**预览（FormPreviewDialog 薄壳）与前台 `/dynamicForm` 共用——跨模块共享件，前台直接 import，勿复制引擎。**
 - `fields/registry.tsx`：`FIELD_REGISTRY`（19 类型四组，Record<type, FieldMeta{type/label/group/defaults/Control/hasOptions/hasLength/hasMinMax/hasPattern/hasPlaceholder}>）+ `createField(type,sort)`；`fields/` 各自写控件。
 - `linkage.ts`：联动求值引擎；`optionSource.ts` + `useRemoteOptions.ts`：远程数据源；`validate.ts`：预览提交校验。

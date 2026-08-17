@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { randomId } from "@/lib/utils";
 import type {
   DynamicForm,
   DynamicFormField,
@@ -40,7 +41,7 @@ export function stateFromForm(form: DynamicForm): DesignerState {
     fields: (form.fields ?? []).map((f) => ({ ...f })),
     groups: (form.groups ?? []).map((g) => ({
       ...g,
-      clientId: g.id ?? crypto.randomUUID(),
+      clientId: g.id ?? randomId(),
       fields: (g.fields ?? []).map((f) => ({ ...f })),
     })),
     linkageRules: (form.linkageRules ?? []).map((r) => ({ ...r })),
@@ -316,7 +317,7 @@ export function useDesignerState(initial?: DynamicForm) {
           sort: s.groups.length,
           collapsed: "0",
           fields: [],
-          clientId: crypto.randomUUID(),
+          clientId: randomId(),
         },
       ],
     }));

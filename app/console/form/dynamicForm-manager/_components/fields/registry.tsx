@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { CalendarIcon, ChevronDown, Star, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn, randomId } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -539,7 +539,7 @@ export const FIELD_GROUPS: FieldMeta["group"][] = ["基础", "选择", "日期�
 export function createField(type: DynamicFormFieldType, sort: number): DynamicFormField {
   const meta = FIELD_REGISTRY[type];
   return {
-    fieldId: crypto.randomUUID(),
+    fieldId: randomId(),
     title: meta.label,
     type,
     required: "0",

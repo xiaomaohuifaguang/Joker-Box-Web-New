@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Eye, Save } from "lucide-react";
 import { addDynamicForm, getDynamicFormInfo, getPublishedForms, updateDynamicForm } from "@/lib/api/dynamicForm";
 import { ApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, randomId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -118,7 +118,7 @@ export function FormDesigner({
             sort: designer.state.groups.length,
             collapsed: "0",
             fields: [field],
-            clientId: crypto.randomUUID(),
+            clientId: randomId(),
           },
         ],
       });

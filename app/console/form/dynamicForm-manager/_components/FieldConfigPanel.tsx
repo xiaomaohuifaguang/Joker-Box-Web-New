@@ -41,7 +41,7 @@ import type {
   DynamicFormOptionSource,
   DynamicFormTableColumn,
 } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, randomId } from "@/lib/utils";
 import { FIELD_REGISTRY } from "./fields/registry";
 import { ruleReferencesField } from "./designer-state";
 import {
@@ -858,7 +858,7 @@ function TableColumnsDialog({
     // key 用短 UUID 保证唯一（用户可改）；title 给可读默认值。
     setDraft((d) => [
       ...d,
-      { key: `col_${crypto.randomUUID().slice(0, 6)}`, title: `列${d.length + 1}` },
+      { key: `col_${randomId().slice(0, 6)}`, title: `列${d.length + 1}` },
     ]);
   }
 
