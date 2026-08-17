@@ -54,6 +54,7 @@ import {
   PROCESS_NODE_LIST,
   PROCESS_NODE_REGISTRY,
   hitEdgeIdAt,
+  nextKindLabel,
   processNodeContextHandler,
   processNodeTypes,
   type ProcessFlowNode,
@@ -427,6 +428,15 @@ function DesignerInner({
     );
   }
 
+  // 节点名称失焦：空则回退类型默认名（label 是画布/配置共用显示，留空会只剩类型标签）。
+  function blurNodeLabel() {
+    if (!selectedNode) return;
+    if (!(selectedNode.data.label ?? "").trim()) {
+      const meta = PROCESS_NODE_REGISTRY[(selectedNode.type as ProcessNodeKind) ?? "serviceTask"];
+      updateSelected({ label: meta.label });
+    }
+  }
+
   // 选中连线（单选），属性面板编辑它。与节点互斥：点节点/空白时 React Flow 会清掉 edge 选中。
   const selectedEdge = useMemo(() => edges.find((e) => e.selected), [edges]);
 
@@ -497,7 +507,8 @@ function DesignerInner({
     [editing, onNodesChange],
   );
 
-  // 模拟运行：点亮节点 = 给命中节点加 __active 标记（节点卡片读它高亮）。
+  // 画布节点：仅注入模拟运行高亮 __active（__ 运行时字段，保存前 stripNode 剥离）。
+  // 节点序号不再派生注入——新节点默认名已由 onDrop 的 nextKindLabel 写进 label（画布/配置面板同读 label）。
   const simNodes = useMemo(() => {
     if (!sim) return nodes;
     const active = new Set(sim.activeIds);
@@ -560,7 +571,8 @@ function DesignerInner({
         id: `n_${crypto.randomUUID().replace(/-/g, "")}`,
         type: kind,
         position,
-        data: { label: meta.label },
+        // 默认名=类型标签+下一个同类序号（用户任务2），画布与配置面板名称同读 label，天然一致。
+        data: { label: nextKindLabel(kind, nodes) },
       };
       setNodes((nds) => nds.concat(node));
       // 落点压着连线 → 插入该线中间（仅任务/网关类）。
@@ -810,7 +822,7 @@ function DesignerInner({
           ) : selectedNode && !paneActive ? (
             <>
               <h2 className="text-xs font-medium text-muted-foreground">节点配置</h2>
-              <NodeConfig node={selectedNode} nodes={nodes} edges={edges} readOnly={readOnly} mainFormBound={formId !== "" && formVersion !== ""} formId={formId} formVersion={formVersion} onChange={updateSelected} />
+              <NodeConfig node={selectedNode} nodes={nodes} edges={edges} readOnly={readOnly} mainFormBound={formId !== "" && formVersion !== ""} formId={formId} formVersion={formVersion} onBlurNodeLabel={blurNodeLabel} onChange={updateSelected} />
             </>
           ) : selectedEdge && !paneActive ? (
             <>
@@ -1014,6 +1026,7 @@ function NodeConfig({
   mainFormBound,
   formId,
   formVersion,
+  onBlurNodeLabel,
   onChange,
 }: {
   node: ProcessFlowNode;
@@ -1028,6 +1041,8 @@ function NodeConfig({
   formId: string;
   /** 主表单版本（globalFormBinding.formVersion；字段权限配置用） */
   formVersion: string;
+  /** 名称失焦回调（空则回退类型默认名） */
+  onBlurNodeLabel: () => void;
   onChange: (patch: Partial<ProcessNodeData>) => void;
 }) {
   const meta = PROCESS_NODE_REGISTRY[(node.type as ProcessNodeKind) ?? "serviceTask"];
@@ -1040,12 +1055,24 @@ function NodeConfig({
         <span className="text-sm font-medium">{meta.label}</span>
         <span className="ml-auto font-mono text-[10px] text-muted-foreground">{node.type}</span>
       </div>
+      {/* 节点 id：只读展示（后端 BPMN 元素 id，NCName；n_<uuid> / start / end）。 */}
+      <div className="grid gap-1.5">
+        <Label htmlFor="node-id" className="text-xs">节点 ID</Label>
+        <Input
+          id="node-id"
+          value={node.id}
+          readOnly
+          disabled
+          className="h-9 font-mono text-xs text-muted-foreground"
+        />
+      </div>
       <div className="grid gap-1.5">
         <Label htmlFor="node-label" className="text-xs">名称</Label>
         <Input
           id="node-label"
           value={node.data.label ?? ""}
           onChange={(e) => onChange({ label: e.target.value })}
+          onBlur={onBlurNodeLabel}
           placeholder={meta.label}
           className="h-9"
         />
