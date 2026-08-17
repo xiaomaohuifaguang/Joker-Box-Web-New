@@ -4,12 +4,12 @@ import { Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn, randomId } from "@/lib/utils";
 import type { DynamicFormOption } from "@/types";
 
 // 生成全局唯一 option value（短 UUID），避免手动编号在增删/嵌套时重复。
 function genValue(): string {
-  return `opt_${crypto.randomUUID().slice(0, 8)}`;
+  return `opt_${randomId().slice(0, 8)}`;
 }
 
 // 选项编辑器：选项类字段的 label/value 列表。cascade=true 时支持 children 嵌套（级联字段）。
