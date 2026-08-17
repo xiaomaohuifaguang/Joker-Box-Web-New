@@ -33,7 +33,14 @@ const APPROVAL_TYPES = [
   { value: "2", label: "或签" },
   { value: "3", label: "随机1人" },
   { value: "4", label: "认领" },
+  { value: "5", label: "随机多人会签" },
+  { value: "6", label: "随机多人或签" },
 ];
+
+// 随机多人审批类型（可配 randomCount 随机人数）。
+const RANDOM_MULTI_TYPES = ["5", "6"];
+// 会签类审批类型（可配 passRate 通过率）：会签1 / 随机多人会签5。
+const COUNTERSIGN_TYPES = ["1", "5"];
 
 // 操作按钮（actionButtons）。value 入 node.data（逗号串），label 展示。
 const ACTION_BUTTONS = [
@@ -88,9 +95,12 @@ export function UserTaskConfig({
   const names = d.__names ?? {};
   const actionButtons = (d.actionButtons ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const backEnabled = actionButtons.includes("back");
-  const backType = d.backType ?? "";
+  // 驳回默认值已显式落库（勾选「驳回」时写入），这里不再 ?? 兜底——保证「所见即所存」。
+  const backType = d.backType ?? "prev";
   const backNodeId = d.backNodeId ?? "";
   const backAssigneePolicy = d.backAssigneePolicy ?? "auto";
+  // 随机人数（仅随机多人会签5/或签6 时可配；默认 1）。
+  const randomCount = d.randomCount ?? 1;
 
   // 驳回节点候选：沿入边反向 BFS 收集当前节点的所有上游（祖先），再过滤出任务类（serviceTask/userTask）。
   // 「驳回」语义是回退到上游，不允许顺流跳到下游（避免永动环）；开始/结束/网关不可驳回。
@@ -163,7 +173,16 @@ export function UserTaskConfig({
         <Label className="text-xs">审批类型</Label>
         <Select
           value={approvalType}
-          onValueChange={(v) => onChange({ approvalType: v })}
+          onValueChange={(v) => {
+            const patch: Partial<ProcessNodeData> = { approvalType: v };
+            // 选「随机多人会签/或签」时补默认随机人数 1；切走则清掉。
+            if (RANDOM_MULTI_TYPES.includes(v)) patch.randomCount = d.randomCount ?? 1;
+            else patch.randomCount = undefined;
+            // 选会签类（会签1/随机多人会签5）时补默认通过率；切走则清掉。
+            if (COUNTERSIGN_TYPES.includes(v)) patch.passRate = d.passRate ?? "1.00";
+            else patch.passRate = undefined;
+            onChange(patch);
+          }}
           disabled={readOnly}
         >
           <SelectTrigger className="h-9 w-full">
@@ -179,7 +198,7 @@ export function UserTaskConfig({
         </Select>
       </div>
 
-      {approvalType === "1" && (
+      {COUNTERSIGN_TYPES.includes(approvalType) && (
         <div className="grid gap-1.5">
           <Label htmlFor="pass-rate" className="text-xs">会签通过率（0~1，两位小数）</Label>
           <Input
@@ -192,6 +211,27 @@ export function UserTaskConfig({
             disabled={readOnly}
             onChange={(e) => onPassRateChange(e.target.value)}
             onBlur={onPassRateBlur}
+            className="h-9"
+          />
+        </div>
+      )}
+
+      {/* 随机人数：仅「随机多人会签/或签」显示。正整数，默认 1，失焦钳制。 */}
+      {RANDOM_MULTI_TYPES.includes(approvalType) && (
+        <div className="grid gap-1.5">
+          <Label htmlFor="random-count" className="text-xs">随机人数</Label>
+          <Input
+            id="random-count"
+            type="number"
+            min={1}
+            step={1}
+            value={randomCount}
+            disabled={readOnly}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              onChange({ randomCount: Number.isNaN(n) ? 1 : n });
+            }}
+            onBlur={() => onChange({ randomCount: Math.max(1, Math.round(randomCount)) })}
             className="h-9"
           />
         </div>
@@ -256,8 +296,10 @@ export function UserTaskConfig({
                     patch.backNodeId = undefined;
                     patch.backAssigneePolicy = undefined;
                   } else if (b.value === "back" && !on) {
-                    // 勾选「驳回」时默认驳回方式=上一节点（prev）。
+                    // 勾选「驳回」时把默认值显式落库（不只显示兜底），保证保存传给接口：
+                    //   驳回方式默认 prev(上一节点)、回退分配策略默认 auto(智能默认)。
                     patch.backType = "prev";
+                    patch.backAssigneePolicy = "auto";
                   }
                   onChange(patch);
                 }}

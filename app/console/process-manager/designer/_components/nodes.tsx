@@ -38,10 +38,12 @@ export interface ProcessNodeData extends Record<string, unknown> {
   __active?: boolean;
 
   // ---- userTask 专属（BPMN 候选人配置）----
-  /** 审批类型：1 会签 / 2 或签 / 3 随机1人 / 4 认领 */
+  /** 审批类型：1 会签 / 2 或签 / 3 随机1人 / 4 认领 / 5 随机多人会签 / 6 随机多人或签 */
   approvalType?: string;
-  /** 会签通过率（0~1 两位小数字符串，如 "1.00"；仅 approvalType=1 会签时有效） */
+  /** 会签通过率（0~1 两位小数字符串，如 "1.00"；仅会签类 approvalType=1会签/5随机多人会签 时有效） */
   passRate?: string;
+  /** 随机人数（正整数，默认 1；仅 approvalType=5/6 随机多人时可配，切走清空） */
+  randomCount?: number;
   /** 候选用户 id 集合（逗号间隔，如 "1,2,3"） */
   candidateUsers?: string;
   /** 候选角色 id 集合（逗号间隔） */
@@ -210,6 +212,17 @@ export const PROCESS_NODE_REGISTRY: Record<ProcessNodeKind, KindMeta> = {
 
 export const PROCESS_NODE_LIST = Object.values(PROCESS_NODE_REGISTRY);
 
+// 新拖入节点的默认名称：「类型标签+（当前同类型节点数+1)」（用户任务2）。简单计数即可——
+// 序号只是帮区分，重名无害（节点靠内部 id 区分）。开始/结束唯一节点不加序号（用默认标签）。
+export function nextKindLabel(kind: ProcessNodeKind, nodes: ProcessFlowNode[]): string {
+  const meta = PROCESS_NODE_REGISTRY[kind];
+  if (meta.unique) return meta.label;
+  const count = nodes.filter((n) => n.type === kind).length;
+  return `${meta.label}${count + 1}`;
+}
+
+// 画布形状显示 label（新节点 label 已含序号「用户任务2」，创建时 nextKindLabel 写入）；空回退类型标签。
+
 // 节点右键回调（模块级）：节点组件是 nodeTypes 稳定引用、拿不到外层闭包，
 // 右键时经此把「节点 id + 屏幕坐标」交给外层 ProcessDesigner 打开 ContextMenu。
 export const processNodeContextHandler: {
@@ -297,7 +310,7 @@ function TaskNode({ id, data, type, selected }: NodeProps) {
       onContextMenu={(e) => onContextMenu(id, e)}
       className={cn(
         // 固定尺寸（w-32 h-8，不可调）；内容居中，过长省略。
-        "flex h-8 w-32 items-center justify-center gap-1 rounded-md border bg-card px-1.5 py-1 shadow-sm transition-shadow",
+        "relative flex h-8 w-32 items-center justify-center gap-1 rounded-md border bg-card px-1.5 py-1 shadow-sm transition-shadow",
         meta.card,
         selected && FLOW_NODE_SELECTED,
         d.__active && "flow-node-active",
