@@ -19,6 +19,10 @@ import {
   seedProcessFormValues,
   ProcessFormFields,
 } from "./ProcessForm";
+import {
+  NextTaskCandidatePicker,
+  missingChooseNodes,
+} from "./NextTaskCandidatePicker";
 import type { ProcessStartInfo } from "@/types";
 
 // 发起流程视图：按 definitionId 调 startInfo 取流程名/版本 + 发起表单，填标题后发起/存草稿。
@@ -38,6 +42,8 @@ export function StartView({
   const [submitting, setSubmitting] = useState<"start" | "draft" | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // 下一用户任务候选人选择（7/8/9）：nodeId -> 选中人员 id 集合。
+  const [choose, setChoose] = useState<Record<string, number[]>>({});
   const rendererRef = useRef<DynamicFormRendererHandle>(null);
 
   const showForm = hasProcessForm(info?.startForm);
@@ -48,6 +54,7 @@ export function StartView({
     setPrevId(definitionId);
     setInfo(null);
     setLoading(true);
+    setChoose({});
   }
 
   useEffect(() => {
@@ -79,6 +86,14 @@ export function StartView({
         return;
       }
     }
+    // 发起时校验 7/8/9 候选人已选；存草稿不校验。
+    if (kind === "start") {
+      const missing = missingChooseNodes(info?.nextUserTaskInfos, choose);
+      if (missing.length > 0) {
+        toast.error(`请为以下节点选择处理人：${missing.join("、")}`);
+        return;
+      }
+    }
     const globalFormData = showForm
       ? (rendererRef.current?.collectAllData() ?? {})
       : undefined;
@@ -88,6 +103,7 @@ export function StartView({
         processDefinitionId: definitionId,
         title: title.trim() || undefined,
         ...(globalFormData ? { globalFormData } : {}),
+        ...(Object.keys(choose).length > 0 ? { nodeCandidateUsersChoose: choose } : {}),
       };
       if (kind === "start") await startProcessInstance(payload);
       else await saveProcessDraft(payload);
@@ -154,6 +170,14 @@ export function StartView({
               rendererRef={rendererRef}
             />
           </div>
+        )}
+        {!loading && (
+          <NextTaskCandidatePicker
+            infos={info?.nextUserTaskInfos}
+            value={choose}
+            disabled={submitting != null}
+            onChange={(nodeId, ids) => setChoose((s) => ({ ...s, [nodeId]: ids }))}
+          />
         )}
         <div className="mt-4 flex gap-2">
           <Button

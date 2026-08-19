@@ -19,7 +19,11 @@ import {
   seedProcessFormValues,
   ProcessFormFields,
 } from "./ProcessForm";
-import type { TaskFormVO } from "@/types";
+import {
+  NextTaskCandidatePicker,
+  missingChooseNodes,
+} from "./NextTaskCandidatePicker";
+import type { TaskFormVO, NextUserTaskInfo } from "@/types";
 
 // 编辑草稿视图：按 id 回填标题，改后存草稿/发起（body 带 processInstanceId 提交既有草稿）。
 export function EditView({
@@ -38,8 +42,11 @@ export function EditView({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<"start" | "draft" | null>(null);
   const [form, setForm] = useState<TaskFormVO | undefined>(undefined);
+  const [nextInfos, setNextInfos] = useState<NextUserTaskInfo[] | undefined>(undefined);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // 下一用户任务候选人选择（7/8/9）：nodeId -> 选中人员 id 集合。
+  const [choose, setChoose] = useState<Record<string, number[]>>({});
   const rendererRef = useRef<DynamicFormRendererHandle>(null);
 
   const showForm = hasProcessForm(form);
@@ -48,6 +55,7 @@ export function EditView({
   if (prevId !== instanceId) {
     setPrevId(instanceId);
     setLoading(true);
+    setChoose({});
   }
 
   useEffect(() => {
@@ -60,6 +68,7 @@ export function EditView({
         setMetaVersion(data.processDefinitionVersion ?? "");
         setTitle(data.title ?? "");
         setForm(data.taskForm);
+        setNextInfos(data.nextUserTaskInfos);
         setValues(seedProcessFormValues(data.taskForm));
       })
       .catch(() => {
@@ -85,6 +94,14 @@ export function EditView({
         return;
       }
     }
+    // 发起时校验 7/8/9 候选人已选；存草稿不校验。
+    if (kind === "start") {
+      const missing = missingChooseNodes(nextInfos, choose);
+      if (missing.length > 0) {
+        toast.error(`请为以下节点选择处理人：${missing.join("、")}`);
+        return;
+      }
+    }
     const globalFormData = showForm
       ? (rendererRef.current?.collectAllData() ?? {})
       : undefined;
@@ -95,6 +112,7 @@ export function EditView({
         processInstanceId: instanceId,
         title: title.trim() || undefined,
         ...(globalFormData ? { globalFormData } : {}),
+        ...(Object.keys(choose).length > 0 ? { nodeCandidateUsersChoose: choose } : {}),
       };
       if (kind === "start") await startProcessInstance(payload);
       else await saveProcessDraft(payload);
@@ -157,6 +175,12 @@ export function EditView({
               />
             </div>
           )}
+          <NextTaskCandidatePicker
+            infos={nextInfos}
+            value={choose}
+            disabled={submitting != null}
+            onChange={(nodeId, ids) => setChoose((s) => ({ ...s, [nodeId]: ids }))}
+          />
           <div className="mt-4 flex gap-2">
             <Button
               variant="outline"
