@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Play, Square, Settings, User, X, Plus, CircleDot, type LucideIcon } from "lucide-react";
+import { Play, Square, Settings, User, UserCheck, X, Plus, CircleDot, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProcessNodeFieldPermission, ProcessGatewayConditionNode } from "@/types/process";
 
@@ -38,11 +38,11 @@ export interface ProcessNodeData extends Record<string, unknown> {
   __active?: boolean;
 
   // ---- userTask 专属（BPMN 候选人配置）----
-  /** 审批类型：1 会签 / 2 或签 / 3 随机1人 / 4 认领 / 5 随机多人会签 / 6 随机多人或签 */
+  /** 审批类型：0 申请人自审 / 1 会签 / 2 或签 / 3 随机1人 / 4 认领 / 5 随机多人会签 / 6 随机多人或签 / 7 上一节点选择1人 / 8 上一节点选择多人会签 / 9 上一节点选择多人或签 */
   approvalType?: string;
-  /** 会签通过率（0~1 两位小数字符串，如 "1.00"；仅会签类 approvalType=1会签/5随机多人会签 时有效） */
+  /** 会签通过率（0~1 两位小数字符串，如 "1.00"；仅会签类 approvalType=1会签/5随机多人会签/8上一节点选择多人会签 时有效） */
   passRate?: string;
-  /** 随机人数（正整数，默认 1；仅 approvalType=5/6 随机多人时可配，切走清空） */
+  /** 随机人数（正整数，默认 1；仅 approvalType=5/6 随机多人时可配，切走清空；「上一节点选择」7/8/9 由上一节点定人不配） */
   randomCount?: number;
   /** 候选用户 id 集合（逗号间隔，如 "1,2,3"） */
   candidateUsers?: string;
@@ -58,6 +58,8 @@ export interface ProcessNodeData extends Record<string, unknown> {
   backNodeId?: string;
   /** 回退后任务分配策略：auto 智能默认（有上次办理人则派回，无则按配置重分配）/ last_handler 派给上次办理人 / reassign 按 candidate 重分配 */
   backAssigneePolicy?: string;
+  /** 是否开启自审批自动通过（String："1" 开启 / "0" 关闭；默认不开启。处理人为申请人时自动通过） */
+  autoApproveIfSelf?: string;
   /** 候选 id → 展示名 的运行时映射（__ 前缀，保存前 stripNode 剥离，不入库） */
   __names?: Record<string, string>;
 
@@ -211,6 +213,28 @@ export const PROCESS_NODE_REGISTRY: Record<ProcessNodeKind, KindMeta> = {
 };
 
 export const PROCESS_NODE_LIST = Object.values(PROCESS_NODE_REGISTRY);
+
+// 申请节点（节点面板预设）：本质是固定 id=applyNode、预置「申请人自审」配置的 userTask。
+// 不作为独立 BPMN type 注册（后端 node.type 即元素 tag），落库 type 仍为 userTask，
+// 画布渲染/节点配置（UserTaskConfig）天然复用。id 固定 → 全图唯一。
+export const APPLY_NODE = {
+  /** 面板/拖拽标识（非 BPMN type，onDrop 特判） */
+  kind: "__applyNode",
+  /** 面板显示名 */
+  label: "申请节点",
+  /** 节点默认名称（落库 node.data.label） */
+  nodeLabel: "申请人",
+  /** 固定节点 id（NCName，全图唯一） */
+  nodeId: "applyNode",
+  group: "任务" as ProcessNodeGroup,
+  icon: UserCheck,
+  iconChip: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+  /** 预置配置：申请人自审 + 操作按钮默认「通过」（自动通过默认不勾选） */
+  data: {
+    approvalType: "0",
+    actionButtons: "pass",
+  } satisfies Partial<ProcessNodeData>,
+};
 
 // 新拖入节点的默认名称：「类型标签+（当前同类型节点数+1)」（用户任务2）。简单计数即可——
 // 序号只是帮区分，重名无害（节点靠内部 id 区分）。开始/结束唯一节点不加序号（用默认标签）。

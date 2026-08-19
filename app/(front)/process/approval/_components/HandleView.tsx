@@ -36,6 +36,10 @@ import {
   seedProcessFormValues,
   ProcessFormFields,
 } from "../../application/_components/ProcessForm";
+import {
+  NextTaskCandidatePicker,
+  missingChooseNodes,
+} from "../../application/_components/NextTaskCandidatePicker";
 import { ProcessWorkHeader } from "../../application/_components/ProcessWorkHeader";
 import {
   PROCESS_BUTTON_ACTIONS,
@@ -44,21 +48,26 @@ import {
 
 // 处理任务视图（待办进入）：可编辑表单 + 始终引入联动（填写态，无「按联动显示」开关）。
 // 审批操作（pass 通过 / reject 拒绝 / back 驳回）点按钮弹确认框（可填审批意见），确认后调对应接口。
+// actionLabels：按动作覆盖按钮文案（如申请中心待处理把 pass 显示为「提交」），缺省用 PROCESS_BUTTON_ACTIONS。
 export function HandleView({
   instanceId,
   taskId,
   onBack,
   onDone,
+  actionLabels,
 }: {
   instanceId: number;
   taskId?: string;
   onBack: () => void;
   onDone: () => void;
+  actionLabels?: Partial<Record<"pass" | "reject" | "back", string>>;
 }) {
   const [detail, setDetail] = useState<ProcessInstance | null>(null);
   const [loading, setLoading] = useState(true);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // 下一用户任务候选人选择（7/8/9）：nodeId -> 选中人员 id 集合。
+  const [choose, setChoose] = useState<Record<string, number[]>>({});
   const rendererRef = useRef<DynamicFormRendererHandle>(null);
 
   // 待确认的动作（点开确认框）；提交中；审批意见；驳回目标节点（仅 backType=choose）。
@@ -75,6 +84,7 @@ export function HandleView({
     setPrevKey(depKey);
     setDetail(null);
     setLoading(true);
+    setChoose({});
   }
 
   useEffect(() => {
@@ -101,6 +111,9 @@ export function HandleView({
   const actions = (detail?.buttonActions ?? []).filter(
     (a) => PROCESS_BUTTON_ACTIONS[a] != null,
   );
+  // 按钮文案：优先 actionLabels 覆盖，缺省取 PROCESS_BUTTON_ACTIONS。
+  const labelOf = (a: "pass" | "reject" | "back") =>
+    actionLabels?.[a] ?? PROCESS_BUTTON_ACTIONS[a].label;
   // 驳回方式：choose 时需用户从 availableBackTargets 选目标节点；prev/specific 直接驳回。
   const backConfig = detail?.backConfig;
   const backTargets = backConfig?.availableBackTargets ?? [];
@@ -133,31 +146,38 @@ export function HandleView({
       toast.error("请选择驳回的目标节点");
       return;
     }
+    // 通过时校验 7/8/9 候选人已选（驳回/拒绝不校验）。
+    if (confirmAction === "pass") {
+      const missing = missingChooseNodes(detail?.nextUserTaskInfos, choose);
+      if (missing.length > 0) {
+        toast.error(`请为以下节点选择处理人：${missing.join("、")}`);
+        return;
+      }
+    }
     setSubmitting(true);
     const payload = {
       processInstanceId: instanceId,
       taskId,
       remark: remark.trim() || undefined,
       ...(globalFormData ? { globalFormData } : {}),
+      ...(confirmAction === "pass" && Object.keys(choose).length > 0
+        ? { nodeCandidateUsersChoose: choose }
+        : {}),
       ...(confirmAction === "back" && backConfig?.backType === "choose"
         ? { targetNodeId }
         : {}),
     };
-    const LABEL: Record<"pass" | "reject" | "back", string> = {
-      pass: "通过",
-      reject: "拒绝",
-      back: "驳回",
-    };
+    const actionLabel = labelOf(confirmAction);
     try {
       if (confirmAction === "pass") await passProcessTask(payload);
       else if (confirmAction === "reject") await rejectProcessTask(payload);
       else await backProcessTask(payload);
-      toast.success(`已${LABEL[confirmAction]}`);
+      toast.success(`已${actionLabel}`);
       setConfirmAction(null);
       onDone();
     } catch (err) {
       toast.error(
-        err instanceof ApiError ? err.message : `${LABEL[confirmAction]}失败`,
+        err instanceof ApiError ? err.message : `${actionLabel}失败`,
       );
     } finally {
       setSubmitting(false);
@@ -166,6 +186,7 @@ export function HandleView({
 
   const confirmMeta =
     confirmAction != null ? PROCESS_BUTTON_ACTIONS[confirmAction] : null;
+  const confirmLabel = confirmAction != null ? labelOf(confirmAction) : null;
 
   return (
     <Container className="py-8 md:py-12">
@@ -217,6 +238,12 @@ export function HandleView({
               rendererRef={rendererRef}
             />
           )}
+          <NextTaskCandidatePicker
+            infos={detail?.nextUserTaskInfos}
+            value={choose}
+            disabled={submitting}
+            onChange={(nodeId, ids) => setChoose((s) => ({ ...s, [nodeId]: ids }))}
+          />
           {actions.length > 0 && (
             <div className="mt-8 flex gap-2">
               {actions.map((a) => {
@@ -227,7 +254,7 @@ export function HandleView({
                     variant={meta.variant}
                     onClick={() => openConfirm(a as "pass" | "reject" | "back")}
                   >
-                    {meta.label}
+                    {labelOf(a as "pass" | "reject" | "back")}
                   </Button>
                 );
               })}
@@ -244,7 +271,7 @@ export function HandleView({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认{confirmMeta?.label ?? ""}？</AlertDialogTitle>
+            <AlertDialogTitle>确认{confirmLabel ?? ""}？</AlertDialogTitle>
             <AlertDialogDescription>
               {confirmAction === "pass"
                 ? "通过后流程将进入下一节点。"
@@ -297,7 +324,7 @@ export function HandleView({
               onClick={submit}
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              确认{confirmMeta?.label ?? ""}
+              确认{confirmLabel ?? ""}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

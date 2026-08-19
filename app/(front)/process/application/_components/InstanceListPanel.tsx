@@ -40,19 +40,22 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   return [1, "…", current - 1, current, current + 1, "…", total];
 }
 
-// 我的流程列表：tab（进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。草稿可编辑、其他可查看（跳转路由视图）。
+// 我的流程列表：tab（待处理/进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。
+// 操作列：待处理=处理（带 taskId 进处理视图，对齐审批中心待办），草稿=编辑、其他=查看（跳转路由视图）。
 export function InstanceListPanel({
   activeTab,
   onTabChange,
   refreshKey,
   onView,
   onEdit,
+  onOpenTask,
 }: {
   activeTab: ProcessInstanceType;
   onTabChange: (t: ProcessInstanceType) => void;
   refreshKey: number;
   onView: (instanceId: number) => void;
   onEdit: (instanceId: number) => void;
+  onOpenTask: (instanceId: number, taskId?: string) => void;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -183,7 +186,16 @@ export function InstanceListPanel({
                       {r.updateTime || "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {r.processStatus === "0" ? (
+                      {activeTab === "6" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => r.id != null && onOpenTask(r.id, r.taskId)}
+                        >
+                          处理
+                        </Button>
+                      ) : r.processStatus === "0" ? (
                         <Button
                           variant="ghost"
                           size="icon"

@@ -151,14 +151,16 @@ export interface ProcessInstance {
   backConfig?: BackConfig;
   /** 任务表单（含已存数据 value；无表单缺省） */
   taskForm?: TaskFormVO;
+  /** 可能的下一个用户任务（info 返回，与 processDefinitionName 同级；含 7/8/9 时需处理人预选定人） */
+  nextUserTaskInfos?: NextUserTaskInfo[];
   /** 创建时间（yyyy-MM-dd HH:mm:ss） */
   createTime?: string;
   /** 更新时间（yyyy-MM-dd HH:mm:ss） */
   updateTime?: string;
 }
 
-// 查询类型：1 我发起的(进行中) / 5 我发起的(全部) / 0 草稿。
-export type ProcessInstanceType = "1" | "5" | "0";
+// 查询类型：1 我发起的(进行中) / 5 我发起的(全部) / 0 草稿 / 6 待处理(待我处理的任务)。
+export type ProcessInstanceType = "1" | "5" | "0" | "6";
 
 // 审批中心查询类型：2 待办 / 3 待认领 / 4 已办。
 export type ApprovalInstanceType = "2" | "3" | "4";
@@ -177,9 +179,9 @@ export interface ProcessInstancePageParam {
 
 // 发起 / 存草稿 / 认领 / 审批动作请求体（POST /processInstance/start | /saveDraft | /claim | /pass | /reject）。
 // 响应只看 code。各接口按需取字段：
-//   start/saveDraft: processDefinitionId (+ processInstanceId 编辑既有草稿) + title? + globalFormData?
+//   start/saveDraft: processDefinitionId (+ processInstanceId 编辑既有草稿) + title? + globalFormData? + nodeCandidateUsersChoose?(含 7/8/9 时)
 //   claim:           processInstanceId + taskId
-//   pass:            processInstanceId + taskId + remark? + globalFormData?
+//   pass:            processInstanceId + taskId + remark? + globalFormData? + nodeCandidateUsersChoose?(含 7/8/9 时)
 //   reject:          processInstanceId + taskId + remark?
 //   back:            processInstanceId + taskId + remark? + targetNodeId(仅 backType=choose 必填)
 export interface ProcessHandleParam {
@@ -197,6 +199,8 @@ export interface ProcessHandleParam {
   targetNodeId?: string;
   /** 表单数据（键=fieldId；无表单省略） */
   globalFormData?: Record<string, unknown>;
+  /** 下一用户任务已选候选人（key=nodeId，value=勾选的人员 id 集合；仅含 7/8/9 节点，7 单选集合大小为 1） */
+  nodeCandidateUsersChoose?: Record<string, number[]>;
 }
 
 // 实例状态徽标映射。键外（非 0/10/11）视为审批中。
@@ -241,8 +245,9 @@ export interface BackConfig {
   availableBackTargets?: BackTargetNode[];
 }
 
-// 列表 tab（顺序：进行中 / 全部 / 草稿）。
+// 列表 tab（顺序：待处理 / 进行中 / 全部 / 草稿）。
 export const INSTANCE_TABS: { value: ProcessInstanceType; label: string }[] = [
+  { value: "6", label: "待处理" },
   { value: "1", label: "进行中" },
   { value: "5", label: "全部" },
   { value: "0", label: "草稿" },
@@ -268,6 +273,8 @@ export interface ProcessStartInfo {
   version?: string;
   /** 发起表单（流程未绑定/节点继承时缺省） */
   startForm?: TaskFormVO;
+  /** 可能的下一个用户任务（startInfo 返回，与 processName 同级；含 7/8/9 时需处理人预选定人） */
+  nextUserTaskInfos?: NextUserTaskInfo[];
 }
 
 // ===== 申请中心表单接入 =====
@@ -297,3 +304,31 @@ export interface TaskFormVO {
   /** 全局表单（可能不存在：流程未绑定/节点继承） */
   globalForm?: ProcessForm;
 }
+
+// ===== 下一用户任务候选人选择（审批类型 7/8/9 上一节点选择）=====
+
+// 可选候选人（NextUserTaskInfo.candidateUsers 元素；后端仅返回 id + nickname）。
+export interface NextTaskCandidate {
+  /** 用户id */
+  id?: number;
+  /** 用户昵称 */
+  nickname?: string;
+}
+
+// 可能的下一个用户任务（startInfo 与 processName 同级 / info 与 processDefinitionName 同级）。
+// 仅当 type 为 7/8/9（上一节点选择1人/多人会签/多人或签）时才返回 candidateUsers，需处理人预先选定处理人。
+export interface NextUserTaskInfo {
+  /** 审批类型（对应后台配置）：7 上一节点选择1人(单选) / 8 上一节点选择多人会签(多选) / 9 上一节点选择多人或签(多选) */
+  type?: number;
+  /** 节点id */
+  nodeId?: string;
+  /** 节点名称 */
+  nodeName?: string;
+  /** 可选候选人（仅 type=7/8/9 返回；其它审批类型不返回） */
+  candidateUsers?: NextTaskCandidate[];
+}
+
+// 需要处理人预先选人的审批类型（上一节点选择）。7=单选，8/9=多选。
+export const NEXT_TASK_CHOOSE_TYPES = [7, 8, 9] as const;
+// 单选类型（上一节点选择1人）；其余 8/9 为多选。
+export const NEXT_TASK_SINGLE_TYPE = 7;

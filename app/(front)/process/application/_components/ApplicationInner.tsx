@@ -9,15 +9,18 @@ import { StartProcessSection } from "./StartProcessSection";
 import { DetailView } from "./DetailView";
 import { EditView } from "./EditView";
 import { StartView } from "./StartView";
+import { HandleView } from "../../approval/_components/HandleView";
 
-// 视图状态：列表 / 发起 / 查看 / 编辑（query 切换，对齐 ganDaShi ForumInner）。
+// 视图状态：列表 / 发起 / 查看 / 编辑 / 处理（query 切换，对齐 ganDaShi ForumInner）。
+// handle=待处理任务处理（复用审批中心 HandleView，带 taskId）。
 export type View =
   | { name: "list" }
   | { name: "start"; definitionId: number }
   | { name: "detail"; instanceId: number }
-  | { name: "edit"; instanceId: number };
+  | { name: "edit"; instanceId: number }
+  | { name: "handle"; instanceId: number; taskId?: string };
 
-// 从 URL query 解析视图（?start=defId / ?view=instId / ?edit=instId / 无参=列表）。
+// 从 URL query 解析视图（?start=defId / ?view=instId / ?edit=instId / ?handle=instId[&taskId=n] / 无参=列表）。
 function parseView(search: string): View {
   const p = new URLSearchParams(search);
   const start = p.get("start");
@@ -26,6 +29,13 @@ function parseView(search: string): View {
   if (view) return { name: "detail", instanceId: Number(view) };
   const edit = p.get("edit");
   if (edit) return { name: "edit", instanceId: Number(edit) };
+  const handle = p.get("handle");
+  if (handle)
+    return {
+      name: "handle",
+      instanceId: Number(handle),
+      taskId: p.get("taskId") ?? undefined,
+    };
   return { name: "list" };
 }
 
@@ -41,6 +51,11 @@ function viewToUrl(v: View, processType?: string): string {
   if (v.name === "start") return `${base}?start=${v.definitionId}`;
   if (v.name === "detail") return `${base}?view=${v.instanceId}`;
   if (v.name === "edit") return `${base}?edit=${v.instanceId}`;
+  if (v.name === "handle") {
+    let url = `${base}?handle=${v.instanceId}`;
+    if (v.taskId != null) url += `&taskId=${v.taskId}`;
+    return url;
+  }
   return base;
 }
 
@@ -99,6 +114,12 @@ export function ApplicationInner({ processType }: { processType?: string }) {
     [go],
   );
 
+  // 待处理任务处理成功：回列表并刷新（不改 activeTab，停留在「待处理」）。
+  const handleTaskDone = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+    go({ name: "list" });
+  }, [go]);
+
   if (view.name === "start") {
     return (
       <StartView
@@ -125,6 +146,17 @@ export function ApplicationInner({ processType }: { processType?: string }) {
       />
     );
   }
+  if (view.name === "handle") {
+    return (
+      <HandleView
+        instanceId={view.instanceId}
+        taskId={view.taskId}
+        onBack={() => go({ name: "list" })}
+        onDone={handleTaskDone}
+        actionLabels={{ pass: "提交" }}
+      />
+    );
+  }
 
   return (
     <Container className="py-8 md:py-12">
@@ -148,6 +180,7 @@ export function ApplicationInner({ processType }: { processType?: string }) {
           refreshKey={refreshKey}
           onView={(id) => go({ name: "detail", instanceId: id })}
           onEdit={(id) => go({ name: "edit", instanceId: id })}
+          onOpenTask={(id, taskId) => go({ name: "handle", instanceId: id, taskId })}
         />
       </section>
     </Container>

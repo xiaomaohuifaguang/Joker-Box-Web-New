@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import { InheritMainFormField } from "./InheritMainFormField";
 import { selectorInitByIds } from "@/lib/api/user";
 import type { Edge } from "@xyflow/react";
 import {
+  APPLY_NODE,
   PROCESS_NODE_REGISTRY,
   type ProcessFlowNode,
   type ProcessNodeData,
@@ -29,18 +31,25 @@ import {
 
 // 审批类型（approvalType）。value 为字符串入 node.data。
 const APPROVAL_TYPES = [
+  { value: "0", label: "申请人自审" },
   { value: "1", label: "会签" },
   { value: "2", label: "或签" },
   { value: "3", label: "随机1人" },
   { value: "4", label: "认领" },
   { value: "5", label: "随机多人会签" },
   { value: "6", label: "随机多人或签" },
+  { value: "7", label: "上一节点选择1人" },
+  { value: "8", label: "上一节点选择多人会签" },
+  { value: "9", label: "上一节点选择多人或签" },
 ];
 
-// 随机多人审批类型（可配 randomCount 随机人数）。
+// 申请人自审：申请人本人审批，无需候选人/通过率/随机人数等联动配置。
+const SELF_REVIEW_TYPE = "0";
+// 随机多人审批类型（可配 randomCount 随机人数）：随机多人会签5/或签6。
+// 「上一节点选择」类（7/8/9）由上一节点选定人，不配随机人数。
 const RANDOM_MULTI_TYPES = ["5", "6"];
-// 会签类审批类型（可配 passRate 通过率）：会签1 / 随机多人会签5。
-const COUNTERSIGN_TYPES = ["1", "5"];
+// 会签类审批类型（可配 passRate 通过率）：会签1 / 随机多人会签5 / 上一节点选择多人会签8。
+const COUNTERSIGN_TYPES = ["1", "5", "8"];
 
 // 操作按钮（actionButtons）。value 入 node.data（逗号串），label 展示。
 const ACTION_BUTTONS = [
@@ -101,6 +110,12 @@ export function UserTaskConfig({
   const backAssigneePolicy = d.backAssigneePolicy ?? "auto";
   // 随机人数（仅随机多人会签5/或签6 时可配；默认 1）。
   const randomCount = d.randomCount ?? 1;
+  // 申请人自审：隐藏候选人/通过率/随机人数等联动配置（本人审批）。
+  const isSelfReview = approvalType === SELF_REVIEW_TYPE;
+  // 申请节点（固定 id=applyNode）：审批类型锁定「申请人自审」，只读不可改。
+  const isApplyNode = node.id === APPLY_NODE.nodeId;
+  // 自审批自动通过：String "1" 开 / "0" 关（默认关）。处理人为申请人时自动通过。
+  const autoApproveIfSelf = d.autoApproveIfSelf === "1";
 
   // 驳回节点候选：沿入边反向 BFS 收集当前节点的所有上游（祖先），再过滤出任务类（serviceTask/userTask）。
   // 「驳回」语义是回退到上游，不允许顺流跳到下游（避免永动环）；开始/结束/网关不可驳回。
@@ -175,15 +190,21 @@ export function UserTaskConfig({
           value={approvalType}
           onValueChange={(v) => {
             const patch: Partial<ProcessNodeData> = { approvalType: v };
-            // 选「随机多人会签/或签」时补默认随机人数 1；切走则清掉。
+            // 选「随机多人会签/或签」（5/6）时补默认随机人数 1；切走则清掉。
             if (RANDOM_MULTI_TYPES.includes(v)) patch.randomCount = d.randomCount ?? 1;
             else patch.randomCount = undefined;
-            // 选会签类（会签1/随机多人会签5）时补默认通过率；切走则清掉。
+            // 选会签类（1/5/8）时补默认通过率；切走则清掉。
             if (COUNTERSIGN_TYPES.includes(v)) patch.passRate = d.passRate ?? "1.00";
             else patch.passRate = undefined;
+            // 选「申请人自审」时清掉候选人配置（本人审批，无需候选用户/角色/部门）；切走不恢复。
+            if (v === SELF_REVIEW_TYPE) {
+              patch.candidateUsers = undefined;
+              patch.candidateRoles = undefined;
+              patch.candidateDepts = undefined;
+            }
             onChange(patch);
           }}
-          disabled={readOnly}
+          disabled={readOnly || isApplyNode}
         >
           <SelectTrigger className="h-9 w-full">
             <SelectValue placeholder="选择审批类型" />
@@ -196,6 +217,22 @@ export function UserTaskConfig({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* 自审批自动通过：String "1"/"0" 显式落库（所见即所存），默认不勾选。 */}
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor="auto-approve-if-self" className="text-xs">
+          自审批自动通过
+          <span className="block text-[11px] font-normal text-muted-foreground">
+            处理人为申请人时自动通过
+          </span>
+        </Label>
+        <Switch
+          id="auto-approve-if-self"
+          checked={autoApproveIfSelf}
+          disabled={readOnly}
+          onCheckedChange={(c) => onChange({ autoApproveIfSelf: c === true ? "1" : "0" })}
+        />
       </div>
 
       {COUNTERSIGN_TYPES.includes(approvalType) && (
@@ -216,7 +253,7 @@ export function UserTaskConfig({
         </div>
       )}
 
-      {/* 随机人数：仅「随机多人会签/或签」显示。正整数，默认 1，失焦钳制。 */}
+      {/* 随机人数：仅「随机多人会签/或签」（5/6）显示。正整数，默认 1，失焦钳制。 */}
       {RANDOM_MULTI_TYPES.includes(approvalType) && (
         <div className="grid gap-1.5">
           <Label htmlFor="random-count" className="text-xs">随机人数</Label>
@@ -237,42 +274,47 @@ export function UserTaskConfig({
         </div>
       )}
 
-      <div className="grid gap-1.5">
-        <Label className="text-xs">候选用户</Label>
-        <CandidateUsersSelect
-          value={d.candidateUsers ?? ""}
-          names={names}
-          disabled={readOnly}
-          onChange={(ids, added) => {
-            onChange({ candidateUsers: ids });
-            mergeNames(added);
-          }}
-        />
-      </div>
+      {/* 候选用户/角色/部门：申请人自审时隐藏（本人审批，无需候选人）。 */}
+      {!isSelfReview && (
+        <>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">候选用户</Label>
+            <CandidateUsersSelect
+              value={d.candidateUsers ?? ""}
+              names={names}
+              disabled={readOnly}
+              onChange={(ids, added) => {
+                onChange({ candidateUsers: ids });
+                mergeNames(added);
+              }}
+            />
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label className="text-xs">候选角色</Label>
-        <CandidateRolesSelect
-          value={d.candidateRoles ?? ""}
-          disabled={readOnly}
-          onChange={(ids, added) => {
-            onChange({ candidateRoles: ids });
-            mergeNames(added);
-          }}
-        />
-      </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">候选角色</Label>
+            <CandidateRolesSelect
+              value={d.candidateRoles ?? ""}
+              disabled={readOnly}
+              onChange={(ids, added) => {
+                onChange({ candidateRoles: ids });
+                mergeNames(added);
+              }}
+            />
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label className="text-xs">候选部门</Label>
-        <CandidateDeptsSelect
-          value={d.candidateDepts ?? ""}
-          disabled={readOnly}
-          onChange={(ids, added) => {
-            onChange({ candidateDepts: ids });
-            mergeNames(added);
-          }}
-        />
-      </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">候选部门</Label>
+            <CandidateDeptsSelect
+              value={d.candidateDepts ?? ""}
+              disabled={readOnly}
+              onChange={(ids, added) => {
+                onChange({ candidateDepts: ids });
+                mergeNames(added);
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {/* 操作按钮：固定枚举多选，逗号串入 node.data.actionButtons。 */}
       <div className="grid gap-1.5">

@@ -8,7 +8,8 @@ Route group（`(front)` 不进 URL）。`layout.tsx`(Server) = Header + `{childr
 - `dynamicForm/`：动态表单填写页。`/dynamicForm?formId=&version=`，`<RequireAuth>`。复用后台设计器的 `DynamicFormRenderer`（渲染/联动/远程选项/校验）按 `info(formId,version)` 渲染已发布版本，`/dynamicForm/submit`（body formId/version/data）提交，成功态 + 再填一次（重拉）。hook `hooks/useDynamicFormFill`。
 - `ganDaShi/`：干大事论坛。`<RequirePermission>`。TipTap 富文本（详见同级 README）。`_components/`(ForumInner, PostList, PostDetail, NewPost, CommentSection, CommentThread, RichTextEditor, RichContent, ResizableImage)。
 - `tools/`：`jsonFormat`(JSON 编辑器+结构树，CodeMirror，`_components/JsonTree`)、`cron`(5 段+预设+`cronstrue` 中文描述+`cron-parser` 下次 5 次触发，date-fns 格式化)、`signInCard`(占位)。均 `<RequirePermission>`。
-- `code-maker/`、`process/`：占位（`<RequirePermission>`）。
+- `process/`：流程前台（申请中心 `application/` + 审批中心 `approval/`），`<RequirePermission>`。视图编排/接口/表单接入/候选人选择约定详见同级 README。
+- `code-maker/`：占位（`<RequirePermission>`）。
 - `_components/`：Header（NavigationMenu + mobile Sheet）、Footer、UserMenu。
 
 导航是 backend-driven（`useMenuTree` menuType=-2），图标读 `menu.icon`。守卫规则见 `components/README.md`。

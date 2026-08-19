@@ -51,6 +51,7 @@ import {
 import { ProcessDataDialog } from "./ProcessDataDialog";
 import { ProcessRunPanel } from "./ProcessRunPanel";
 import {
+  APPLY_NODE,
   PROCESS_NODE_LIST,
   PROCESS_NODE_REGISTRY,
   hitEdgeIdAt,
@@ -61,6 +62,7 @@ import {
   type ProcessNodeData,
   type ProcessNodeKind,
   type ProcessEdgeData,
+  type KindMeta,
 } from "./nodes";
 import { UserTaskConfig } from "./UserTaskConfig";
 import { ServiceTaskConfig } from "./ServiceTaskConfig";
@@ -427,10 +429,33 @@ function DesignerInner({
   // 选中节点（单选），属性面板编辑它。
   const selectedNode = useMemo(() => nodes.find((n) => n.selected), [nodes]);
 
+  // 开始节点 id（按 type=startEvent 找，不写死 "start"——rawData 回填的老流程开始节点 id 未必是 start）。
+  const startNodeId = useMemo(() => nodes.find((n) => n.type === "startEvent")?.id ?? null, [nodes]);
+
+  // 开始节点 ↔ 申请节点（id=applyNode）的「表单配置」双向同步：仅 inheritMainForm/fieldPermissions 两个 key。
+  // 改任一节点的表单配置就镜像到另一节点（存在才同步）；其它字段（名称/备注/审批等）与普通用户任务一律不同步。
+  const FORM_CONFIG_KEYS = ["inheritMainForm", "fieldPermissions"] as const;
   function updateSelected(patch: Partial<ProcessNodeData>) {
     if (!selectedNode) return;
+    const isFormConfig = FORM_CONFIG_KEYS.some((k) => k in patch);
+    const syncTargetId =
+      selectedNode.type === "startEvent"
+        ? APPLY_NODE.nodeId
+        : selectedNode.id === APPLY_NODE.nodeId
+          ? startNodeId
+          : null;
+    const shouldSync = isFormConfig && syncTargetId != null;
     setNodes((nds) =>
-      nds.map((n) => (n.id === selectedNode.id ? { ...n, data: { ...n.data, ...patch } } : n)),
+      nds.map((n) => {
+        if (n.id === selectedNode.id) return { ...n, data: { ...n.data, ...patch } };
+        if (shouldSync && n.id === syncTargetId) {
+          const sub: Partial<ProcessNodeData> = {};
+          if ("inheritMainForm" in patch) sub.inheritMainForm = patch.inheritMainForm;
+          if ("fieldPermissions" in patch) sub.fieldPermissions = patch.fieldPermissions;
+          return { ...n, data: { ...n.data, ...sub } };
+        }
+        return n;
+      }),
     );
   }
 
@@ -526,8 +551,8 @@ function DesignerInner({
   const simStep = useCallback((ids: string[]) => setSim((s) => (s ? { ...s, activeIds: ids } : s)), []);
   const simFinish = useCallback(() => setSim((s) => (s ? { ...s, running: false } : s)), []);
 
-  // 节点面板项：拖拽起始，把 kind 写入 dataTransfer。
-  function onDragStart(e: React.DragEvent, kind: ProcessNodeKind) {
+  // 节点面板项：拖拽起始，把 kind 写入 dataTransfer（申请节点预设用专属标识 __applyNode）。
+  function onDragStart(e: React.DragEvent, kind: string) {
     e.dataTransfer.setData("application/process-node", kind);
     e.dataTransfer.effectAllowed = "move";
   }
@@ -564,26 +589,45 @@ function DesignerInner({
     (e: React.DragEvent) => {
       e.preventDefault();
       if (!editing) return;
-      const kind = e.dataTransfer.getData("application/process-node") as ProcessNodeKind;
-      const meta = PROCESS_NODE_REGISTRY[kind];
+      const kind = e.dataTransfer.getData("application/process-node");
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+
+      // 申请节点预设：固定 id=applyNode（全图唯一），落库 type=userTask + 预置申请人自审配置。
+      if (kind === APPLY_NODE.kind) {
+        if (nodes.some((n) => n.id === APPLY_NODE.nodeId)) {
+          toast.info(`「${APPLY_NODE.label}」已存在，唯一`);
+          return;
+        }
+        const node: ProcessFlowNode = {
+          id: APPLY_NODE.nodeId,
+          type: "userTask",
+          position,
+          data: { label: APPLY_NODE.nodeLabel, ...APPLY_NODE.data },
+        };
+        setNodes((nds) => nds.concat(node));
+        const edgeId = hitEdgeIdAt(e.clientX, e.clientY);
+        if (edgeId) insertIntoEdge(node.id, edgeId);
+        return;
+      }
+
+      const meta = PROCESS_NODE_REGISTRY[kind as ProcessNodeKind];
       if (!meta) return;
       if (meta.unique && nodes.some((n) => n.type === kind)) {
         toast.info(`「${meta.label}」节点已存在，唯一`);
         return;
       }
-      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const node: ProcessFlowNode = {
         // 节点 id：n_ 前缀（字母开头）+ newNodeIdSuffix（NCName；http 内网非安全上下文时 crypto.randomUUID 不可用，走兜底）。
         id: `n_${newNodeIdSuffix()}`,
-        type: kind,
+        type: kind as ProcessNodeKind,
         position,
         // 默认名=类型标签+下一个同类序号（用户任务2），画布与配置面板名称同读 label，天然一致。
-        data: { label: nextKindLabel(kind, nodes) },
+        data: { label: nextKindLabel(kind as ProcessNodeKind, nodes) },
       };
       setNodes((nds) => nds.concat(node));
       // 落点压着连线 → 插入该线中间（仅任务/网关类）。
       const edgeId = hitEdgeIdAt(e.clientX, e.clientY);
-      if (edgeId && canInsertKind(kind)) insertIntoEdge(node.id, edgeId);
+      if (edgeId && canInsertKind(kind as ProcessNodeKind)) insertIntoEdge(node.id, edgeId);
     },
     [editing, nodes, screenToFlowPosition, setNodes, canInsertKind, insertIntoEdge],
   );
@@ -593,12 +637,25 @@ function DesignerInner({
     e.dataTransfer.dropEffect = "move";
   }, []);
 
-  // 左栏：搜索过滤 + 分组（保持 REGISTRY 内 group 顺序）。
+  // 左栏：搜索过滤 + 分组（保持 REGISTRY 内 group 顺序）。申请节点作为预设挂「任务」组。
+  // 「任务」组内顺序固定为：申请节点 → 用户任务 → 服务任务（TASK_ORDER 排名，未列的排最后）。
   const groupedPalette = useMemo(() => {
     const q = paletteSearch.trim().toLowerCase();
-    const list = PROCESS_NODE_LIST.filter((m) => !q || m.label.toLowerCase().includes(q));
+    const list: Array<KindMeta | typeof APPLY_NODE> = PROCESS_NODE_LIST.filter(
+      (m) => !q || m.label.toLowerCase().includes(q),
+    );
+    if (!q || APPLY_NODE.label.toLowerCase().includes(q)) list.push(APPLY_NODE);
     const groups = new Map<string, typeof list>();
     for (const m of list) groups.set(m.group, [...(groups.get(m.group) ?? []), m]);
+    const TASK_ORDER = [APPLY_NODE.kind, "userTask", "serviceTask"];
+    const taskGroup = groups.get("任务");
+    if (taskGroup) {
+      taskGroup.sort((a, b) => {
+        const ra = TASK_ORDER.indexOf(a.kind);
+        const rb = TASK_ORDER.indexOf(b.kind);
+        return (ra === -1 ? TASK_ORDER.length : ra) - (rb === -1 ? TASK_ORDER.length : rb);
+      });
+    }
     return [...groups.entries()];
   }, [paletteSearch]);
 

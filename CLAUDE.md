@@ -69,9 +69,9 @@ Two sections, unified login. Static export = no server-side route protection; th
 
 各模块的**实现细节与坑见所在目录的 `README.md`**（改某个模块前先读它）。已实现的功能入口：
 
-- **前台**：收藏网站 `/website`、码头（云盘）`/file-server`、干大事论坛 `/ganDaShi`、JSON 格式化 `/tools/jsonFormat`、cron `/tools/cron` → `app/(front)/README.md`（ganDaShi 富文本另有同级 README）
-- **后台**：机构/用户/角色（`authority/`）、API、菜单、网址收藏、邮件、码表（`system/code-table`）、动态表单设计器（`form/dynamicForm-manager`）→ `app/console/README.md`（动态表单另有同级 README）
-- **占位**（`ComingSoon`）：`code-maker`、`process`、`signInCard`、仪表盘、`process-manager`、`displayBoard`、`crawler-task-manager`、`ai/model-manager`、`system/system-prompt`
+- **前台**：收藏网站 `/website`、码头（云盘）`/file-server`、干大事论坛 `/ganDaShi`、JSON 格式化 `/tools/jsonFormat`、cron `/tools/cron` → `app/(front)/README.md`（ganDaShi 富文本另有同级 README）；流程前台（申请中心+审批中心）`/process` → `app/(front)/process/README.md`
+- **后台**：机构/用户/角色（`authority/`）、API、菜单、网址收藏、邮件、码表（`system/code-table`）、动态表单设计器（`form/dynamicForm-manager`）、流程设计器（`process-manager/designer`）→ `app/console/README.md`（动态表单另有同级 README）
+- **占位**（`ComingSoon`）：`code-maker`、`signInCard`、仪表盘、`displayBoard`、`crawler-task-manager`、`ai/model-manager`、`system/system-prompt`
 
 ## ⚠️ Next.js 16 is NOT the Next.js in your training data
 
