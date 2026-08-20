@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/Container";
-import { processTypeName } from "@/lib/process-types";
+import { processTypeName, DEFAULT_PROCESS_TYPE } from "@/lib/process-types";
 import type { ProcessInstanceType } from "@/types";
 import { InstanceListPanel } from "./InstanceListPanel";
 import { StartProcessSection } from "./StartProcessSection";
@@ -63,8 +63,10 @@ function viewToUrl(v: View, processType?: string): string {
 // 申请中心视图编排：list / start / detail / edit 四视图切换。
 // state 为主（渲染可靠），URL 用原生 pushState 同步（可分享/刷新/前进后退还原）。
 // 不用 router.push：同 path 仅改 query 时静态导出的软导航不可靠。
-// processType：分类（/process/application/oa -> "oa"）；通用页不传（undefined）。
+// processType：分类（/process/application/oa -> "oa"）；通用页（/process/application）不传=默认分类 default。
 export function ApplicationInner({ processType }: { processType?: string }) {
+  // 接口传参用的分类：通用页（无路由 type）按默认分类 default 传。
+  const processCategory = processType ?? DEFAULT_PROCESS_TYPE;
   const searchParams = useSearchParams();
   // 权威视图 = 响应式 URL（useSearchParams 由 Next 客户端路由驱动，外部 <Link>/前进后退必更新）。
   // 解决：兄弟页（申请<->审批）<Link> 软导航不重建组件，纯 useState(快照) 不重算残留详情态。
@@ -168,7 +170,7 @@ export function ApplicationInner({ processType }: { processType?: string }) {
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">发起流程</h2>
         <StartProcessSection
-          processCategory={processType}
+          processCategory={processCategory}
           onStart={(id) => go({ name: "start", definitionId: id })}
         />
       </section>
@@ -179,7 +181,7 @@ export function ApplicationInner({ processType }: { processType?: string }) {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           refreshKey={refreshKey}
-          processCategory={processType}
+          processCategory={processCategory}
           onView={(id) => go({ name: "detail", instanceId: id })}
           onEdit={(id) => go({ name: "edit", instanceId: id })}
           onOpenTask={(id, taskId) => go({ name: "handle", instanceId: id, taskId })}

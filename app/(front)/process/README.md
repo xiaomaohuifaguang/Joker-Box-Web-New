@@ -2,7 +2,7 @@
 
 流程的用户侧：`application/`（申请中心，我发起的）+ `approval/`（审批中心，待我审批的）。两目录平行，各带通用页 `page.tsx` 和分类页 `[type]/page.tsx`（分类如 `/process/application/oa`，静态导出靠 `generateStaticParams` 枚举 type，新 type 要重新 build）。均 `<RequirePermission>`。
 
-分类 type 注册表在 `lib/process-types.ts`（`PROCESS_TYPES: { type, name }[]`，含默认分类 `{ type:"default", name:"默认分类" }`，`DEFAULT_PROCESS_TYPE`）。`generateStaticParams` 从它派生（新增 type 只改注册表）；两中心列表标题用 `processTypeName(processType)` 拼前缀（如「OA申请中心」；**默认分类/通用页不拼名**，仍「申请中心」；未知 type 返回 `""`）。将来 type 与后台配置联动时只换该文件数据源。
+分类 type 注册表在 `lib/process-types.ts`（`PROCESS_TYPES: { type, name }[]`，含默认分类 `{ type:"default", name:"默认分类" }`，`DEFAULT_PROCESS_TYPE`）。**通用页 = 默认分类页**：`/process/application` `/process/approval`（路由不带 default）接口按 `processCategory=default` 传参（Inner 里 `processType ?? DEFAULT_PROCESS_TYPE`）；`generateStaticParams` 从注册表派生但**排除 default**（不产出 /default 路由），新增 type 只改注册表。两中心列表标题用 `processTypeName(processType)` 拼前缀（如「OA申请中心」；**默认分类/通用页不拼名**，仍「申请中心」；未知 type 返回 `""`）。将来 type 与后台配置联动时只换该文件数据源。
 
 ## 视图编排（两目录同一套约定）
 
@@ -13,8 +13,8 @@ state 驱动视图 + **原生 `window.history.pushState` 同步 URL**（可分�
 
 ## 数据接口（`lib/api/process.ts`，类型见 `types/process.ts`）
 
-- 列表：`useProcessInstancePage` → `POST /processInstance/queryPage`（body 带 `processCategory`=路由 `[type]`，通用页不传=全部；两个 Inner 透传到列表面板）。申请 tab `INSTANCE_TABS`（待处理6/进行中1/全部5/草稿0），审批 tab `APPROVAL_INSTANCE_TABS`（待办2/待认领3/已办4）。
-- 发起区块：`StartProcessSection` → `POST /processDefinition/deployList`（**query 传 `processCategory`**=路由 `[type]`，通用页不传=全部）。
+- 列表：`useProcessInstancePage` → `POST /processInstance/queryPage`（body 带 `processCategory`=路由 `[type]`，通用页=默认分类传 `default`；两个 Inner 透传到列表面板）。申请 tab `INSTANCE_TABS`（待处理6/进行中1/全部5/草稿0），审批 tab `APPROVAL_INSTANCE_TABS`（待办2/待认领3/已办4）。
+- 发起区块：`StartProcessSection` → `POST /processDefinition/deployList`（**query 传 `processCategory`**，同上通用页传 `default`）。
 - 详情：`getProcessInstanceInfo(id, taskId?)` → `POST /processInstance/info`（**query 传参**，审批/处理场景带 taskId）。
 - 发起定义信息：`getProcessDefinitionStartInfo` → `POST /processDefinition/startInfo`（query 传 processDefinitionId）。
 - 动作：`start` / `saveDraft` / `claim` / `pass` / `reject` / `back`，body 均 `ProcessHandleParam`，响应只看 code。
