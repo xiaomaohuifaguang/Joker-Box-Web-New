@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/Container";
+import { processTypeName } from "@/lib/process-types";
 import type { ProcessInstanceType } from "@/types";
 import { InstanceListPanel } from "./InstanceListPanel";
 import { StartProcessSection } from "./StartProcessSection";
@@ -84,11 +85,6 @@ export function ApplicationInner({ processType }: { processType?: string }) {
   const [activeTab, setActiveTab] = useState<ProcessInstanceType>("1");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 确认 processType 生效（后续接 queryPage 传参 prcessType）。
-  useEffect(() => {
-    console.log("[process/application] processType =", processType ?? "(通用)");
-  }, [processType]);
-
   const go = useCallback(
     (v: View) => {
       window.history.pushState(null, "", viewToUrl(v, processType));
@@ -161,7 +157,9 @@ export function ApplicationInner({ processType }: { processType?: string }) {
   return (
     <Container className="py-8 md:py-12">
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">申请中心</h1>
+        <h1 className="font-display text-2xl font-semibold">
+          {processTypeName(processType)}申请中心
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           选择流程发起申请，或查看我发起的流程。
         </p>
@@ -169,7 +167,10 @@ export function ApplicationInner({ processType }: { processType?: string }) {
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">发起流程</h2>
-        <StartProcessSection onStart={(id) => go({ name: "start", definitionId: id })} />
+        <StartProcessSection
+          processCategory={processType}
+          onStart={(id) => go({ name: "start", definitionId: id })}
+        />
       </section>
 
       <section>
@@ -178,6 +179,7 @@ export function ApplicationInner({ processType }: { processType?: string }) {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           refreshKey={refreshKey}
+          processCategory={processType}
           onView={(id) => go({ name: "detail", instanceId: id })}
           onEdit={(id) => go({ name: "edit", instanceId: id })}
           onOpenTask={(id, taskId) => go({ name: "handle", instanceId: id, taskId })}

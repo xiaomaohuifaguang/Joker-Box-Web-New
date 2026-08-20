@@ -10,10 +10,12 @@ import {
   stopProcessDefinition,
 } from "@/lib/api/process";
 import { useProcessDefinitionPage } from "@/hooks/useProcessDefinitionPage";
+import { PROCESS_TYPES } from "@/lib/process-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -57,6 +59,12 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   return [1, "…", current - 1, current, current + 1, "…", total];
 }
 
+// 分类列展示名：注册表 type → name；注册表外的旧值原样显示。
+function categoryLabel(c?: string): string {
+  if (!c) return "-";
+  return PROCESS_TYPES.find((t) => t.type === c)?.name ?? c;
+}
+
 // 流程定义列表：标题 + 搜索 + 表格 + 分页。布局对齐其它后台页（h1 + flex h-full flex-col gap-4）。
 // 操作列预留（接口待后端提供）：草稿=查看/编辑/删除；已发布=查看/停用；已停用=查看/编辑/发布。
 export function ProcessListPanel({
@@ -68,13 +76,15 @@ export function ProcessListPanel({
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  // 分类筛选：""=全部（不传后端），否则传 PROCESS_TYPES 的 type。
+  const [category, setCategory] = useState("");
   const [current, setCurrent] = useState(1);
   const [size, setSize] = useState(10);
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleting, setDeleting] = useState<ProcessDefinition | null>(null);
   const [publishing, setPublishing] = useState<ProcessDefinition | null>(null);
   const [stopping, setStopping] = useState<ProcessDefinition | null>(null);
-  const { page, loading } = useProcessDefinitionPage({ search, current, size, refreshKey });
+  const { page, loading } = useProcessDefinitionPage({ search, processCategory: category, current, size, refreshKey });
 
   // 搜索防抖。
   useEffect(() => {
@@ -126,6 +136,7 @@ export function ProcessListPanel({
   function reset() {
     setSearchInput("");
     setSearch("");
+    setCategory("");
     setCurrent(1);
   }
 
@@ -144,9 +155,26 @@ export function ProcessListPanel({
         </Button>
       </div>
 
-      {/* 筛选 */}
+      {/* 筛选：分类 tabs（全部 + PROCESS_TYPES 注册表）+ 搜索 */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
+        <Tabs
+          value={category}
+          onValueChange={(v) => {
+            setCategory(v);
+            setCurrent(1);
+          }}
+        >
+          <TabsList>
+            {/* min-w-20 统一最小宽度：名称长短不一（全部/OA vs 默认分类）时 tab 仍对齐。 */}
+            <TabsTrigger value="" className="min-w-20">全部</TabsTrigger>
+            {PROCESS_TYPES.map((t) => (
+              <TabsTrigger key={t.type} value={t.type} className="min-w-20">
+                {t.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="relative ml-auto">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchInput}
@@ -189,7 +217,9 @@ export function ProcessListPanel({
             ) : records.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={7} className="h-40 text-center text-sm text-muted-foreground">
-                  还没有流程，点右上角「新增流程」开始
+                  {search || category
+                    ? "没有匹配的流程，试试调整分类或搜索词"
+                    : "还没有流程，点右上角「新增流程」开始"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -199,7 +229,7 @@ export function ProcessListPanel({
                   <TableRow key={p.id} className="group">
                     <TableCell className="text-sm font-medium">{p.processName || "-"}</TableCell>
                     <TableCell className="hidden max-w-40 truncate text-xs text-muted-foreground lg:table-cell">
-                      {p.processCategory || "-"}
+                      {categoryLabel(p.processCategory)}
                     </TableCell>
                     <TableCell className="hidden max-w-64 truncate text-xs text-muted-foreground lg:table-cell">
                       {p.processDescription || "-"}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/Container";
+import { processTypeName } from "@/lib/process-types";
 import type { ApprovalInstanceType } from "@/types";
 import { ApprovalListPanel } from "./ApprovalListPanel";
 import { HandleView } from "./HandleView";
@@ -70,11 +71,6 @@ export function ApprovalInner({ processType }: { processType?: string }) {
   const [activeTab, setActiveTab] = useState<ApprovalInstanceType>("4");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 确认 processType 生效（后续接 queryPage 传参 prcessType）。
-  useEffect(() => {
-    console.log("[process/approval] processType =", processType ?? "(通用)");
-  }, [processType]);
-
   // 浏览器前进/后退：popstate 直接用 window.location 重算（useSearchParams 在静态导出下可能滞后）。
   useEffect(() => {
     const onPop = () => setOverride(parseView(window.location.search));
@@ -121,7 +117,9 @@ export function ApprovalInner({ processType }: { processType?: string }) {
   return (
     <Container className="py-8 md:py-12">
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">审批中心</h1>
+        <h1 className="font-display text-2xl font-semibold">
+          {processTypeName(processType)}审批中心
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           处理待办、待认领与已办的审批任务。
         </p>
@@ -131,6 +129,7 @@ export function ApprovalInner({ processType }: { processType?: string }) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         refreshKey={refreshKey}
+        processCategory={processType}
         onView={(id) => go({ name: "detail", kind: "view", instanceId: id })}
         onOpenTask={(instanceId, taskId, claim) =>
           go({

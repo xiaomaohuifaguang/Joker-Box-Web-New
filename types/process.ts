@@ -36,6 +36,8 @@ export interface ProcessDefinitionPageParam {
   current: number;
   /** 搜索（流程名称，可空） */
   search?: string;
+  /** 流程分类（可空；空=全部） */
+  processCategory?: string;
 }
 
 // 流程表单绑定（globalFormBinding）：流程级绑定的动态表单 + 版本。
@@ -175,6 +177,8 @@ export interface ProcessInstancePageParam {
   current: number;
   /** 搜索（可空） */
   search?: string;
+  /** 流程分类（可空；前台按路由 [type] 传，通用页不传=全部） */
+  processCategory?: string;
 }
 
 // 发起 / 存草稿 / 认领 / 审批动作请求体（POST /processInstance/start | /saveDraft | /claim | /pass | /reject）。

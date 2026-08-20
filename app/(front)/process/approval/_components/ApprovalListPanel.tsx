@@ -46,12 +46,15 @@ export function ApprovalListPanel({
   activeTab,
   onTabChange,
   refreshKey,
+  processCategory,
   onView,
   onOpenTask,
 }: {
   activeTab: ApprovalInstanceType;
   onTabChange: (t: ApprovalInstanceType) => void;
   refreshKey: number;
+  /** 流程分类（路由 [type]；不传=全部） */
+  processCategory?: string;
   onView: (instanceId: number) => void;
   onOpenTask: (instanceId: number, taskId?: string, claim?: boolean) => void;
 }) {
@@ -72,6 +75,7 @@ export function ApprovalListPanel({
     current,
     size,
     refreshKey,
+    processCategory,
   });
 
   // 搜索防抖。
