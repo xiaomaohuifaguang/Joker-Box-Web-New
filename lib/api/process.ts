@@ -72,10 +72,13 @@ export async function getDelegateExpressions(): Promise<SelectOption[]> {
 
 // ===== 申请中心（流程实例，第一版）=====
 
-// 已部署流程列表：POST /processDefinition/deployList，无参。响应 data = DeployedProcessDefinition[]。
-export async function getDeployList(): Promise<DeployedProcessDefinition[]> {
+// 已部署流程列表：POST /processDefinition/deployList，query 参数 processCategory（可空，不传=全部）。响应 data = DeployedProcessDefinition[]。
+export async function getDeployList(
+  processCategory?: string,
+): Promise<DeployedProcessDefinition[]> {
   const { data } = await api.post<DeployedProcessDefinition[]>(
     "/processDefinition/deployList",
+    { params: processCategory ? { processCategory } : undefined },
   );
   return data;
 }

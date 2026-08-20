@@ -46,6 +46,7 @@ export function InstanceListPanel({
   activeTab,
   onTabChange,
   refreshKey,
+  processCategory,
   onView,
   onEdit,
   onOpenTask,
@@ -53,6 +54,8 @@ export function InstanceListPanel({
   activeTab: ProcessInstanceType;
   onTabChange: (t: ProcessInstanceType) => void;
   refreshKey: number;
+  /** 流程分类（路由 [type]；不传=全部） */
+  processCategory?: string;
   onView: (instanceId: number) => void;
   onEdit: (instanceId: number) => void;
   onOpenTask: (instanceId: number, taskId?: string) => void;
@@ -74,6 +77,7 @@ export function InstanceListPanel({
     current,
     size,
     refreshKey,
+    processCategory,
   });
 
   // 搜索防抖。

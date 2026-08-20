@@ -18,9 +18,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { DeployedProcessDefinition } from "@/types";
 
 // 发起流程区块：搜索式下拉选择已部署流程 + 「发起」按钮，点击后由调用方跳转发起视图。
+// processCategory：流程分类（路由 [type]）——deployList 按它过滤；不传=全部。
 export function StartProcessSection({
+  processCategory,
   onStart,
 }: {
+  processCategory?: string;
   onStart: (definitionId: number) => void;
 }) {
   const [list, setList] = useState<DeployedProcessDefinition[] | null>(null);
@@ -30,7 +33,7 @@ export function StartProcessSection({
 
   useEffect(() => {
     let cancelled = false;
-    getDeployList()
+    getDeployList(processCategory)
       .then((data) => {
         if (!cancelled) setList(data);
       })
@@ -40,7 +43,7 @@ export function StartProcessSection({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [processCategory]);
 
   const selected = useMemo(
     () => list?.find((d) => d.id === selectedId) ?? null,

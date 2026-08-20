@@ -30,6 +30,7 @@ import {
 } from "@/lib/api/process";
 import { getPublishedForms } from "@/lib/api/dynamicForm";
 import { ApiError } from "@/lib/api";
+import { PROCESS_TYPES, DEFAULT_PROCESS_TYPE } from "@/lib/process-types";
 import type { DynamicFormPublishedVersion, ProcessRawData, ProcessGatewayConditionNode } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -231,7 +232,7 @@ function DesignerInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<ProcessFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(DEFAULT_PROCESS_TYPE);
   const [description, setDescription] = useState("");
   // 流程表单绑定（rawData.data.globalFormBinding）：formId + formVersion 两级。
   const [formId, setFormId] = useState("");
@@ -280,7 +281,8 @@ function DesignerInner({
       .then((info) => {
         if (cancelled) return;
         setName(info.processName ?? "");
-        setCategory(info.processCategory ?? "");
+        // 旧数据 processCategory 可能为空——按默认分类回填显示（保存时落 "default"）。
+        setCategory(info.processCategory || DEFAULT_PROCESS_TYPE);
         setDescription(info.processDescription ?? "");
         const raw = info.rawData;
         const ns = nodesFromRaw(raw);
@@ -993,6 +995,12 @@ function ProcessConfig({
   const selectedForm = formOptions.find((f) => f.formId === formId);
   const versionOptions = selectedForm?.versions ?? [];
 
+  // 分类下拉选项=PROCESS_TYPES 注册表；兼容旧数据：注册表外的自定义值追加一项原样展示（编辑页只读能看到原值）。
+  const categoryOptions =
+    category !== "" && !PROCESS_TYPES.some((t) => t.type === category)
+      ? [...PROCESS_TYPES, { type: category, name: category }]
+      : PROCESS_TYPES;
+
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-3">
       <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
@@ -1012,14 +1020,24 @@ function ProcessConfig({
         />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="process-category" className="text-xs">流程分类</Label>
-        <Input
-          id="process-category"
+        <Label className="text-xs">流程分类</Label>
+        {/* 下拉选择（注册表 PROCESS_TYPES，默认选中「默认分类」）；仅新建可改，编辑页只读（id!=null 禁用）。 */}
+        <Select
           value={category}
-          onChange={(e) => onCategoryChange(e.target.value)}
-          placeholder="流程分类"
-          className="h-9"
-        />
+          onValueChange={onCategoryChange}
+          disabled={readOnly || id != null}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="选择流程分类" />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            {categoryOptions.map((t) => (
+              <SelectItem key={t.type} value={t.type}>
+                {t.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid gap-1.5">
         <Label htmlFor="process-description" className="text-xs">流程描述</Label>
