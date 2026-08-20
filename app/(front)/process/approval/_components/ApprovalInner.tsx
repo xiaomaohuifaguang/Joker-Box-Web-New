@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/Container";
-import { processTypeName } from "@/lib/process-types";
+import { processTypeName, DEFAULT_PROCESS_TYPE } from "@/lib/process-types";
 import type { ApprovalInstanceType } from "@/types";
 import { ApprovalListPanel } from "./ApprovalListPanel";
 import { HandleView } from "./HandleView";
@@ -51,8 +51,10 @@ function viewToUrl(v: View, processType?: string): string {
 
 // 审批中心视图编排：list / detail 两视图切换；detail 按 kind 分处理/认领/查看。
 // 权威视图 = 响应式 URL（useSearchParams）；内部 go() 用 override 立即生效。同 ApplicationInner。
-// processType：分类（/process/approval/oa -> "oa"）；通用页不传（undefined）。
+// processType：分类（/process/approval/oa -> "oa"）；通用页（/process/approval）不传=默认分类 default。
 export function ApprovalInner({ processType }: { processType?: string }) {
+  // 接口传参用的分类：通用页（无路由 type）按默认分类 default 传。
+  const processCategory = processType ?? DEFAULT_PROCESS_TYPE;
   const searchParams = useSearchParams();
   const urlStr = searchParams.toString();
   const urlView: View = parseView(urlStr);
@@ -129,7 +131,7 @@ export function ApprovalInner({ processType }: { processType?: string }) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         refreshKey={refreshKey}
-        processCategory={processType}
+        processCategory={processCategory}
         onView={(id) => go({ name: "detail", kind: "view", instanceId: id })}
         onOpenTask={(instanceId, taskId, claim) =>
           go({
