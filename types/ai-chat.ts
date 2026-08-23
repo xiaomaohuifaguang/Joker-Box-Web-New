@@ -9,6 +9,20 @@ export interface ChatModel {
   name: string;
   model: string;
   description: string;
+  /** 图像理解能力（缺省按 false 处理）。 */
+  vision?: boolean;
+}
+
+/** 聊天附件（fileUpload 响应 data / messages 的 files 元素）。 */
+export interface ChatFileInfo {
+  /** 文件唯一 id */
+  id: string;
+  /** 文件名 */
+  filename: string;
+  /** 文件类型（fileUpload 响应没有，messages 的 files 有） */
+  contentType?: string;
+  /** 文件大小（字节） */
+  size: number;
 }
 
 /** 会话（/ai/completions/sessions 返回）。 */
@@ -31,6 +45,8 @@ export interface ChatMessage {
   reasonContent: string | null;
   /** yyyy-MM-dd HH:mm:ss；增量帧为 null。 */
   createTime: string | null;
+  /** 附件（用户消息的图片；增量帧无此字段）。 */
+  files?: ChatFileInfo[] | null;
 }
 
 /** /ai/completions/chat body。 */
@@ -43,4 +59,6 @@ export interface ChatRequestParam {
   content: string;
   /** 是否流式 */
   stream: boolean;
+  /** 附件 id 列表（fileUpload 返回的 id；无附件不传）。 */
+  fileIds?: string[];
 }

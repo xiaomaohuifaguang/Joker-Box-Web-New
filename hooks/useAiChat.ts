@@ -10,7 +10,7 @@ import {
   getChatSessions,
 } from "@/lib/api/aiChat";
 import { ApiError } from "@/lib/api";
-import type { ChatModel, ChatRole, ChatSession } from "@/types";
+import type { ChatFileInfo, ChatModel, ChatRole, ChatSession } from "@/types";
 
 export interface UiMessage {
   key: string;
@@ -18,6 +18,8 @@ export interface UiMessage {
   content: string;
   reason: string;
   time: string | null;
+  /** 附件（用户消息的图片，用于气泡内联缩略图）。 */
+  files?: ChatFileInfo[];
   /** 流式中的 assistant 消息（未完成）。 */
   pending?: boolean;
 }
@@ -93,6 +95,7 @@ export function useAiChat() {
             content: m.content ?? "",
             reason: m.reasonContent ?? "",
             time: m.createTime ?? null,
+            files: m.files ?? undefined,
           })),
         );
       })
@@ -121,9 +124,11 @@ export function useAiChat() {
   }, []);
 
   const send = useCallback(
-    (content: string) => {
+    (content: string, files?: ChatFileInfo[]) => {
       const text = content.trim();
       if (!text || streaming || !modelId) return;
+      // 附件只传 id（选中时已上传完成）；空数组不传字段。
+      const fileIds = files?.length ? files.map((f) => f.id) : undefined;
 
       // 本地先插 user + 流式 assistant 占位。
       setMessages((ms) => [
@@ -134,6 +139,7 @@ export function useAiChat() {
           content: text,
           reason: "",
           time: null,
+          files,
         },
         {
           key: "streaming",
@@ -150,7 +156,12 @@ export function useAiChat() {
 
       // 非流式：一次性返回完整消息（chatOnce 走 api.post，自动 token/401/ApiError）。
       if (!stream) {
-        chatOnce({ modelId, sessionId: sidAtSend ?? undefined, content: text })
+        chatOnce({
+          modelId,
+          sessionId: sidAtSend ?? undefined,
+          content: text,
+          fileIds,
+        })
           .then((msg) => {
             if (!sidAtSend && msg.sessionId) setSessionId(msg.sessionId);
             setMessages((ms) =>
@@ -180,7 +191,12 @@ export function useAiChat() {
       }
 
       abortRef.current = chatStream(
-        { modelId, sessionId: sidAtSend ?? undefined, content: text },
+        {
+          modelId,
+          sessionId: sidAtSend ?? undefined,
+          content: text,
+          fileIds,
+        },
         {
           onChunk: (chunk) => {
             // 隐式建会话：首帧带回新 sessionId。
