@@ -15,7 +15,7 @@
 - 多数是 `POST body`。
 - 部分是 **POST 却用 query 传参**（如 dynamicForm 的 `deploy`/`stop`/`publishedForms` 传 `formId`）——写新接口时对齐后端，别默认全走 body。
 - `file.ts` 例外：**upload 走 multipart、download 走 GET blob+token**，都是直接 `fetch` + `getToken()` + `buildQuery()`，不经 `api.*`。
-- `aiChat.ts` 流式例外：`chatStream`（SSE）直接 `fetch` + `getToken()`，经 `lib/sse.ts` 的 `streamSSE` 读 `body.getReader()` 解 `data:` 帧（`api.*` 不支持流）；非流式 `chatOnce`/models/sessions/messages 仍走 `api.*`。
+- `aiChat.ts` 流式例外：`chatStream`（SSE）直接 `fetch` + `getToken()`，经 `lib/sse.ts` 的 `streamSSE` 读 `body.getReader()` 解 `data:` 帧（`api.*` 不支持流）；非流式 `chatOnce`/models/sessions/messages 仍走 `api.*`。另外 `fileUpload`（multipart）/`fileDownload`（blob+token）同 `file.ts` 模式直接 `fetch`。
 
 ## 文件 → 后端模块
 

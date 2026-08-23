@@ -1,7 +1,8 @@
-import { api } from "@/lib/api";
+import { api, ApiError, buildQuery, handleUnauthorized } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { streamSSE, type SSEMessage } from "@/lib/sse";
 import type {
+  ChatFileInfo,
   ChatMessage,
   ChatModel,
   ChatRequestParam,
@@ -9,7 +10,8 @@ import type {
 } from "@/types";
 
 // AI 会话接口（/ai/completions/*）。非流式走 api（自动 token + ApiError）；
-// 流式 /chat 走 streamSSE（fetch 读 body stream，手动带 token）。
+// 流式 /chat 走 streamSSE（fetch 读 body stream，手动带 token）；
+// fileUpload/fileDownload 同 file.ts：直接 fetch（multipart / blob+token），不经 api.*。
 
 const BASE = "/joker-box";
 
@@ -97,4 +99,80 @@ export function chatStream(
     },
     getToken(),
   );
+}
+
+// ─── 附件（图片上传/下载）─────────────────────────────────────────────
+// 同 lib/api/file.ts 的理由不走 api.*：upload 是 multipart（api.post 会设 JSON
+// Content-Type 破坏 boundary），download 是二进制流（api.* 按 JSON 解析）。
+
+/** 聊天图片上传：POST /ai/completions/fileUpload，multipart（uploadFile）。 */
+export async function uploadChatFile(file: File): Promise<ChatFileInfo> {
+  const fd = new FormData();
+  fd.append("uploadFile", file);
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/ai/completions/fileUpload`, {
+    method: "POST",
+    headers,
+    body: fd,
+  });
+  if (!res.ok) throw new ApiError(res.status, `上传失败: ${res.status}`);
+  const body = (await res.json()) as {
+    code: number;
+    msg?: string;
+    data?: ChatFileInfo;
+  };
+  handleUnauthorized(body.code, !!token);
+  if (body.code !== 200 || !body.data)
+    throw new ApiError(body.code, body.msg || `上传失败: ${body.code}`);
+  return body.data;
+}
+
+/**
+ * 取聊天附件内容：GET /ai/completions/fileDownload?fileId=（带 token）→ Blob。
+ * 缩略图（objectURL）与触发下载共用——<img> 直链发不了 Authorization 头，只能 fetch。
+ */
+async function fetchChatFileBlob(fileId: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const url = `${BASE}/ai/completions/fileDownload${buildQuery({ fileId })}`;
+  const res = await fetch(url, { headers });
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!res.ok || contentType.includes("application/json")) {
+    // 错误响应（JSON）
+    let msg = `获取文件失败: ${res.status}`;
+    try {
+      const body = await res.json();
+      msg = body.msg || msg;
+      handleUnauthorized(body.code ?? res.status, !!token);
+    } catch {
+      handleUnauthorized(res.status, !!token);
+    }
+    throw new ApiError(res.status, msg);
+  }
+  return res.blob();
+}
+
+/** 聊天附件 → objectURL（消息气泡内联缩略图用；调用方负责 revoke）。 */
+export async function getChatFileObjectUrl(fileId: string): Promise<string> {
+  const blob = await fetchChatFileBlob(fileId);
+  return URL.createObjectURL(blob);
+}
+
+/** 聊天附件下载：拉 blob 后触发浏览器下载（文件名取自 messages 的 filename）。 */
+export async function downloadChatFile(
+  fileId: string,
+  filename: string,
+): Promise<void> {
+  const blob = await fetchChatFileBlob(fileId);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

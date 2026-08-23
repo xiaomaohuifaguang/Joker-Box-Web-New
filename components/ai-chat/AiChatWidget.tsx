@@ -27,6 +27,9 @@ function AiChatPanel() {
   const [open, setOpen] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const chat = useAiChat();
+  // 当前模型是否支持图像理解（决定输入框是否出现「+」上传图片入口）。
+  const vision =
+    chat.models.find((m) => m.id === chat.modelId)?.vision ?? false;
 
   return (
     <>
@@ -74,6 +77,7 @@ function AiChatPanel() {
               <AiChatInput
                 streaming={chat.streaming}
                 disabled={!chat.modelId || chat.loadingMessages}
+                vision={vision}
                 onSend={chat.send}
                 onStop={chat.stop}
               />
