@@ -39,6 +39,8 @@ export interface AiModel {
   type: AiModelType;
   /** 向量维度（仅 EMBEDDING 有值） */
   dimension?: number;
+  /** 图形理解能力（默认 false） */
+  vision?: boolean;
   /** 描述 */
   description: string;
 }
@@ -63,6 +65,8 @@ export interface AiModelDetail {
   embeddingsPath: string;
   /** 向量维度（仅 EMBEDDING 有值） */
   dimension?: number;
+  /** 图形理解能力（默认 false） */
+  vision?: boolean;
   /** 描述（可空） */
   description: string;
 }
@@ -82,6 +86,8 @@ export interface AiModelPayload {
   type: AiModelType;
   /** 向量维度：仅 type=EMBEDDING 时传（必填），CHAT 不传。 */
   dimension?: number;
+  /** 图形理解能力：默认 false，始终随表单提交。 */
+  vision: boolean;
   baseUrl: string;
   completionsPath: string;
   embeddingsPath: string;

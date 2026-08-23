@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { AiModel, AiModelPayload, AiModelType } from "@/types";
 import { AI_MODEL_TYPE_LABELS } from "@/types";
@@ -34,6 +35,7 @@ const EMPTY: FormState = {
   model: "",
   type: "CHAT",
   dimension: "",
+  vision: false,
   baseUrl: "",
   completionsPath: "",
   embeddingsPath: "",
@@ -106,6 +108,7 @@ export function AiModelFormDialog({
           model: d.model,
           type: d.type ?? "CHAT",
           dimension: d.dimension != null ? String(d.dimension) : "",
+          vision: d.vision ?? false,
           baseUrl: d.baseUrl ?? "",
           completionsPath: d.completionsPath ?? "",
           embeddingsPath: d.embeddingsPath ?? "",
@@ -158,6 +161,8 @@ export function AiModelFormDialog({
         model: form.model.trim(),
         type: form.type,
         ...(dimension !== undefined ? { dimension } : {}),
+        // EMBEDDING 无图形理解概念：恒传 false，避免 CHAT 改类型后残留 true。
+        vision: form.type === "CHAT" ? form.vision : false,
         baseUrl: form.baseUrl.trim(),
         completionsPath: form.completionsPath.trim(),
         embeddingsPath: form.embeddingsPath.trim(),
@@ -175,6 +180,7 @@ export function AiModelFormDialog({
           ...(payload.dimension !== undefined
             ? { dimension: payload.dimension }
             : {}),
+          vision: payload.vision,
           baseUrl: payload.baseUrl,
           completionsPath: payload.completionsPath,
           embeddingsPath: payload.embeddingsPath,
@@ -270,6 +276,22 @@ export function AiModelFormDialog({
                     inputMode="numeric"
                     className="font-mono text-sm"
                   />
+                </>
+              )}
+              {form.type === "CHAT" && (
+                <>
+                  <Label className="text-sm text-muted-foreground">
+                    图形理解
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={form.vision}
+                      onCheckedChange={(v) => set("vision", v)}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      模型支持图片输入（视觉理解）
+                    </span>
+                  </div>
                 </>
               )}
               <Label className="text-sm text-muted-foreground">基础URL</Label>
