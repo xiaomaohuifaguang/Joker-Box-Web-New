@@ -2,6 +2,7 @@
 // 按需新建文件（如 domain.ts）并在此 barrel 导出。
 export * from "./ai-model";
 export * from "./ai-chat";
+export * from "./ai-system-prompt";
 export * from "./api";
 export * from "./api-path";
 export * from "./code-table";
