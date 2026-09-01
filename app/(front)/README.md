@@ -1,6 +1,6 @@
 # app/(front) — 前台路由组
 
-Route group（`(front)` 不进 URL）。`layout.tsx`(Server) = Header + `{children}` + Footer；有 `loading.tsx`/`error.tsx`。
+Route group（`(front)` 不进 URL）。`layout.tsx`(Server) = Header + `SystemPromptBanner`（全局公告横幅，有未读的生效中系统提示才渲染，点 X 已读——详见 `components/README.md`）+ `{children}` + Footer；有 `loading.tsx`/`error.tsx`。
 
 - `page.tsx`：首页（Server，branding hero）。
 - `website/`：收藏网站。`/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（scroll 监听 + rAF，尊重 reduced-motion）。白名单公开。
