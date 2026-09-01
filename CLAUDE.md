@@ -104,3 +104,4 @@ This is the single most important thing to know. **本项目是 static export（
 - **静态导出下 `router.push` 仅改 query 的软导航不可靠**（同 path 返回按钮偶发无效）-> 用 `window.history.pushState` + `popstate` 监听同步视图（ganDaShi / dynamicForm-manager）。
 - **`.prose img` margin 特异性**：typography 给 `.prose img` 的 margin 特异性 (0,1,1) 高于 Tailwind utility -> 用更高特异性选择器在 `globals.css` 覆盖（见 ganDaShi 富文本）。
 - **`crypto.randomUUID` 是 Secure-Context 限定**：仅 https/localhost 有；http 内网（nginx 部署）里 `crypto.randomUUID is not a function` -> 一律用 `@/lib/utils` 的 `randomId()`（内部已兜底时间戳+随机数）。流程节点 id 要 NCName 再去连字符。
+- **共享 `Textarea` 带 `field-sizing-content`**：高度随内容自适应，`rows` 属性失效（空内容时永远矮）-> 要固定高文本框就覆写 `field-sizing-fixed` + 显式 `h-*`（如系统提示词编辑弹窗 `h-[50vh]`）。

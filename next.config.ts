@@ -13,7 +13,7 @@ if (process.env.NODE_ENV === 'development') {
     {
       // 匹配所有以 /joker-box 开头的请求，转发到真实后端地址
       source: '/joker-box/:path*',
-      destination: 'http://localhost:8100/joker-box/:path*',
+      destination: 'http://localhost:10251/joker-box/:path*',
     },
   ];
 }
