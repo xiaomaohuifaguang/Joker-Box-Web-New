@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, ImagePlus, Loader2, Plus, Square, X } from "lucide-react";
+import {
+  ArrowUp,
+  FileText,
+  FileUp,
+  ImagePlus,
+  Loader2,
+  Plus,
+  Square,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,45 +25,64 @@ import { ApiError } from "@/lib/api";
 import { cn, randomId } from "@/lib/utils";
 import type { ChatFileInfo } from "@/types";
 
-// 附件约束（前端兜底，后端无约束）：仅图片，最多 5 张、每张 ≤10MB。
-const ACCEPT = ".jpg,.jpeg,.png,.gif,.webp";
-const ACCEPT_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+// 附件约束（前端兜底，后端无约束）：最多 5 个、每个 ≤10MB。
+// 图片（需 vision 模型）：JPEG/PNG/GIF/WebP；文件（任意模型）：pdf/office 文档。
+const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.gif,.webp";
+const IMAGE_EXT = ["jpg", "jpeg", "png", "gif", "webp"];
+const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx";
+const DOC_EXT = ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx"];
 const MAX_FILES = 5;
 const MAX_SIZE = 10 * 1024 * 1024;
+
+type AttachmentKind = "image" | "doc";
 
 /** 输入框待发附件：选中即上传（uploading），拿到 fileId 后 done，发送只带 id。 */
 interface Attachment {
   key: string;
-  /** 本地预览 objectURL（选图即生成，remove/发送后 revoke）。 */
-  previewUrl: string;
+  kind: AttachmentKind;
+  /** 保留原文件：失败后可直接重传（不必再选一次）。 */
+  file: File;
+  /** 本地预览 objectURL（仅图片；remove/发送后 revoke）。 */
+  previewUrl?: string;
   fileName: string;
   status: "uploading" | "done" | "error";
   info?: ChatFileInfo;
 }
 
+function extOf(name: string): string {
+  return name.split(".").pop()?.toLowerCase() ?? "";
+}
+
 // 输入区：单张圆角作曲卡（textarea 无边框内嵌，发送钮嵌右下），Enter 发送 / Shift+Enter 换行。
 // 流式中发送钮原位变停止钮（同圆槽，不跳动）。焦点环落在整张卡上（focus-within），而非字段本身。
-// vision=true 时左下「+」下拉可上传图片：缩略图排在 textarea 上方，选中即传（fileUpload），
-// 发送只带 fileIds；有上传中/失败附件时禁发（失败项点缩略图重试）。
+// 左下「+」下拉：上传图片（仅 vision 模型，缩略图预览）/ 上传文件（任意模型，图标卡片）。
+// 附件排在 textarea 上方，选中即传（fileUpload），发送只带 fileIds；有上传中/失败附件时禁发（失败项点击重试）。
 export function AiChatInput({
   streaming, disabled, vision, onSend, onStop,
 }: {
   streaming: boolean;
   disabled: boolean;
-  /** 当前模型是否支持图像理解（false 时隐藏上传入口、清空已选附件）。 */
+  /** 当前模型是否支持图像理解（false 时隐藏「上传图片」、移除已选图片；文件附件不受影响）。 */
   vision: boolean;
   onSend: (content: string, files?: ChatFileInfo[]) => void;
   onStop: () => void;
 }) {
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
-  // 切到无图像理解能力的模型：清掉已选附件（render 期条件 setState，避开 set-state-in-effect）。
+  // 切到无图像理解能力的模型：仅移除已选「图片」（文件附件不受模型限制，保留）。
+  // render 期条件 setState，避开 set-state-in-effect。
   const [prevVision, setPrevVision] = useState(vision);
   if (prevVision !== vision) {
     setPrevVision(vision);
-    if (!vision) clearAttachments();
+    if (!vision) {
+      attachments
+        .filter((a) => a.kind === "image")
+        .forEach((a) => a.previewUrl && URL.revokeObjectURL(a.previewUrl));
+      setAttachments((as) => as.filter((a) => a.kind !== "image"));
+    }
   }
 
   const uploading = attachments.some((a) => a.status === "uploading");
@@ -73,7 +101,9 @@ export function AiChatInput({
   }, [attachments]);
   useEffect(() => {
     return () => {
-      attachmentsRef.current.forEach((a) => URL.revokeObjectURL(a.previewUrl));
+      attachmentsRef.current.forEach(
+        (a) => a.previewUrl && URL.revokeObjectURL(a.previewUrl),
+      );
     };
   }, []);
 
@@ -86,13 +116,15 @@ export function AiChatInput({
   function removeAttachment(key: string) {
     setAttachments((as) => {
       const target = as.find((a) => a.key === key);
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
       return as.filter((a) => a.key !== key);
     });
   }
 
   function clearAttachments() {
-    attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl));
+    attachments.forEach(
+      (a) => a.previewUrl && URL.revokeObjectURL(a.previewUrl),
+    );
     setAttachments([]);
   }
 
@@ -108,16 +140,22 @@ export function AiChatInput({
       });
   }
 
-  function pickFiles(list: FileList | null) {
+  function pickFiles(list: FileList | null, kind: AttachmentKind) {
     if (!list) return;
     const files = Array.from(list);
     if (attachments.length + files.length > MAX_FILES) {
-      toast.error(`最多上传 ${MAX_FILES} 张图片`);
+      toast.error(`最多上传 ${MAX_FILES} 个附件`);
       return;
     }
+    const allowed = kind === "image" ? IMAGE_EXT : DOC_EXT;
+    const label =
+      kind === "image"
+        ? "JPEG/PNG/GIF/WebP"
+        : "PDF/Word/PPT/Excel";
     for (const file of files) {
-      if (!ACCEPT_TYPES.includes(file.type)) {
-        toast.error(`「${file.name}」格式不支持，仅限 JPEG/PNG/GIF/WebP`);
+      // 用扩展名校验：doc/md/txt 的 MIME 在部分系统为空或不可靠。
+      if (!allowed.includes(extOf(file.name))) {
+        toast.error(`「${file.name}」格式不支持，仅限 ${label}`);
         continue;
       }
       if (file.size > MAX_SIZE) {
@@ -127,7 +165,10 @@ export function AiChatInput({
       const key = randomId();
       const att: Attachment = {
         key,
-        previewUrl: URL.createObjectURL(file),
+        kind,
+        file,
+        previewUrl:
+          kind === "image" ? URL.createObjectURL(file) : undefined,
         fileName: file.name,
         status: "uploading",
       };
@@ -136,14 +177,10 @@ export function AiChatInput({
     }
   }
 
-  function retry(key: string, fileName: string) {
-    // 重试拿不到原 File（blob URL 可 fetch 回 blob）；直接重新拉本地预览转 File。
+  function retry(key: string) {
     const att = attachments.find((a) => a.key === key);
     if (!att) return;
-    fetch(att.previewUrl)
-      .then((r) => r.blob())
-      .then((blob) => doUpload(key, new File([blob], fileName, { type: blob.type })))
-      .catch(() => toast.error("重试失败，请移除后重新选择"));
+    doUpload(key, att.file);
   }
 
   function submit() {
@@ -167,20 +204,34 @@ export function AiChatInput({
           disabled && "opacity-60",
         )}
       >
-        {/* 附件缩略图排：uploading 转圈遮罩，error 红罩点击重试，hover 浮 × 移除。 */}
+        {/* 附件排：图片缩略图 / 文件卡片；uploading 转圈遮罩，error 红罩点击重试，hover 浮 × 移除。 */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pt-2.5">
             {attachments.map((a) => (
               <div
                 key={a.key}
-                className="group/att relative h-16 w-16 overflow-hidden rounded-md border bg-background"
+                className={cn(
+                  "group/att relative overflow-hidden rounded-md border bg-background",
+                  a.kind === "image"
+                    ? "h-16 w-16"
+                    : "flex h-16 w-36 flex-col items-center justify-center gap-1 p-1.5",
+                )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- 本地 objectURL 预览 */}
-                <img
-                  src={a.previewUrl}
-                  alt={a.fileName}
-                  className="h-full w-full object-cover"
-                />
+                {a.kind === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- 本地 objectURL 预览
+                  <img
+                    src={a.previewUrl}
+                    alt={a.fileName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <>
+                    <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    <span className="w-full truncate text-center text-[10px] leading-tight">
+                      {a.fileName}
+                    </span>
+                  </>
+                )}
                 {a.status === "uploading" && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/60">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -189,7 +240,7 @@ export function AiChatInput({
                 {a.status === "error" && (
                   <button
                     type="button"
-                    onClick={() => retry(a.key, a.fileName)}
+                    onClick={() => retry(a.key)}
                     className="absolute inset-0 flex items-center justify-center bg-destructive/70 text-[10px] text-destructive-foreground"
                     title="上传失败，点击重试"
                   >
@@ -226,47 +277,61 @@ export function AiChatInput({
             "focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent",
           )}
         />
-        {/* 卡内底行：左侧 +（vision 时）与键位提示，右侧圆形发送/停止钮。 */}
+        {/* 卡内底行：左侧 +（附件）与键位提示，右侧圆形发送/停止钮。 */}
         <div className="flex items-center justify-between gap-2 px-2.5 pb-2">
           <div className="flex items-center gap-1">
-            {vision && (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                      disabled={disabled || streaming}
-                      aria-label="添加附件"
-                      title="添加附件"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="start">
-                    <DropdownMenuItem
-                      onSelect={() => fileInputRef.current?.click()}
-                    >
-                      <ImagePlus className="h-4 w-4" />
-                      上传图片
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPT}
-                  multiple
-                  hidden
-                  onChange={(e) => {
-                    pickFiles(e.target.files);
-                    // 重置 value：允许连续选同一文件再次触发 change。
-                    e.target.value = "";
-                  }}
-                />
-              </>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                  disabled={disabled || streaming}
+                  aria-label="添加附件"
+                  title="添加附件"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start">
+                {vision && (
+                  <DropdownMenuItem
+                    onSelect={() => imageInputRef.current?.click()}
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                    上传图片
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => docInputRef.current?.click()}>
+                  <FileUp className="h-4 w-4" />
+                  上传文件
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {/* 两个隐藏 file input：图片/文件分开，各自 accept 限制类型。 */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept={IMAGE_ACCEPT}
+              multiple
+              hidden
+              onChange={(e) => {
+                pickFiles(e.target.files, "image");
+                // 重置 value：允许连续选同一文件再次触发 change。
+                e.target.value = "";
+              }}
+            />
+            <input
+              ref={docInputRef}
+              type="file"
+              accept={DOC_ACCEPT}
+              multiple
+              hidden
+              onChange={(e) => {
+                pickFiles(e.target.files, "doc");
+                e.target.value = "";
+              }}
+            />
             <p className="select-none pl-0.5 text-[11px] leading-none text-muted-foreground/70 max-sm:hidden">
               <kbd className="font-sans">Enter</kbd> 发送 · <kbd className="font-sans">Shift+Enter</kbd> 换行
             </p>
@@ -291,9 +356,9 @@ export function AiChatInput({
               aria-label="发送"
               title={
                 uploading
-                  ? "图片上传中…"
+                  ? "附件上传中…"
                   : hasError
-                    ? "有图片上传失败，请重试或移除"
+                    ? "有附件上传失败，请重试或移除"
                     : "发送"
               }
             >

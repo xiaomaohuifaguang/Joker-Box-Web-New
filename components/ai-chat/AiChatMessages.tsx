@@ -6,9 +6,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import type { ChatFileInfo } from "@/types";
 import type { UiMessage } from "@/hooks/useAiChat";
 import { AiMarkdown } from "./AiMarkdown";
 import { AiChatFileThumb } from "./AiChatFileThumb";
+import { AiChatFileDoc } from "./AiChatFileDoc";
+
+// 判图片附件：优先 contentType（messages 有），兜底按扩展名（fileUpload 响应无 contentType）。
+function isImageFile(f: ChatFileInfo): boolean {
+  const ct = f.contentType ?? "";
+  if (ct) return ct.startsWith("image/");
+  const ext = f.filename.split(".").pop()?.toLowerCase() ?? "";
+  return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
+}
 
 // 单条思考块（signature「进程终端」）：mono 字体 + felt 左竖线 + 弱化底。
 // 打字机效果：pending 一进来就亮卡（哪怕 reason 还空），标题实时计时「思考中 · Ns」，
@@ -175,9 +185,13 @@ export function AiChatMessages({
               <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
                 {m.files && m.files.length > 0 && (
                   <div className="mb-1.5 flex flex-wrap gap-1.5">
-                    {m.files.map((f) => (
-                      <AiChatFileThumb key={f.id} file={f} />
-                    ))}
+                    {m.files.map((f) =>
+                      isImageFile(f) ? (
+                        <AiChatFileThumb key={f.id} file={f} />
+                      ) : (
+                        <AiChatFileDoc key={f.id} file={f} />
+                      ),
+                    )}
                   </div>
                 )}
                 <div className="whitespace-pre-wrap break-words">{m.content}</div>
