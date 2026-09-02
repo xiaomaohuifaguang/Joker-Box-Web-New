@@ -13,7 +13,7 @@ shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `li
 
 ## 根布局常驻 / 全局
 - `UserBootstrap`：登录态变化时拉/清用户信息（已登录每次挂载重拉 `fetchUserInfo`，`useRef` 防 setUser 重 fetch 循环）；拿到 userId 后把匿名身份的系统提示已读合并进账号（`mergeAnonInto`，幂等）。
-- `SystemPromptBanner`：全局公告横幅（仅前台 `(front)/layout.tsx` 挂在 Header 下方）。挂载拉 `POST /system/prompt`（白名单，无参 → 生效中公告），过滤当前身份已读后垂直堆叠、各自可关；**点 X = 已读**（`lib/systemPromptRead`：localStorage `read_system_prompts` = `{[owner]: id[]}`，owner=已登录 userId / 未登录 anon；登录时 anon 已读合并进账号——换账号会重新看到该账号未读的）；**拉取成功后 `pruneReadIds` 清掉已不在活跃列表的已读 id**（过期/被删），防 localStorage 越存越多。无公告/拉取失败不渲染。
+- `SystemPromptBanner`：全局公告横幅（仅前台 `(front)/layout.tsx` 挂在 Header 下方）。**悬浮条**：fixed 贴 sticky Header（h-16）下方浮于内容之上（不挤压布局，z-40 让 Header z-50 滚动时盖住它，外层 pointer-events-none 只卡片可点），限高 40vh 可滚。挂载拉 `POST /system/prompt`（白名单，无参 → 生效中公告），过滤当前身份已读后垂直堆叠、各自可关；**点 X = 已读**（`lib/systemPromptRead`：localStorage `read_system_prompts` = `{[owner]: id[]}`，owner=已登录 userId / 未登录 anon；登录时 anon 已读合并进账号——换账号会重新看到该账号未读的）；**拉取成功后 `pruneReadIds` 清掉已不在活跃列表的已读 id**（过期/被删），防 localStorage 越存越多。无公告/拉取失败不渲染。
 - `ThemeSelect`：主题预设切换（前台 Header / 后台顶栏共享）。
 - `ComingSoon`：占位页（Server）。
 - `Container`：流式内容容器 `w-[85%] max-w-[1600px]`，`className` 可覆盖（全宽页用 `w-full max-w-none`）。

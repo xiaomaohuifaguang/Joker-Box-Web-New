@@ -14,6 +14,8 @@ import type { SystemPrompt } from "@/types";
 
 // 全局公告横幅：挂载时拉生效中的系统提示（白名单接口），过滤当前身份已读的后垂直堆叠展示，
 // 每条独立可关——点 X = markRead（已登录记 userId 名下、未登录记 anon）+ 从视图移除。
+// **悬浮展示**：fixed 贴在 sticky Header（h-16）下方、浮于内容之上不挤压布局，z-40 让 Header
+// （z-50）滚动时仍盖住它；外层 pointer-events-none 只让卡片本身可点。
 // 挂在 (front)/layout.tsx Header 下方；无公告时不渲染。登录后 anon 已读由 UserBootstrap 合并进账号。
 export function SystemPromptBanner() {
   const { user } = useUser();
@@ -55,20 +57,14 @@ export function SystemPromptBanner() {
   if (visible.length === 0) return null;
 
   return (
-    <div
-      className="border-b"
-      style={{
-        borderColor: "color-mix(in oklab, var(--brand) 30%, transparent)",
-        background: "color-mix(in oklab, var(--brand) 8%, transparent)",
-      }}
-    >
-      <div className="mx-auto w-[85%] max-w-[1600px]">
+    <div className="pointer-events-none fixed inset-x-0 top-16 z-40 mt-2 flex justify-center">
+      <div className="flex max-h-[40vh] w-[85%] max-w-[1600px] flex-col gap-2 overflow-auto">
         {visible.map((p) => (
           <div
             key={p.id}
-            className="flex items-start gap-3 border-b py-2.5 last:border-b-0"
+            className="pointer-events-auto flex items-start gap-3 rounded-lg border bg-background/90 px-4 py-2.5 shadow-lg backdrop-blur"
             style={{
-              borderColor: "color-mix(in oklab, var(--brand) 20%, transparent)",
+              borderColor: "color-mix(in oklab, var(--brand) 30%, transparent)",
             }}
           >
             <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
