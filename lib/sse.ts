@@ -1,6 +1,8 @@
 // fetch + ReadableStream 解析 SSE 的工具（项目唯一流式点，不走 lib/api/client.ts）。
 // 帧格式：若干 "data: <一行JSON>\n\n"，以空行分帧。
 
+import { apiFetch } from "@/lib/api/fetch";
+
 export interface SSEMessage {
   /** data: 后面的整行文本（一个 JSON 串）。 */
   data: string;
@@ -30,7 +32,7 @@ export function streamSSE(
 
   (async () => {
     try {
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: "POST",
         headers,
         body: JSON.stringify(body),

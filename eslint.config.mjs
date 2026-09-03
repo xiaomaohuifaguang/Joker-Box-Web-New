@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     "hooks/use-mobile.ts",
     // tmp/ 为本地 scratch（截图 mock、临时脚本），不纳入 lint
     "tmp/**",
+    // Tauri 壳是 Rust + 生成物（target/ 编译产物），不纳入前端 lint
+    "src-tauri/**",
   ]),
 ]);
 
