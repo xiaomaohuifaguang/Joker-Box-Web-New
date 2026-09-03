@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Fraunces, IBM_Plex_Sans, Space_Mono } from "next/fon
 import "./globals.css";
 import { UserBootstrap } from "@/components/UserBootstrap";
 import { DesktopGuard } from "@/components/DesktopGuard";
+import { DesktopUpdater } from "@/components/DesktopUpdater";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <UserBootstrap />
         <DesktopGuard />
+        <DesktopUpdater />
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster position="top-right" />
       </body>

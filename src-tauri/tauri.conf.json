@@ -24,9 +24,23 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIzOEI3N0U4MERBQzk0ODEKUldTQmxLd042SGVMczRKYkpoY2hlaElHQXUxWG5KTm9aeDJmanJzTE14bUpmSjlmT2lLMzNHaEIK",
+      "endpoints": [
+        "https://gitee.com/xiaomaohuifaguang/Joker-Box-Web-New/releases/download/desktop/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
