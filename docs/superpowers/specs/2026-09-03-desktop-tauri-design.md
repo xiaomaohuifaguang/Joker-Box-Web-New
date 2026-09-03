@@ -47,8 +47,17 @@ localStorage token 在 Tauri WebView2 默认持久化到应用数据目录，登
 
 ## 阶段划分
 
-- **MVP（本次）**：壳 + API 收敛 + 上传下载适配 + 出 exe。
-- **阶段二（不做）**：tauri-plugin-updater 自动更新、开机自启、托盘。**正式发布前的安全收紧**（试验版宽 scope 可接受）：capabilities 里 fs 收到 `$DOWNLOAD/**`、http scope 收到配置的后端 origin、评估启用 CSP。
+- **MVP + 自动更新（已完成）**：壳 + API 收敛 + 上传下载适配 + 出 exe/安装包 + updater（见下节）。
+- **阶段二（不做）**：开机自启、托盘。**正式发布前的安全收紧**（试验版宽 scope 可接受）：capabilities 里 fs 收到 `$DOWNLOAD/**`、http scope 收到配置的后端 origin、评估启用 CSP。
+
+## 自动更新（2026-09-03 已实现并实测通过）
+
+- **方案**：tauri-plugin-updater + Gitee Releases 托管（公网可达；GitHub 本网络不通）。固定 tag `desktop` 的 release 只挂 `latest.json`（endpoint 永不变）；每版本独立 tag 的 release 归档 `setup.exe`（latest.json 里按版本指向它；`.sig` 仅本地备份，签名已内联进清单）。
+- **签名**：minisign 密钥对 `npx tauri signer generate -w ~/.tauri/joker-box.key`；私钥在构建机本地（不进仓库），公钥在 `tauri.conf.json plugins.updater.pubkey`。换密钥必须同步换公钥，否则旧版无法升级。
+- **配置**：`createUpdaterArtifacts: true`（不开不出 `.sig`）；bundler 只认 `TAURI_SIGNING_PRIVATE_KEY`（私钥**内容**，`_PATH` 变量无效）。
+- **发版**：改 `tauri.conf.json` 的 `version`（唯一权威版本，脚本自动同步 Cargo.toml——Cargo 必填但应用版本不读它）→ `npm run build:desktop -- "可选的更新说明"`（`scripts/build-desktop.mjs`：同步版本→构建→签名→生成 latest.json）→ Gitee 两步：新建版本 tag 的 release 传 setup.exe；编辑固定 tag `desktop` 替换 latest.json。
+- **客户端**：`components/DesktopUpdater.tsx`（生产+Tauri 门控），启动 3s 静默 `check()`，失败静默；有新版 AlertDialog → 下载进度 toast → 验签安装 → plugin-process `relaunch()`。已实测 0.1.0→0.1.1。
+- 坑：Windows 图标缓存会让任务栏显示旧图标（`ie4uinit.exe -show` 或重启解决，非打包问题）。
 
 ## 执行顺序（spike 优先）
 
