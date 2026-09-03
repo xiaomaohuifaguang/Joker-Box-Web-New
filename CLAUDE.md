@@ -38,8 +38,8 @@ npx tsc --noEmit # type-check only, without building
 Architecture: static export served by nginx; the frontend only renders pages and calls a separate backend API. No server-side logic. Many Next.js 16 features (SSR, Server Actions, `proxy`, server route handlers) **do not apply** under static export.
 
 1. **Routing** - `app/` holds only route files. Keep route files thin; put route-specific components in a sibling `_components/` folder (underscore = excluded from routing).
-2. **API address** - All backend calls go to relative `/joker-box/...` (root = `BASE_URL` in `lib/api/client.ts`). **Dev**: `next.config.ts` `rewrites` proxies `/joker-box/*` to the backend (same-origin, no CORS). **Prod**: nginx reverse-proxies. No `NEXT_PUBLIC_API_URL`.
-3. **Data layer** - All backend calls go through `lib/api/` (typed wrappers returning `ApiResponse<T>`; business errors throw `ApiError` - destructure `.data`). `api.post/put` takes `{ body?, params? }` (body -> JSON, params -> query string auto-encoded); `api.get/delete` takes `params?`. No raw `fetch` in components **except** `lib/api/file.ts` upload (multipart) and download (blob+token) -- direct `fetch` + `getToken()` + `buildQuery()`. Menus 走 `useMenuTree`（backend 按 token 过滤，见 Routing & auth）。
+2. **API address** - Backend calls go to `env.apiBase`（`lib/env.ts` 读 `NEXT_PUBLIC_API_BASE`，默认相对 `/joker-box`）。**Dev**: `next.config.ts` `rewrites` proxies `/joker-box/*` to the backend (same-origin, no CORS). **Prod**: nginx reverse-proxies. **桌面（Tauri）**：`.env.desktop` 注入绝对地址，请求走 `lib/api/fetch.ts` 的 `apiFetch`（plugin-http 绕 CORS，见 `lib/api/README.md`）。
+3. **Data layer** - All backend calls go through `lib/api/` (typed wrappers returning `ApiResponse<T>`; business errors throw `ApiError` - destructure `.data`). `api.post/put` takes `{ body?, params? }` (body -> JSON, params -> query string auto-encoded); `api.get/delete` takes `params?`. No raw `fetch` in components；multipart/blob/SSE 等 `api.*` 覆盖不了的场景统一走 `lib/api/fetch.ts` 的 `apiFetch`/`saveBlob`（含桌面 Tauri 适配）。 Menus 走 `useMenuTree`（backend 按 token 过滤，见 Routing & auth）。
 4. **Dynamic content** - Prefer `?id=` query params or client-side fetching. Dynamic `[param]` segments require `generateStaticParams` (must enumerate at build), usually impossible for backend data.
 5. **Components** - Default to Server Components; add `'use client'` only for interactivity/state/effects/runtime data. Under static export, runtime data fetching is always client-side.
 6. **Naming** - Component files PascalCase; hooks `useXxx.ts`; utils camelCase; folders kebab-case. One component per file.
@@ -84,7 +84,7 @@ This is the single most important thing to know. **本项目是 static export（
 - **Turbopack 是默认打包器**（dev 和 build 都是）：自定义 `webpack` 配置会让 build 失败。
 - **dev 与 build 输出目录分离**（dev → `.next/dev`），可同时跑；`output:'export'` 下 dev 的 `rewrites` 会有告警但可用（生产由 nginx 反代）。
 - **`next/image`**：项目当前**未使用**（只用后端运行时返回的品牌图 + `public/` 静态资源）。若要引入，注意 16 的收紧默认值（`localPatterns.search`、`minimumCacheTTL` 4h、`qualities` 仅 `[75]`、禁本地 IP、`remotePatterns` 替代 `domains`），先查文档再配。
-- **运行时要求**：Node 20.9+、TS 5.1+；浏览器 Chrome/Edge/Firefox 111+ & Safari 16.4+。
+- **运行时要求**：Node 20.12+（`process.loadEnvFile`，桌面构建用）、TS 5.1+；浏览器 Chrome/Edge/Firefox 111+ & Safari 16.4+。
 
 ---
 

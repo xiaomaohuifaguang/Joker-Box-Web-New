@@ -1,4 +1,6 @@
 import { clearToken, getToken } from "@/lib/auth";
+import { apiFetch } from "@/lib/api/fetch";
+import { env } from "@/lib/env";
 import type { ApiResponse } from "@/types";
 
 /** 业务成功码（按后端约定调整，常见为 200 或 0）。 */
@@ -14,8 +16,9 @@ export class ApiError extends Error {
   }
 }
 
-// 接口根路径：开发由 next.config.ts rewrites 代理，生产由 nginx 反代。
-const BASE_URL = "/joker-box";
+// 接口根路径：默认相对路径（web：dev 由 rewrites 代理，prod 由 nginx 反代）；
+// 桌面（Tauri）构建时由 .env.desktop 注入绝对地址（见 lib/env.ts）。
+const BASE_URL = env.apiBase;
 
 // 401 处理：请求时携带了 token 且响应 code=401 -> token 无效/过期，清空登录信息。
 // clearToken 同步清 token；动态 import clearUser 清用户（避免循环依赖）。
@@ -61,7 +64,7 @@ async function request<T>(
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method: opts.method,
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,

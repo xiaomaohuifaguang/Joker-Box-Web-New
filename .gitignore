@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 桌面端后端地址（非密钥，构建时内联）：随仓库提交，缺了桌面构建会静默打成坏包。
+!.env.desktop
 
 # vercel
 .vercel

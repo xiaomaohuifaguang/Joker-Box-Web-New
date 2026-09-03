@@ -1,8 +1,10 @@
 import { ApiError, buildQuery, handleUnauthorized } from "@/lib/api";
+import { apiFetch, saveBlob } from "@/lib/api/fetch";
 import { getToken } from "@/lib/auth";
+import { env } from "@/lib/env";
 import type { FileInfo } from "@/types";
 
-const BASE_URL = "/joker-box";
+const BASE_URL = env.apiBase;
 const SUCCESS_CODE = 200;
 
 // 动态表单文件接口（/file/*DynamicForm）。与码头云盘的 /file/upload|download 分开，
@@ -15,7 +17,7 @@ export async function uploadDynamicFormFile(file: File): Promise<FileInfo> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE_URL}/file/uploadDynamicForm`, {
+  const res = await apiFetch(`${BASE_URL}/file/uploadDynamicForm`, {
     method: "POST",
     headers,
     body: fd,
@@ -29,7 +31,7 @@ export async function uploadDynamicFormFile(file: File): Promise<FileInfo> {
   return body.data as FileInfo;
 }
 
-// 下载：GET /file/downloadDynamicForm?fileId=，返回 blob 并触发浏览器下载。
+// 下载：GET /file/downloadDynamicForm?fileId=，web 触发浏览器下载，Tauri 弹系统保存框。
 export async function downloadDynamicFormFile(
   fileId: string,
   filename: string,
@@ -38,7 +40,7 @@ export async function downloadDynamicFormFile(
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const url = BASE_URL + "/file/downloadDynamicForm" + buildQuery({ fileId });
-  const res = await fetch(url, { headers });
+  const res = await apiFetch(url, { headers });
   const contentType = res.headers.get("content-type") ?? "";
   if (!res.ok || contentType.includes("application/json")) {
     let msg = `下载失败: ${res.status}`;
@@ -52,12 +54,5 @@ export async function downloadDynamicFormFile(
     throw new ApiError(res.status, msg);
   }
   const blob = await res.blob();
-  const url2 = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url2;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url2);
+  await saveBlob(blob, filename);
 }

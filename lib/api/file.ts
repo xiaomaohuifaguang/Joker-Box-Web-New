@@ -1,8 +1,10 @@
 import { api, ApiError, buildQuery, handleUnauthorized } from "@/lib/api";
+import { apiFetch, saveBlob } from "@/lib/api/fetch";
 import { getToken } from "@/lib/auth";
+import { env } from "@/lib/env";
 import type { FileItem } from "@/types";
 
-const BASE_URL = "/joker-box";
+const BASE_URL = env.apiBase;
 const SUCCESS_CODE = 200;
 
 // 文件列表：POST /file/list?parentId=<id>（"0" 查根目录）。
@@ -22,7 +24,7 @@ export async function uploadFile(file: File, parentId: string): Promise<void> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE_URL}/file/upload`, {
+  const res = await apiFetch(`${BASE_URL}/file/upload`, {
     method: "POST",
     headers,
     body: fd,
@@ -64,7 +66,7 @@ export async function renameFile(
   });
 }
 
-// 下载：GET /file/download?fileId=，带 token；返回 blob 并触发浏览器下载。
+// 下载：GET /file/download?fileId=，带 token；web 触发浏览器下载，Tauri 弹系统保存框。
 export async function downloadFile(
   fileId: string,
   filename: string,
@@ -73,7 +75,7 @@ export async function downloadFile(
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const url = BASE_URL + "/file/download" + buildQuery({ fileId });
-  const res = await fetch(url, { headers });
+  const res = await apiFetch(url, { headers });
   const contentType = res.headers.get("content-type") ?? "";
   if (!res.ok || contentType.includes("application/json")) {
     // 错误响应（JSON）
@@ -88,12 +90,5 @@ export async function downloadFile(
     throw new ApiError(res.status, msg);
   }
   const blob = await res.blob();
-  const url2 = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url2;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url2);
+  await saveBlob(blob, filename);
 }

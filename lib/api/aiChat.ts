@@ -1,5 +1,7 @@
 import { api, ApiError, buildQuery, handleUnauthorized } from "@/lib/api";
+import { apiFetch, saveBlob } from "@/lib/api/fetch";
 import { getToken } from "@/lib/auth";
+import { env } from "@/lib/env";
 import { streamSSE, type SSEMessage } from "@/lib/sse";
 import type {
   ChatFileInfo,
@@ -10,10 +12,10 @@ import type {
 } from "@/types";
 
 // AI 会话接口（/ai/completions/*）。非流式走 api（自动 token + ApiError）；
-// 流式 /chat 走 streamSSE（fetch 读 body stream，手动带 token）；
-// fileUpload/fileDownload 同 file.ts：直接 fetch（multipart / blob+token），不经 api.*。
+// 流式 /chat 走 streamSSE（lib/sse.ts，读 body stream，手动带 token）；
+// fileUpload/fileDownload 同 file.ts：走 apiFetch（multipart / blob+token），不经 api.*。
 
-const BASE = "/joker-box";
+const BASE = env.apiBase;
 
 /** CHAT 模型列表：POST /ai/completions/models，无参。 */
 export async function getChatModels(): Promise<ChatModel[]> {
@@ -112,7 +114,7 @@ export async function uploadChatFile(file: File): Promise<ChatFileInfo> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE}/ai/completions/fileUpload`, {
+  const res = await apiFetch(`${BASE}/ai/completions/fileUpload`, {
     method: "POST",
     headers,
     body: fd,
@@ -138,7 +140,7 @@ async function fetchChatFileBlob(fileId: string): Promise<Blob> {
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const url = `${BASE}/ai/completions/fileDownload${buildQuery({ fileId })}`;
-  const res = await fetch(url, { headers });
+  const res = await apiFetch(url, { headers });
   const contentType = res.headers.get("content-type") ?? "";
   if (!res.ok || contentType.includes("application/json")) {
     // 错误响应（JSON）
@@ -161,18 +163,11 @@ export async function getChatFileObjectUrl(fileId: string): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
-/** 聊天附件下载：拉 blob 后触发浏览器下载（文件名取自 messages 的 filename）。 */
+/** 聊天附件下载：web 触发浏览器下载，Tauri 弹系统保存框（文件名取自 messages 的 filename）。 */
 export async function downloadChatFile(
   fileId: string,
   filename: string,
 ): Promise<void> {
   const blob = await fetchChatFileBlob(fileId);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  await saveBlob(blob, filename);
 }

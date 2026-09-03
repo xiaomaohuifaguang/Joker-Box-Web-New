@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fraunces, IBM_Plex_Sans, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { UserBootstrap } from "@/components/UserBootstrap";
+import { DesktopGuard } from "@/components/DesktopGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -64,6 +65,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <UserBootstrap />
+        <DesktopGuard />
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster position="top-right" />
       </body>
