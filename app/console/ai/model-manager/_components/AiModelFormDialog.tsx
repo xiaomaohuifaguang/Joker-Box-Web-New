@@ -301,24 +301,24 @@ export function AiModelFormDialog({
                 placeholder="https://api.example.com"
                 className="font-mono text-sm"
               />
-              <Label className="text-sm text-muted-foreground">
-                completions
-              </Label>
-              <Input
-                value={form.completionsPath}
-                onChange={(e) => set("completionsPath", e.target.value)}
-                placeholder="/v1/chat/completions"
-                className="font-mono text-sm"
-              />
-              <Label className="text-sm text-muted-foreground">
-                embeddings
-              </Label>
-              <Input
-                value={form.embeddingsPath}
-                onChange={(e) => set("embeddingsPath", e.target.value)}
-                placeholder="/v1/embeddings"
-                className="font-mono text-sm"
-              />
+              {/*<Label className="text-sm text-muted-foreground">*/}
+              {/*  completions*/}
+              {/*</Label>*/}
+              {/*<Input*/}
+              {/*  value={form.completionsPath}*/}
+              {/*  onChange={(e) => set("completionsPath", e.target.value)}*/}
+              {/*  placeholder="/v1/chat/completions"*/}
+              {/*  className="font-mono text-sm"*/}
+              {/*/>*/}
+              {/*<Label className="text-sm text-muted-foreground">*/}
+              {/*  embeddings*/}
+              {/*</Label>*/}
+              {/*<Input*/}
+              {/*  value={form.embeddingsPath}*/}
+              {/*  onChange={(e) => set("embeddingsPath", e.target.value)}*/}
+              {/*  placeholder="/v1/embeddings"*/}
+              {/*  className="font-mono text-sm"*/}
+              {/*/>*/}
               <Label className="text-sm text-muted-foreground">API密钥</Label>
               <Input
                 value={form.apiKey}
