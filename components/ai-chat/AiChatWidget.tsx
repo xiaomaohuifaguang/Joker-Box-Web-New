@@ -73,6 +73,8 @@ function AiChatPanel() {
               <AiChatMessages
                 messages={chat.messages}
                 loading={chat.loadingMessages}
+                streaming={chat.streaming}
+                onRetry={chat.retry}
               />
               <AiChatInput
                 streaming={chat.streaming}

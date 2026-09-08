@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Copy, Loader2, Terminal } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, Copy, Loader2, RotateCcw, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -110,12 +110,42 @@ function CopyMsgBtn({ text }: { text: string }) {
   );
 }
 
+// 请求失败卡：永久留在对话里（toast 几秒就消失），语义色 error 淡底 + 原因 + 重试。
+// 流式中途失败时已生成的部分内容照常显示在本卡上方。
+function ErrorCard({
+  message, onRetry, disabled,
+}: {
+  message: string;
+  onRetry: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="mt-1 flex items-center gap-2 rounded-md border border-error/35 bg-error/10 px-3 py-2 text-xs text-error">
+      <CircleAlert className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1 break-words">{message}</span>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 shrink-0 gap-1 border-error/35 px-2 text-xs text-error hover:bg-error/10 hover:text-error"
+        onClick={onRetry}
+        disabled={disabled}
+      >
+        <RotateCcw className="h-3 w-3" />
+        重试
+      </Button>
+    </div>
+  );
+}
+
 // 消息流：user 右 / assistant 左；滚动容器，新消息自动滚到底。
 export function AiChatMessages({
-  messages, loading,
+  messages, loading, streaming, onRetry,
 }: {
   messages: UiMessage[];
   loading: boolean;
+  /** 流式/请求进行中：禁用失败卡的重试钮。 */
+  streaming: boolean;
+  onRetry: () => void;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   // 是否贴着底部（贴底才跟随新消息滚动；用户上翻后不被拽回）。
@@ -216,6 +246,9 @@ export function AiChatMessages({
                       <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-current align-middle" />
                     )}
                   </div>
+                )}
+                {m.error && (
+                  <ErrorCard message={m.error} onRetry={onRetry} disabled={streaming} />
                 )}
                 {!m.pending && m.content && <CopyMsgBtn text={m.content} />}
               </div>

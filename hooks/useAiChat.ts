@@ -20,6 +20,8 @@ export interface UiMessage {
   time: string | null;
   /** 附件（用户消息的图片，用于气泡内联缩略图）。 */
   files?: ChatFileInfo[];
+  /** 请求失败原因（assistant 消息；与已生成的部分 content/reason 并存）。 */
+  error?: string;
   /** 流式中的 assistant 消息（未完成）。 */
   pending?: boolean;
 }
@@ -54,6 +56,8 @@ export function useAiChat() {
   }, []);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const abortRef = useRef<(() => void) | null>(null);
+  // 最后一次发送的入参：失败卡片的「重试」按它原样重发。
+  const lastRequestRef = useRef<{ content: string; files?: ChatFileInfo[] } | null>(null);
 
   // 首挂：拉模型（默认选第一个）+ 会话列表。模型拉取失败提示（否则 send 被静默禁用）。
   useEffect(() => {
@@ -129,6 +133,7 @@ export function useAiChat() {
       if (!text || streaming || !modelId) return;
       // 附件只传 id（选中时已上传完成）；空数组不传字段。
       const fileIds = files?.length ? files.map((f) => f.id) : undefined;
+      lastRequestRef.current = { content: text, files };
 
       // 本地先插 user + 流式 assistant 占位。
       setMessages((ms) => [
@@ -153,6 +158,19 @@ export function useAiChat() {
       setStreaming(true);
 
       const sidAtSend = sessionId;
+
+      // 失败不落空：把占位的 assistant 消息落成「失败态」（保留流式已生成的部分内容），
+      // 对话里永久可见（toast 几秒就消失，用户感知不到）；并保留 toast 做即时提醒。
+      const failInto = (msg: string) => {
+        setMessages((ms) =>
+          ms.map((m) =>
+            m.key === "streaming"
+              ? { ...m, pending: false, key: `e-${Date.now()}`, error: msg }
+              : m,
+          ),
+        );
+        toast.error(msg);
+      };
 
       // 非流式：一次性返回完整消息（chatOnce 走 api.post，自动 token/401/ApiError）。
       if (!stream) {
@@ -181,10 +199,7 @@ export function useAiChat() {
             refreshSessions();
           })
           .catch((err) => {
-            setMessages((ms) => ms.filter((m) => m.key !== "streaming"));
-            toast.error(
-              err instanceof ApiError ? err.message : "发送失败",
-            );
+            failInto(err instanceof ApiError ? err.message : "发送失败");
           })
           .finally(() => setStreaming(false));
         return;
@@ -228,8 +243,7 @@ export function useAiChat() {
           onError: (err) => {
             abortRef.current = null;
             setStreaming(false);
-            setMessages((ms) => ms.filter((m) => m.key !== "streaming"));
-            toast.error(
+            failInto(
               err instanceof ApiError ? err.message : err.message || "发送失败",
             );
           },
@@ -238,6 +252,13 @@ export function useAiChat() {
     },
     [modelId, sessionId, streaming, stream, refreshSessions],
   );
+
+  // 重试最后一次发送（失败卡片的「重试」）：按记住的入参原样重发（新起一条 user 气泡）。
+  const retry = useCallback(() => {
+    const last = lastRequestRef.current;
+    if (!last || streaming) return;
+    send(last.content, last.files);
+  }, [send, streaming]);
 
   return {
     models,
@@ -251,6 +272,7 @@ export function useAiChat() {
     setStream,
     loadingMessages,
     send,
+    retry,
     stop,
     newSession,
     selectSession,
