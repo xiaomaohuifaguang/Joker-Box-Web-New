@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useMounted } from "@/hooks/useMounted";
 import { useAiChat } from "@/hooks/useAiChat";
+import { cn } from "@/lib/utils";
 import { AiChatHeader } from "./AiChatHeader";
 import { AiChatMessages } from "./AiChatMessages";
 import { AiChatInput } from "./AiChatInput";
@@ -15,15 +16,16 @@ import { AiChatSessionList } from "./AiChatSessionList";
 // AI 会话助手：右下角悬浮钮 + 右侧抽屉。前后台各挂一份（共享本组件）。
 // 仅登录后可见（接口需 token）；useMounted 防 hydration（token 是 client-only）。
 // 面板拆成 AiChatPanel 内层组件：仅登录挂载——useAiChat 的首挂请求（models/sessions）才不会对未登录空跑。
-export function AiChatWidget() {
+// raised：后台传入，FAB 抬高避开表格分页条（分页右对齐在视口右下，bottom-6 会压住「下一页」）。
+export function AiChatWidget({ raised = false }: { raised?: boolean }) {
   const mounted = useMounted();
   const { authenticated } = useAuth();
 
   if (!mounted || !authenticated) return null;
-  return <AiChatPanel />;
+  return <AiChatPanel raised={raised} />;
 }
 
-function AiChatPanel() {
+function AiChatPanel({ raised }: { raised: boolean }) {
   const [open, setOpen] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const chat = useAiChat();
@@ -36,7 +38,10 @@ function AiChatPanel() {
       <Button
         onClick={() => setOpen(true)}
         size="icon"
-        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg"
+        className={cn(
+          "fixed right-6 z-50 h-12 w-12 rounded-full shadow-lg",
+          raised ? "bottom-20" : "bottom-6",
+        )}
         aria-label="AI 助手"
       >
         <BotMessageSquare className="h-5 w-5" />
