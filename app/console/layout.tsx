@@ -56,7 +56,8 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
           </header>
           <div className="flex-1 overflow-y-auto p-6">{children}</div>
         </SidebarInset>
-        <AiChatWidget />
+        {/* raised：后台表格分页条右对齐在视口右下，FAB 抬高避开（前台保持 bottom-6）。 */}
+        <AiChatWidget raised />
       </SidebarProvider>
     </RequireAdmin>
   );
