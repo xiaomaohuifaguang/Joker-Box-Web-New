@@ -88,6 +88,7 @@ export default function JsonFormatPage() {
           </div>
           <div className="flex-1 overflow-hidden">
             <CodeMirror
+              className="h-full"
               value={value}
               onChange={setValue}
               extensions={[json()]}
