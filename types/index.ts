@@ -5,6 +5,7 @@ export * from "./ai-chat";
 export * from "./ai-system-prompt";
 export * from "./api";
 export * from "./api-path";
+export * from "./code-factory";
 export * from "./code-table";
 export * from "./dynamic-form";
 export * from "./file";
