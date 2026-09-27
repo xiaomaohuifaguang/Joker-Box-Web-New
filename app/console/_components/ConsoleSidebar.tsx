@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, ChevronsUpDown, Home, LogOut, Mail } from "lucide-react";
 import { MenuIcon } from "@/components/menuIcons";
+import { LogoMark } from "@/components/LogoMark";
 import {
   Collapsible,
   CollapsibleContent,
@@ -76,13 +77,7 @@ export function ConsoleSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/console">
-                <span
-                  className="flex h-7 w-6 flex-col items-center justify-center rounded-[3px] border leading-none"
-                  aria-hidden="true"
-                >
-                  <span className="font-display text-[10px] font-bold">J</span>
-                  <span className="text-[11px] leading-none text-brand">♠</span>
-                </span>
+                <LogoMark />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span data-slot="logo-text" className="font-display truncate font-semibold">
                     Joker Box
@@ -220,7 +215,7 @@ export function ConsoleSidebar() {
                     userId={user?.userId}
                     initials={initials}
                     className="h-8 w-8 shrink-0 rounded-lg"
-                    fallbackClassName="rounded-lg bg-felt font-display text-xs text-background"
+                    fallbackClassName="rounded-lg bg-brand-2 font-display text-xs text-background"
                   />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{name}</span>
@@ -238,7 +233,7 @@ export function ConsoleSidebar() {
                     userId={user?.userId}
                     initials={initials}
                     className="h-11 w-11"
-                    fallbackClassName="bg-felt font-display text-base text-background"
+                    fallbackClassName="bg-brand-2 font-display text-base text-background"
                   />
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex items-center gap-1.5">

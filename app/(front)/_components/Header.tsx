@@ -9,6 +9,7 @@ import { useMenuTree } from "@/hooks/useMenuTree";
 import { useTheme } from "@/hooks/useTheme";
 import { useUser } from "@/hooks/useUser";
 import { UserMenu } from "./UserMenu";
+import { LogoMark } from "@/components/LogoMark";
 import { ThemeSelect } from "@/components/ThemeSelect";
 import { MenuIcon } from "@/components/menuIcons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -139,16 +140,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
       <div className="flex h-16 items-center px-6">
-        {/* 左：logo--扑克牌角标（J + 红黑桃）+ 字标 */}
+        {/* 左：logo--大王牌标记（小丑帽，无花色）+ 字标 */}
         <div className="flex flex-1 items-center">
           <Link href="/" className="flex items-center gap-2">
-            <span
-              className="flex h-7 w-6 flex-col items-center justify-center rounded-[3px] border leading-none"
-              aria-hidden="true"
-            >
-              <span className="font-display text-[10px] font-bold">J</span>
-              <span className="text-[11px] leading-none text-brand">♠</span>
-            </span>
+            <LogoMark />
             <span data-slot="logo-text" className="font-display text-lg font-semibold tracking-tight">
               Joker Box
             </span>
@@ -181,7 +176,7 @@ export function Header() {
                           <NavigationMenuLink
                             asChild
                             active={pathname === c.path}
-                            className="flex flex-col items-start gap-0.5 rounded-md px-3 py-2.5 transition-colors hover:bg-felt/15 focus:bg-felt/15 data-[active=true]:bg-transparent"
+                            className="flex flex-col items-start gap-0.5 rounded-md px-3 py-2.5 transition-colors hover:bg-brand-2/15 focus:bg-brand-2/15 data-[active=true]:bg-transparent"
                           >
                             <Link href={c.path} onClick={(e) => navTo(e, c.path)}>
                               <span
@@ -366,7 +361,7 @@ export function Header() {
                 {authenticated ? (
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="bg-felt font-display text-xs text-background">
+                      <AvatarFallback className="bg-brand-2 font-display text-xs text-background">
                         {initials}
                       </AvatarFallback>
                     </Avatar>

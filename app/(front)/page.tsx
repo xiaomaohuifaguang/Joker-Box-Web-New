@@ -1,17 +1,13 @@
 // 前台首页：公开（无守卫）。平台定位为聚合平台，文案不绑定到某个具体功能。
 // 登录/注册走 Header、后台走 UserMenu，首页 hero 不再重复这些入口。
+import { LogoMark } from "@/components/LogoMark";
+
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       {/* hero */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-        <span
-          className="mb-6 flex h-10 w-8 flex-col items-center justify-center rounded-[3px] border leading-none"
-          aria-hidden="true"
-        >
-          <span className="font-display text-sm font-bold">J</span>
-          <span className="text-base leading-none text-brand">♠</span>
-        </span>
+        <LogoMark className="mb-6 h-12 w-10" />
         <h1 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl">
           Joker Box
         </h1>

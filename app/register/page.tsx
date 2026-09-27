@@ -7,11 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
-import { register, sendMailCode, type Sex } from "@/lib/api/auth";
+import { register, sendMailCode } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Form,
   FormControl,
@@ -20,25 +18,22 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { CardFan } from "@/components/CardFan";
+import { LogoMark } from "@/components/LogoMark";
+import { JesterHat } from "@/components/JesterHat";
 
-const SEX_OPTIONS: Sex[] = ["男", "女", "未知"];
-
-// 方案 A：单线输入框（去框，底部 2px 线，聚焦亮 brand 红线）。
+// 方案 A：单线输入框（去框，底部 2px 线，聚焦亮 brand 线）。
 const underlineInput =
   "h-11 rounded-none border-0 border-b-2 border-border bg-transparent px-0 shadow-none focus-visible:border-brand focus-visible:ring-0";
 
 // 注册表单校验：必填项 + 邮箱格式 + 两次密码一致（错误挂在 confirmPassword）。
+// 表单只收最少字段；nickname/sex 后端契约必填，提交时填默认值（nickname=用户名、sex=未知）。
 const schema = z
   .object({
     username: z.string().min(1, "请输入用户名"),
     password: z.string().min(1, "请输入密码"),
     confirmPassword: z.string().min(1, "请再次输入密码"),
-    nickname: z.string().min(1, "请输入昵称"),
     mail: z.email("请输入有效邮箱"),
     code: z.string().min(1, "请输入验证码"),
-    sex: z.enum(["男", "女", "未知"] as const),
-    phone: z.string().optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "两次输入的密码不一致",
@@ -61,11 +56,8 @@ export default function RegisterPage() {
       username: "",
       password: "",
       confirmPassword: "",
-      nickname: "",
       mail: "",
       code: "",
-      sex: "未知",
-      phone: "",
     },
   });
 
@@ -100,11 +92,10 @@ export default function RegisterPage() {
       await register({
         username: values.username,
         password: values.password,
-        nickname: values.nickname,
+        nickname: values.username,
         mail: values.mail,
         code: values.code,
-        sex: values.sex,
-        phone: values.phone || undefined,
+        sex: "未知",
       });
       router.replace("/login");
     } catch (err) {
@@ -116,236 +107,147 @@ export default function RegisterPage() {
 
   return (
     <main className="grid min-h-screen md:grid-cols-2">
-      {/* 品牌舞台（桌面左侧 / 移动顶部横条）：牌桌绿 + 蚀刻排线 + 扇形牌 + 标语。全 token。 */}
+      {/* 品牌舞台（仅桌面）：harlequin 菱格 + 烫金内框 + 小丑帽 emblem，黑金剧场气质。全 token。 */}
       <section
-        className="relative flex flex-col items-center justify-center gap-6 overflow-hidden bg-felt px-6 py-12 md:gap-10"
+        className="relative hidden flex-col items-center justify-center gap-10 overflow-hidden border-r bg-surface md:flex"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(52deg, transparent 0 5px, color-mix(in srgb, var(--background) 5%, transparent) 5px 6px), repeating-linear-gradient(-38deg, transparent 0 7px, color-mix(in srgb, var(--brand) 6%, transparent) 7px 8px)",
+            "repeating-linear-gradient(60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px), repeating-linear-gradient(-60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px)",
         }}
       >
-        <CardFan size={104} className="scale-[0.55] md:scale-100" />
+        <div aria-hidden className="pointer-events-none absolute inset-8 border border-brand/30" />
+        <JesterHat className="h-24 w-24 text-brand" />
         <div className="text-center">
-          <p className="font-display text-2xl font-semibold text-background md:text-3xl">
-            万千功能，一站聚合
-          </p>
-          <p className="mt-2 text-sm text-background/70 md:mt-3">
-            入座——不止于工具，更是你的全能数字助手。
-          </p>
+          <p className="font-display text-3xl font-semibold tracking-tight">Joker Box</p>
+          <p className="mt-3 text-sm text-muted-foreground">不止于工具，更是你的全能数字助手</p>
         </div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+          Plate Nº 53
+        </p>
       </section>
 
-      {/* 表单（右侧 / 移动下方）：方案 B——表单容器做成一张竖向扑克牌。
-          左侧 brand 红竖边（直排 JOKER+♠）+ 牌面 bg-surface + 角落 J/♠ + 右缘邮票穿孔。 */}
-      <section className="flex min-w-0 items-center justify-center overflow-x-hidden bg-background px-6 py-12">
-        <div className="relative flex w-full max-w-lg overflow-hidden rounded-xl border bg-surface shadow-xl">
-          {/* 左缘：brand 红竖边 + 直排 JOKER + ♠ */}
-          <div className="flex w-12 flex-none flex-col items-center justify-between bg-brand py-5 text-background">
-            <span className="font-mono text-xs font-bold tracking-widest [writing-mode:vertical-rl]">
-              JOKER
-            </span>
-            <span className="text-lg leading-none">♠</span>
-          </div>
+      {/* 表单（右侧 / 移动全宽）：安静单栏，无牌面装扮。 */}
+      <section className="flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          <LogoMark className="h-10 w-8" />
+          <h1 className="mt-6 font-display text-4xl font-semibold tracking-tight">创建账号</h1>
+          <p className="mt-2 text-sm text-muted-foreground">注册以开始使用</p>
 
-          {/* 牌面 */}
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
               autoComplete="off"
-              className="relative flex min-w-0 flex-1 flex-col gap-5 p-7 sm:p-9"
+              className="mt-8 flex flex-col gap-5"
             >
-              {/* 角落 J/♠ 标记（右上 / 左下） */}
-              <span aria-hidden className="pointer-events-none absolute right-4 top-3 flex flex-col items-center leading-none">
-                <span className="font-mono text-sm font-bold text-foreground">J</span>
-                <span className="text-sm text-brand">♠</span>
-              </span>
-              <span aria-hidden className="pointer-events-none absolute bottom-3 left-4 flex rotate-180 flex-col items-center leading-none">
-                <span className="font-mono text-sm font-bold text-foreground">J</span>
-                <span className="text-sm text-brand">♠</span>
-              </span>
-
-              <div>
-                <p className="font-mono text-xs uppercase tracking-widest text-brand">Joker Box</p>
-                <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">入座</h1>
-                <p className="mt-2 text-sm text-muted-foreground">注册一个账号</p>
-              </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>用户名 *</FormLabel>
-                <FormControl>
-                  <Input placeholder="用户名" autoComplete="off" {...field} className={underlineInput} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>用户名 *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="用户名" autoComplete="off" {...field} className={underlineInput} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>密码 *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="密码"
-                    autoComplete="new-password"
-                    {...field} className={underlineInput} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>密码 *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="密码"
+                        autoComplete="new-password"
+                        {...field} className={underlineInput} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>确认密码 *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="再次输入密码"
-                    autoComplete="new-password"
-                    {...field} className={underlineInput} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>确认密码 *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="再次输入密码"
+                        autoComplete="new-password"
+                        {...field} className={underlineInput} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="nickname"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>昵称 *</FormLabel>
-                <FormControl>
-                  <Input placeholder="昵称" autoComplete="off" {...field} className={underlineInput} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="mail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>邮箱 *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="邮箱"
+                        autoComplete="off"
+                        {...field} className={underlineInput} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="mail"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>邮箱 *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="邮箱"
-                    autoComplete="off"
-                    {...field} className={underlineInput} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>验证码 *</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input
+                          placeholder="邮箱验证码"
+                          autoComplete="off"
+                          {...field} className={underlineInput} />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendCode}
+                        disabled={codeCooldown > 0 || !mail}
+                        className="shrink-0"
+                      >
+                        {codeCooldown > 0 ? `${codeCooldown}s` : "发送验证码"}
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>验证码 *</FormLabel>
-                <div className="flex gap-2">
-                  <FormControl>
-                    <Input
-                      placeholder="邮箱验证码"
-                      autoComplete="off"
-                      {...field} className={underlineInput} />
-                  </FormControl>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleSendCode}
-                    disabled={codeCooldown > 0 || !mail}
-                    className="shrink-0"
-                  >
-                    {codeCooldown > 0 ? `${codeCooldown}s` : "发送验证码"}
-                  </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="sex"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>性别</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    value={field.value}
-                    onValueChange={(v) => field.onChange(v as Sex)}
-                    className="flex gap-4"
-                  >
-                    {SEX_OPTIONS.map((s) => (
-                      <div key={s} className="flex items-center gap-2">
-                        <RadioGroupItem value={s} id={`sex-${s}`} />
-                        <Label htmlFor={`sex-${s}`}>{s}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>手机号</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="手机号（选填）"
-                    autoComplete="off"
-                    {...field} className={underlineInput} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button type="submit" disabled={loading} className="h-11 w-full text-base">
-            {loading ? "注册中…" : "注册"}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            已有账号？
-            <Link href="/login" className="font-medium text-brand hover:underline">
-              登录
-            </Link>
-          </p>
+              <Button type="submit" disabled={loading} className="h-11 w-full text-base">
+                {loading ? "注册中…" : "注册"}
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                已有账号？
+                <Link href="/login" className="font-medium text-brand hover:underline">
+                  登录
+                </Link>
+              </p>
             </form>
           </Form>
-
-          {/* 右缘：邮票穿孔（径向点阵） */}
-          <div
-            aria-hidden
-            className="w-3 flex-none border-l border-dashed border-border"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, var(--border) 1.5px, transparent 1.5px)",
-              backgroundSize: "100% 14px",
-              backgroundPosition: "center",
-            }}
-          />
         </div>
       </section>
     </main>
