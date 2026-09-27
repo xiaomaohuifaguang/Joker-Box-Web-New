@@ -10,6 +10,7 @@ Route group（`(front)` 不进 URL）。`layout.tsx`(Server) = Header + `SystemP
 - `tools/`：`jsonFormat`(JSON 编辑器+结构树，CodeMirror，`_components/JsonTree`)、`cron`(5 段+预设+`cronstrue` 中文描述+`cron-parser` 下次 5 次触发，date-fns 格式化)、`signInCard`(占位)。均 `<RequirePermission>`。
 - `process/`：流程前台（申请中心 `application/` + 审批中心 `approval/`），`<RequirePermission>`。视图编排/接口/表单接入/候选人选择约定详见同级 README。
 - `code-maker/`：占位（`<RequirePermission>`）。
-- `_components/`：Header（NavigationMenu + mobile Sheet）、Footer、UserMenu。
+- `settings/`：个人设置。`/settings` 构建期 `permanentRedirect` 到 `/settings/profile`。`<RequireAuth>`（仅登录，不查 authPaths）包在 layout 级，左竖导航（移动横滚，`SettingsNav` 的 `SETTINGS_NAV` 数组，加设置页 = 建子路由 + 加一项）。`profile/`（头像上传点选预览 + 昵称/性别/手机号，空手机提交 null 清除）、`security/`（改密码 query 传参，密码规则 7-19 位限定字符集）。头像上传 multipart 走 `lib/api/avatar.ts` 的 `uploadAvatar`，成功后广播 `avatar_change` 事件，所有 `UserAvatar` 实例订阅重拉（Header/后台 sidebar/设置页同步刷新）。
+- `_components/`：Header（NavigationMenu + mobile Sheet）、Footer、UserMenu（头像下拉：身份卡 + 后台管理(admin) + 个人设置 + 退出登录）。
 
 导航是 backend-driven（`useMenuTree` menuType=-2），图标读 `menu.icon`。守卫规则见 `components/README.md`。

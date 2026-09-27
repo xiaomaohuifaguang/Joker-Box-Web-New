@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, LayoutDashboard, LogOut, Mail, Shield } from "lucide-react";
+import { Building2, LayoutDashboard, LogOut, Mail, Settings, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUser } from "@/hooks/useUser";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -127,6 +127,12 @@ export function UserMenu() {
               </Link>
             </DropdownMenuItem>
           ) : null}
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+              <Settings className="h-4 w-4" />
+              个人设置
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault(); // 保持下拉打开，避免 AlertDialog 触发焦点冲突

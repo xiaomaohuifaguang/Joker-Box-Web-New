@@ -34,3 +34,26 @@ export async function register(body: {
 export async function sendMailCode(mail: string): Promise<void> {
   await api.post<unknown>("/auth/mailCode", { params: { mail } });
 }
+
+// 修改密码：POST /auth/changePassword?oldPassword=&newPassword=（query 传参，无 body）。
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await api.post<unknown>("/auth/changePassword", {
+    params: { oldPassword, newPassword },
+  });
+}
+
+// 更新用户信息：POST /auth/updateUserInfo。专用 body 类型保证只发后端允许修改的 4 个字段；
+// phone 传 null 显式清除（后端 Long）。
+export type UpdateUserInfoBody = {
+  userId: string;
+  nickname: string;
+  sex: Sex;
+  phone: number | null;
+};
+
+export async function updateUserInfo(body: UpdateUserInfoBody): Promise<void> {
+  await api.post<unknown>("/auth/updateUserInfo", { body });
+}
