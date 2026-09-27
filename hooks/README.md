@@ -5,7 +5,7 @@
 ## 认证 / 用户 / 主题（全局）
 - `useAuth`：token 登录态，`logout()` = clearToken + clearUser + `window.location.href="/"` 硬导航。
 - `useUser`：当前用户缓存。
-- `useTheme`：`scheme`(明暗) + `preset`(5 套预设)，localStorage 持久化。
+- `useTheme`：`scheme`(明暗) + `preset`(11 套预设，见 `app/styles/README.md` 契约)，localStorage 持久化。
 - `useMounted`：跳首帧（token 是 client-only，守卫避免已登录刷新闪 404）。
 - `useCredentials`：记住密码（base64）。
 

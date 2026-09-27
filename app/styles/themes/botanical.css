@@ -1,0 +1,50 @@
+/* 花园（theme-factory Botanical Garden：蕨绿 + 金盏花 + 陶土 + 奶油）-- 清新有机 */
+
+/* ===== ① token ===== */
+:root[data-theme="botanical"] {
+  --background: oklch(96.4% 0.0082 91.5);
+  --foreground: oklch(30% 0.045 150);
+  --surface: oklch(99% 0.004 91.5);
+  --muted-foreground: oklch(50% 0.03 140);
+  --border: oklch(88% 0.02 110);
+  --brand: oklch(48% 0.085 153);
+  --brand-2: oklch(54.5% 0.1517 35.5);
+  --success: oklch(52% 0.10 152);
+  --warning: oklch(66% 0.15 72);
+  --error: oklch(52% 0.16 35);
+  --info: oklch(52% 0.11 250);
+  --display-font: var(--font-fraunces);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-geist-mono);
+  --radius: 0.75rem;
+  --shadow-x: 0px;
+  --shadow-y: 4px;
+  --shadow-blur: 12px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: 30% 0.045 150;
+  --tracking-display: -0.03em;
+  --tracking-normal: 0em;
+  --motion-duration: 240ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --space-unit: 0.25rem;
+}
+:root[data-theme="botanical"].dark {
+  --background: oklch(19% 0.018 150);
+  --foreground: oklch(93% 0.01 91.5);
+  --surface: oklch(24% 0.022 150);
+  --muted-foreground: oklch(69% 0.025 140);
+  --border: oklch(30% 0.025 150);
+  --brand: oklch(68% 0.10 153);
+  --brand-2: oklch(66% 0.15 35);
+  --success: oklch(70% 0.12 152);
+  --warning: oklch(75% 0.15 72);
+  --error: oklch(66% 0.16 35);
+  --info: oklch(68% 0.11 250);
+}
+
+/* ===== ③ 专属特效 ===== */
+:root[data-theme="botanical"] ::selection {
+  background: var(--brand);
+  color: var(--background);
+}

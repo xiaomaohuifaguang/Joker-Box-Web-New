@@ -1,0 +1,108 @@
+/* 设计 token 中枢：dark 变体 + 阴影统一派生公式 + @theme inline 映射。
+   主题契约（必填 token 清单 / 明暗推导规则 / 新增主题步骤）见 app/styles/README.md。 */
+
+/* 让 Tailwind 的 dark: 工具类跟着 .dark 类走（v4 写法） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== 阴影派生公式（全主题唯一一份）=====
+   主题文件只填 6 个分量（--shadow-x/y/blur/spread/opacity/color），7 档 elevation 在此统一派生。
+   自定义属性在元素上按特异性覆盖（:root[data-theme] > :root），var() 在使用处取覆盖后的值，
+   故切主题只换分量、公式自动重算。需要特殊阴影（辉光/flat）的主题在自己文件里覆盖对应 --elevation-*。 */
+:root {
+  --elevation-2xs: var(--shadow-x, 0px) calc(var(--shadow-y, 4px) * 0.25) calc(var(--shadow-blur, 12px) * 0.083) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / calc(var(--shadow-opacity, 0.08) * 0.5));
+  --elevation-xs: var(--shadow-x, 0px) calc(var(--shadow-y, 4px) * 0.25) calc(var(--shadow-blur, 12px) * 0.17) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / calc(var(--shadow-opacity, 0.08) * 0.625));
+  --elevation-sm: var(--shadow-x, 0px) calc(var(--shadow-y, 4px) * 0.25) calc(var(--shadow-blur, 12px) * 0.17) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / calc(var(--shadow-opacity, 0.08) * 0.75));
+  --elevation-md: var(--shadow-x, 0px) var(--shadow-y, 4px) var(--shadow-blur, 12px) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / var(--shadow-opacity, 0.08));
+  --elevation-lg: var(--shadow-x, 0px) calc(var(--shadow-y, 4px) * 2) calc(var(--shadow-blur, 12px) * 2) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / calc(var(--shadow-opacity, 0.08) * 1.25));
+  --elevation-xl: var(--shadow-x, 0px) calc(var(--shadow-y, 4px) * 3) calc(var(--shadow-blur, 12px) * 2.67) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / calc(var(--shadow-opacity, 0.08) * 1.5));
+  --elevation-2xl: var(--shadow-x, 0px) calc(var(--shadow-y, 4px) * 4) calc(var(--shadow-blur, 12px) * 4) var(--shadow-spread, 0px) oklch(var(--shadow-color, 0% 0 0) / calc(var(--shadow-opacity, 0.08) * 1.75));
+}
+
+@theme inline {
+  /* 自有 token（每套主题必填，见 themes/*.css） */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+
+  /* shadcn 约定 token（引用上面的值，每套主题自动适配）*/
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--background);
+  --color-secondary: var(--surface);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--surface);
+  --color-accent: var(--background);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--brand);
+  --color-destructive-foreground: var(--background);
+  --color-input: var(--border);
+  --color-ring: var(--brand);
+
+  /* 语义色（success/warning/error/info）*/
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  /* sidebar（映射到自有 token）*/
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--brand);
+  --color-sidebar-primary-foreground: var(--background);
+  --color-sidebar-accent: var(--background);
+  --color-sidebar-accent-foreground: var(--foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--brand);
+
+  /* chart（占位，真做图表再细化）*/
+  --color-chart-1: var(--brand);
+  --color-chart-2: var(--brand-2);
+  --color-chart-3: var(--foreground);
+  --color-chart-4: var(--muted-foreground);
+  --color-chart-5: var(--border);
+
+  /* 圆角（每套主题 --radius 为基准，rounded-sm/md/lg/xl 跟随）*/
+  --radius-sm: calc(var(--radius) * 0.25);
+  --radius-md: calc(var(--radius) * 0.5);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  /* 阴影（统一公式派生的 --elevation-* 全标尺 2xs~2xl，shadow-* 跟随）*/
+  --shadow-2xs: var(--elevation-2xs);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+  --shadow-xl: var(--elevation-xl);
+  --shadow-2xl: var(--elevation-2xl);
+
+  /* 字体（每套主题自带，跟随 data-theme）*/
+  --font-sans: var(--body-font);
+  --font-mono: var(--mono-font);
+  --font-display: var(--display-font);
+
+  /* 字距（每套主题 --tracking-normal 为基准，tracking-* 六档跟随）*/
+  --tracking-tighter: calc(var(--tracking-normal, 0em) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal, 0em) - 0.025em);
+  --tracking-normal: var(--tracking-normal, 0em);
+  --tracking-wide: calc(var(--tracking-normal, 0em) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal, 0em) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal, 0em) + 0.1em);
+
+  /* 动效（每套主题 --motion-duration / --motion-ease，duration 和 ease 跟随）*/
+  --duration-150: var(--motion-duration, 200ms);
+  --duration-200: var(--motion-duration, 200ms);
+  --duration-300: calc(var(--motion-duration, 200ms) * 1.5);
+  --duration-500: calc(var(--motion-duration, 200ms) * 2.5);
+  --ease-in-out: var(--motion-ease, cubic-bezier(0.4, 0, 0.2, 1));
+
+  /* 间距（每套主题 --space-unit，所有 spacing 工具类跟随）*/
+  --spacing: var(--space-unit, 0.25rem);
+}

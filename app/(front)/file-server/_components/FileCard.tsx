@@ -77,7 +77,7 @@ export function FileCard({
           >
             <FileIcon
               item={item}
-              className={`h-9 w-9 ${isFolder ? "text-felt" : "text-muted-foreground"}`}
+              className={`h-9 w-9 ${isFolder ? "text-brand-2" : "text-muted-foreground"}`}
             />
             <span className="line-clamp-2 break-all text-xs font-medium">
               {item.filename}

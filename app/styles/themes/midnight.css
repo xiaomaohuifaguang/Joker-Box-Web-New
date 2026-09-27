@@ -1,0 +1,50 @@
+/* 星河（theme-factory Midnight Galaxy：深紫 + 宇宙蓝 + 薰衣草 + 银）-- 戏剧深邃 */
+
+/* ===== ① token ===== */
+:root[data-theme="midnight"] {
+  --background: oklch(97% 0.008 302);
+  --foreground: oklch(26.7% 0.0597 301.2);
+  --surface: oklch(99.3% 0.004 302);
+  --muted-foreground: oklch(50% 0.04 290);
+  --border: oklch(88% 0.02 295);
+  --brand: oklch(45.3% 0.105 278.7);
+  --brand-2: oklch(56% 0.08 303);
+  --success: oklch(55% 0.12 155);
+  --warning: oklch(70% 0.12 75);
+  --error: oklch(55% 0.19 27);
+  --info: oklch(52% 0.11 275);
+  --display-font: var(--font-geist-sans);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-geist-mono);
+  --radius: 0.75rem;
+  --shadow-x: 0px;
+  --shadow-y: 4px;
+  --shadow-blur: 12px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: 26.7% 0.0597 301.2;
+  --tracking-display: -0.02em;
+  --tracking-normal: 0em;
+  --motion-duration: 260ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --space-unit: 0.25rem;
+}
+:root[data-theme="midnight"].dark {
+  --background: oklch(20% 0.04 300);
+  --foreground: oklch(93.1% 0.0269 285.9);
+  --surface: oklch(25% 0.05 300);
+  --muted-foreground: oklch(70% 0.06 300);
+  --border: oklch(32% 0.05 300);
+  --brand: oklch(64% 0.13 280);
+  --brand-2: oklch(72% 0.08 303);
+  --success: oklch(72% 0.13 155);
+  --warning: oklch(76% 0.12 75);
+  --error: oklch(66% 0.19 27);
+  --info: oklch(70% 0.12 280);
+}
+
+/* ===== ③ 专属特效 ===== */
+:root[data-theme="midnight"] ::selection {
+  background: var(--brand);
+  color: var(--background);
+}

@@ -1,0 +1,121 @@
+/* Joker（黑金剧场：墨绿黑 + 烫金 + 点睛红）-- Fraunces 衬线、菱格金线、幕布入场 -- 默认主题
+   暗色为主场设计（深底金字为先），亮色版派生（象牙 + 古铜金 + 绛红）。
+   默认主题约定：同时挂 :root（无 data-theme 时也是 joker，首屏内联脚本未跑完前不闪默认外主题）。 */
+
+/* ===== ① token ===== */
+:root,
+:root[data-theme="joker"] {
+  --background: oklch(96.5% 0.014 95);
+  --foreground: oklch(24% 0.02 165);
+  --surface: oklch(99% 0.006 95);
+  --muted-foreground: oklch(48% 0.025 150);
+  --border: oklch(86% 0.02 100);
+  --brand: oklch(52% 0.11 82);
+  --brand-2: oklch(52% 0.17 27);
+  --success: oklch(52% 0.10 158);
+  --warning: oklch(62% 0.12 70);
+  --error: oklch(52% 0.18 27);
+  --info: oklch(50% 0.11 250);
+  --display-font: var(--font-fraunces);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-geist-mono);
+  --radius: 0.5rem;
+  --shadow-x: 0px;
+  --shadow-y: 6px;
+  --shadow-blur: 16px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.12;
+  --shadow-color: 24% 0.02 165;
+  --tracking-display: -0.03em;
+  --tracking-normal: 0em;
+  --motion-duration: 240ms;
+  --motion-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --space-unit: 0.25rem;
+}
+:root.dark,
+:root[data-theme="joker"].dark {
+  --background: oklch(18% 0.014 165);
+  --foreground: oklch(92% 0.015 95);
+  --surface: oklch(23% 0.018 165);
+  --muted-foreground: oklch(68% 0.02 120);
+  --border: oklch(30% 0.02 160);
+  --brand: oklch(72% 0.125 90);
+  --brand-2: oklch(63% 0.18 27);
+  --success: oklch(70% 0.12 160);
+  --warning: oklch(74% 0.13 65);
+  --error: oklch(63% 0.18 27);
+  --info: oklch(68% 0.09 230);
+}
+
+/* ===== ② 纹样：harlequin 菱格金线（小丑戏服本体图案），±60° 双向极淡金细线织成菱格 ===== */
+:root[data-theme="joker"] body,
+:root[data-theme="joker"] .bg-background,
+:root[data-theme="joker"] .bg-surface,
+:root[data-theme="joker"] .bg-sidebar,
+:root[data-theme="joker"] .bg-popover,
+:root[data-theme="joker"] [data-slot="navigation-menu-content"] {
+  background-image:
+    repeating-linear-gradient(60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px),
+    repeating-linear-gradient(-60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px);
+}
+
+/* ===== ③ 专属特效：烫金 selection + 浮层金边 + 幕布入场 + 微动效 ===== */
+
+/* ::selection：烫金 + 深底字 */
+:root[data-theme="joker"] ::selection {
+  background: var(--brand);
+  color: var(--background);
+}
+
+/* 烫金边：浮层（Dialog/Popover/Dropdown 等）边框掺金，暗底上的一线烫金 */
+:root[data-theme="joker"] [data-slot="dialog-content"],
+:root[data-theme="joker"] [data-slot="alert-dialog-content"],
+:root[data-theme="joker"] [data-slot="popover-content"],
+:root[data-theme="joker"] [data-slot="dropdown-menu-content"],
+:root[data-theme="joker"] [data-slot="context-menu-content"],
+:root[data-theme="joker"] [data-slot="navigation-menu-content"] {
+  border-color: color-mix(in oklab, var(--brand) 40%, var(--border));
+}
+
+/* 入场动画：幕布拉开（从下往上滑 + 回弹）*/
+@keyframes curtain-rise {
+  from {
+    transform: translateY(50%) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+:root[data-theme="joker"] [data-slot="dialog-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="alert-dialog-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="dropdown-menu-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="popover-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="context-menu-content"][data-state="open"],
+:root[data-theme="joker"] [data-slot="navigation-menu-content"] {
+  animation: curtain-rise var(--motion-duration, 200ms) var(--motion-ease, ease) both;
+}
+
+/* 交互微动效：hover 轻浮起 + 投影（登台感，不倾斜）*/
+:root[data-theme="joker"] [data-slot="button"] {
+  transition-property: transform, box-shadow, background-color, color, border-color;
+}
+:root[data-theme="joker"] [data-slot="button"]:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+:root[data-theme="joker"] [data-slot="button"]:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* 危险操作：hover 咧嘴笑式的抖动（joker-wobble），小丑 DNA 的危险预警 */
+@keyframes joker-wobble {
+  0%, 100% { transform: translateY(-2px) rotate(-1deg); }
+  25% { transform: translateY(-2px) rotate(-2.4deg); }
+  75% { transform: translateY(-2px) rotate(0.4deg); }
+}
+:root[data-theme="joker"] [data-slot="button"][data-variant="destructive"]:not(:disabled):hover {
+  animation: joker-wobble var(--motion-duration, 240ms) var(--motion-ease, ease) infinite;
+}

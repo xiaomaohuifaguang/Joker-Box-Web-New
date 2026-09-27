@@ -51,7 +51,7 @@ export function ThemeSelect() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-40 overflow-hidden rounded-lg border bg-surface shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-40 overflow-y-auto rounded-lg border bg-surface shadow-lg">
           {PRESETS.map((p) => (
             <button
               key={p.id}

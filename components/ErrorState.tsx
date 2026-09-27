@@ -19,7 +19,7 @@ export function ErrorState({
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">{message}</p>
       <Link
         href="/"
-        className="mt-6 rounded-full bg-felt px-4 py-2 text-sm text-background transition-opacity hover:opacity-90"
+        className="mt-6 rounded-full bg-brand-2 px-4 py-2 text-sm text-background transition-opacity hover:opacity-90"
       >
         回首页
       </Link>
