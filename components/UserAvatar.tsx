@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAvatarUrl } from "@/lib/api/avatar";
+import { getAvatarUrl, onAvatarChange } from "@/lib/api/avatar";
 
 // 共享用户头像：前台 UserMenu / 后台 ConsoleSidebar 都用。
 // 有 userId 时异步拉 /auth/avatar/{userId}（图片流）→ AvatarImage；
@@ -22,6 +22,9 @@ export function UserAvatar({
   // userId 变化时回到取字态（render 期条件 setState；effect 内只在异步回调 setState）
   const [prevId, setPrevId] = useState(userId);
   const [src, setSrc] = useState<string | null>(null);
+  // 头像上传成功后广播 avatar_change → version+1 触发重拉（事件回调里 setState，非 effect 体）
+  const [version, setVersion] = useState(0);
+  useEffect(() => onAvatarChange(() => setVersion((v) => v + 1)), []);
   if (prevId !== userId) {
     setPrevId(userId);
     setSrc(null);
@@ -47,7 +50,7 @@ export function UserAvatar({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [userId]);
+  }, [userId, version]);
 
   return (
     <Avatar className={className}>
