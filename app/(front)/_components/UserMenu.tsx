@@ -50,7 +50,7 @@ export function UserMenu() {
             userId={user?.userId}
             initials={initials}
             className="h-9 w-9"
-            fallbackClassName="bg-felt font-display text-sm text-background"
+            fallbackClassName="bg-brand-2 font-display text-sm text-background"
           />
         </button>
       </DropdownMenuTrigger>
@@ -61,7 +61,7 @@ export function UserMenu() {
             userId={user?.userId}
             initials={initials}
             className="h-11 w-11"
-            fallbackClassName="bg-felt font-display text-base text-background"
+            fallbackClassName="bg-brand-2 font-display text-base text-background"
           />
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex items-center gap-1.5">

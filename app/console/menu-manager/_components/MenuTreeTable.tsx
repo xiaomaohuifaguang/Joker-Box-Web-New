@@ -412,7 +412,7 @@ export function MenuTreeTable({
 function IconChip({ name }: { name: string }) {
   if (!name) return null;
   return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border text-felt">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border text-brand-2">
       <MenuIcon name={name} className="h-3.5 w-3.5" />
     </span>
   );

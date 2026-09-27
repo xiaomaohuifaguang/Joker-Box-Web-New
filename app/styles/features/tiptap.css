@@ -1,0 +1,37 @@
+/* TipTap 编辑器 + prose 排版修复（功能样式，与主题无关，颜色全走 token）。 */
+
+/* TipTap 编辑器：占位符 + 去聚焦边框 */
+.tiptap { outline: none; min-height: 80px; }
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* 编辑器内可缩放图片：清掉 .prose img 的 2em 上下 margin（否则缩放手柄上下不贴图）。
+   .prose :where(img) 特异性 (0,1,1) 高于 my-0 等 utility，需用更高特异性的 (0,2,1) 覆盖。 */
+.prose [data-node-view-wrapper] img {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* 详情页富文本（RichContent）：行内图片与文字同行（图文混排）。
+   .prose img 默认上下 1.7em margin 会把行内图片撑出段落、视觉上换行/独占 -> 清掉；
+   display:inline-block + vertical-align:middle 让图片与文字基线对齐、同一行内展示。
+   用 [data-rich-content] 限定作用域，避免影响全站其它 prose 图片排版。 */
+.prose[data-rich-content] img {
+  display: inline-block;
+  vertical-align: middle;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* 预览断词与编辑器一致：编辑器 contenteditable 默认 overflow-wrap:break-word（超长无空格串
+   自动断行），.prose 默认 normal 会一行溢出外壳。补上使新增/预览断行一致。
+   word-break:break-word 兜底连续 CJK/长串。 */
+.prose[data-rich-content] {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}

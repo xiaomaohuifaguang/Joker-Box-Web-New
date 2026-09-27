@@ -35,7 +35,7 @@ export function FileRow({
             >
               <FileIcon
                 item={item}
-                className={`h-4 w-4 shrink-0 ${isFolder ? "text-felt" : "text-muted-foreground"}`}
+                className={`h-4 w-4 shrink-0 ${isFolder ? "text-brand-2" : "text-muted-foreground"}`}
               />
               <span className="truncate font-medium">{item.filename}</span>
             </button>

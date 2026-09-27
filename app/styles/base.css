@@ -1,0 +1,16 @@
+/* 全局基础样式：token 到元素默认样式的挂接（主题无关，各主题只换 token 值）。 */
+@layer base {
+  *, ::before, ::after {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    letter-spacing: var(--tracking-normal, 0em);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-display, 0em);
+  }
+}

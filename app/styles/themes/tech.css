@@ -1,0 +1,50 @@
+/* 科技（theme-factory Tech Innovation：电蓝 + 霓虹青 + 近黑 + 白）-- 大胆高对比 */
+
+/* ===== ① token ===== */
+:root[data-theme="tech"] {
+  --background: oklch(98.5% 0.004 261);
+  --foreground: oklch(23.5% 0 0);
+  --surface: oklch(100% 0 0);
+  --muted-foreground: oklch(50% 0.01 261);
+  --border: oklch(89% 0.008 261);
+  --brand: oklch(56.3% 0.2408 260.8);
+  --brand-2: oklch(62% 0.11 210);
+  --success: oklch(60% 0.15 155);
+  --warning: oklch(72% 0.13 80);
+  --error: oklch(57% 0.20 27);
+  --info: oklch(56.3% 0.2408 260.8);
+  --display-font: var(--font-geist-sans);
+  --body-font: var(--font-geist-sans);
+  --mono-font: var(--font-geist-mono);
+  --radius: 0.25rem;
+  --shadow-x: 0px;
+  --shadow-y: 4px;
+  --shadow-blur: 12px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.12;
+  --shadow-color: 0% 0 0;
+  --tracking-display: -0.01em;
+  --tracking-normal: 0em;
+  --motion-duration: 150ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --space-unit: 0.25rem;
+}
+:root[data-theme="tech"].dark {
+  --background: oklch(16% 0.015 261);
+  --foreground: oklch(94% 0.005 261);
+  --surface: oklch(21% 0.02 261);
+  --muted-foreground: oklch(68% 0.015 261);
+  --border: oklch(28% 0.025 261);
+  --brand: oklch(66% 0.22 261);
+  --brand-2: oklch(85% 0.13 195);
+  --success: oklch(75% 0.16 155);
+  --warning: oklch(78% 0.13 80);
+  --error: oklch(66% 0.20 27);
+  --info: oklch(66% 0.22 261);
+}
+
+/* ===== ③ 专属特效 ===== */
+:root[data-theme="tech"] ::selection {
+  background: var(--brand);
+  color: var(--background);
+}

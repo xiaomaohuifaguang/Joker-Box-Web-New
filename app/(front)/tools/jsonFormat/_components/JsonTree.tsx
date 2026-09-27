@@ -64,13 +64,13 @@ function JsonNode({ k, value }: { k: string | null; value: unknown }) {
     );
   }
   if (typeof value === "string") {
-    return <Leaf k={k} value={`"${value}"`} className="text-felt" />;
+    return <Leaf k={k} value={`"${value}"`} className="text-brand-2" />;
   }
   if (typeof value === "number") {
     return <Leaf k={k} value={String(value)} className="text-brand" />;
   }
   if (typeof value === "boolean") {
-    return <Leaf k={k} value={String(value)} className="text-felt" />;
+    return <Leaf k={k} value={String(value)} className="text-brand-2" />;
   }
   return null;
 }

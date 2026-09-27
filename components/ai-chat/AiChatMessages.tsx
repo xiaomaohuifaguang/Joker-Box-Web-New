@@ -55,7 +55,7 @@ function ReasonBlock({
   return (
     <div
       className={cn(
-        "mb-2 rounded-r-md border-l-2 border-felt/60 bg-muted/40 font-mono text-xs",
+        "mb-2 rounded-r-md border-l-2 border-brand-2/60 bg-muted/40 font-mono text-xs",
         // 思考中的呼吸微光（felt 淡染，随主题）。
         thinking && "animate-pulse",
       )}
@@ -65,11 +65,11 @@ function ReasonBlock({
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-muted-foreground"
       >
-        <Terminal className="h-3 w-3 text-felt" />
+        <Terminal className="h-3 w-3 text-brand-2" />
         <span className="tracking-wide">
           {thinking ? `思考中 · ${elapsed}s` : "思考过程"}
         </span>
-        {thinking && <Loader2 className="h-3 w-3 animate-spin text-felt" />}
+        {thinking && <Loader2 className="h-3 w-3 animate-spin text-brand-2" />}
         <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
@@ -77,7 +77,7 @@ function ReasonBlock({
           {reason}
           {thinking && (
             // 跟随光标：文字逐字增长时贴在末尾，营造打字机感。
-            <span className="ml-0.5 inline-block h-3 w-[2px] animate-pulse bg-felt align-middle" />
+            <span className="ml-0.5 inline-block h-3 w-[2px] animate-pulse bg-brand-2 align-middle" />
           )}
           {thinking && !reason && (
             <span className="text-muted-foreground/60">正在整理思路…</span>
@@ -193,7 +193,7 @@ export function AiChatMessages({
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <Terminal className="h-5 w-5 text-felt" />
+        <Terminal className="h-5 w-5 text-brand-2" />
         <p className="font-display text-lg tracking-tight text-foreground">开始新的对话</p>
         <p className="text-sm text-muted-foreground">输入问题，Enter 发送</p>
       </div>
@@ -230,7 +230,7 @@ export function AiChatMessages({
               // 助手：无气泡——felt 左竖线 + 裸 markdown 散文，读起来像正在书写的文档（编辑感）。
               // group/msg：hover 浮现消息操作条（复制全文）。min-w-0：flex 项默认 min-width:auto，
               // 内容（宽代码/mermaid）会把容器撑破导致右侧被裁——给 0 让 flex 收缩、内部靠 overflow-x 滚动。
-              <div className="group/msg relative min-w-0 max-w-full flex-1 border-l border-felt/40 pl-3 text-sm">
+              <div className="group/msg relative min-w-0 max-w-full flex-1 border-l border-brand-2/40 pl-3 text-sm">
                 {(m.reason || m.pending) && (
                   // pending 即渲染（静默期也亮卡计时）；历史/完成后只在有 reason 时显示。
                   <ReasonBlock
