@@ -10,7 +10,7 @@
 - `useCredentials`：记住密码（base64）。
 
 ## 菜单树（backend-driven 导航）
-- `useMenuTree`：按 `menuType`(-1 后台 / -2 前台)拉**后端已按 token 过滤**的菜单树。Module 级缓存 keyed by `menuType + authed + userId`（登录/登出/换用户 → key 变 → 重拉）。
+- `useMenuTree`：按 `menuType`(-1 后台 / -2 前台)拉**后端已按 token 过滤**的菜单树。Module 级缓存 keyed by `menuType + token`（后端过滤菜单的依据就是 token；登录/登出/换用户 → token 变 → key 变 → 重拉）。不用 authed+userId 做 key：过期 token 拿到的匿名菜单会污染"已登录"key，登录软导航后命中 → 菜单为空。
 - `useMenuTreeAll`：菜单管理页用，拉全量树 + refresh。
 
 ## 业务分页 / 数据（一模块一 hook）
