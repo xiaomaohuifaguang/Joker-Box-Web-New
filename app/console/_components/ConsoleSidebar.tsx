@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, ChevronsUpDown, Home, LogOut, Mail } from "lucide-react";
@@ -63,6 +63,8 @@ export function ConsoleSidebar() {
   const { menu, loading } = useMenuTree(MENU_TYPE.CONSOLE);
   const { state, isMobile } = useSidebar();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  // 用户菜单防误触：记录当前手势的 pointerdown 是否落在菜单内容内（见下）。
+  const menuDownInsideRef = useRef(false);
 
   const initials = (user?.nickname || user?.username || "?")
     .slice(0, 2)
@@ -210,6 +212,10 @@ export function ConsoleSidebar() {
                   size="lg"
                   tooltip={name}
                   className="data-[state=open]:bg-sidebar-accent"
+                  onPointerDownCapture={() => {
+                    // 本次手势从触发器开始（不在菜单内容内）
+                    menuDownInsideRef.current = false;
+                  }}
                 >
                   <UserAvatar
                     userId={user?.userId}
@@ -226,7 +232,21 @@ export function ConsoleSidebar() {
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="w-72 p-0">
+              {/* 防误触：Radix 菜单 pointerdown 即开，且 MenuItem 会把「没有对应
+                  pointerdown 的 pointerup」合成 click（支持按住-拖动-松开）。向上展开时
+                  开菜单那次点击的抬起若落在菜单项上（如贴边的退出登录）会被误触发。
+                  这里拦掉内容内未先按下的第一次抬起；正常点击（按下也在内容内）不受影响。 */}
+              <DropdownMenuContent
+                side="top"
+                align="end"
+                className="w-72 p-0"
+                onPointerDownCapture={() => {
+                  menuDownInsideRef.current = true;
+                }}
+                onPointerUpCapture={(e) => {
+                  if (!menuDownInsideRef.current) e.stopPropagation();
+                }}
+              >
                 {/* 身份卡头：大头像 + 名称 + 管理员徽章 + 用户名 */}
                 <div className="flex items-center gap-3 px-3 py-3">
                   <UserAvatar
