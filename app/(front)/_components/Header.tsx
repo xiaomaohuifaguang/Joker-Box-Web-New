@@ -9,6 +9,7 @@ import { useMenuTree } from "@/hooks/useMenuTree";
 import { useTheme } from "@/hooks/useTheme";
 import { useUser } from "@/hooks/useUser";
 import { UserMenu } from "./UserMenu";
+import { LayoutToggle } from "@/components/LayoutToggle";
 import { LogoMark } from "@/components/LogoMark";
 import { ThemeSelect } from "@/components/ThemeSelect";
 import { MenuIcon } from "@/components/menuIcons";
@@ -235,6 +236,7 @@ export function Header() {
                 {scheme === "dark" ? "切换浅色模式" : "切换深色模式"}
               </TooltipContent>
             </Tooltip>
+            <LayoutToggle />
             {authenticated ? (
               <UserMenu />
             ) : (
@@ -357,6 +359,7 @@ export function Header() {
                   >
                     {scheme === "dark" ? <SunIcon /> : <MoonIcon />}
                   </Button>
+                  <LayoutToggle />
                 </div>
                 {authenticated ? (
                   <div className="flex items-center gap-2">
