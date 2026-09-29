@@ -100,11 +100,22 @@ export function UserMenu() {
                 </div>
               ) : null}
               {user?.orgs?.length ? (
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate">
-                    {user.orgs.map((o) => o.name).join("、")}
-                  </span>
+                <div className="flex items-start gap-2">
+                  <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {/* 机构可能多且名称长：Badge 换行全显（同角色行），
+                      高度封顶可滚动；单个超长名 truncate + title 悬停见全名 */}
+                  <div className="flex max-h-20 flex-wrap gap-1 overflow-y-auto">
+                    {user.orgs.map((o) => (
+                      <Badge
+                        key={o.name}
+                        variant="outline"
+                        title={o.name}
+                        className="h-4 max-w-full px-1 text-[10px] font-normal text-muted-foreground"
+                      >
+                        <span className="min-w-0 truncate">{o.name}</span>
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               ) : null}
               {user?.mail ? (
