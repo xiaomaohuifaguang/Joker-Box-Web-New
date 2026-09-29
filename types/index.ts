@@ -16,6 +16,7 @@ export * from "./menu-manager";
 export * from "./org";
 export * from "./process";
 export * from "./role-manager";
+export * from "./statistics";
 export * from "./system-prompt";
 export * from "./user";
 export * from "./user-manager";
