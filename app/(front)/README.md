@@ -1,9 +1,13 @@
 # app/(front) — 前台路由组
 
-Route group（`(front)` 不进 URL）。`layout.tsx`(Server) = Header + `SystemPromptBanner`（全局公告横幅，有未读的生效中系统提示才渲染，点 X 已读——详见 `components/README.md`）+ `{children}` + Footer；有 `loading.tsx`/`error.tsx`。
+Route group（`(front)` 不进 URL）。`layout.tsx`(Server) 只是薄壳，实际外壳在 `_components/FrontShell.tsx`(Client)——两种布局模式可切换（`lib/front-layout.ts` localStorage `front-layout` 持久化，`hooks/useFrontLayout` 响应式，`components/LayoutToggle.tsx` 切换按钮，所有用户可见；`useMounted` 门控首帧防跳变）：
+- **top（默认）**：Header + `SystemPromptBanner`（全局公告横幅，有未读的生效中系统提示才渲染，点 X 已读——详见 `components/README.md`）+ `{children}`（文档流滚动）+ Footer + `AiChatWidget`。
+- **side**：仿后台 app-shell（`SidebarProvider` + `_components/FrontSidebar` + `SidebarInset`，结构移植自 ConsoleSidebar）：inset 顶栏 = SidebarTrigger + 主题 + LayoutToggle + UserMenu/登录注册；主区**内部容器滚动**（非 window scroll），Footer 在滚动区底部；`AiChatWidget raised`。
+
+跨文件约定：布局根设 CSS 变量 `--front-chrome-h`（top=4rem Header 高 / side=0.5rem），页面内 sticky 偏移/scroll-mt 用它（如 website）；**写依赖滚动的代码不要监听 window scroll**（side 模式不触发），用 IntersectionObserver。FrontSidebar 的 Link 带与 Header 相同的 `navTo` hack（同 path 仅改 query 手动 popstate）。**FrontShell 同时被 `components/NotFoundPage` 复用**（全局 404 只套根布局、不进路由组布局，需自含前台外壳；改 FrontShell 结构时注意 404 页联动）。有 `loading.tsx`/`error.tsx`。
 
 - `page.tsx`：首页（Server，branding hero）。
-- `website/`：收藏网站。`/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（scroll 监听 + rAF，尊重 reduced-motion）。白名单公开。
+- `website/`：收藏网站。`/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（IntersectionObserver 顶部条带，两种布局通用，尊重 reduced-motion）。白名单公开。
 - `file-server/`：码头（云盘）。`<RequireAuth>`。双视图（卡片/列表）+ 排序（名称/大小/时间，文件夹置顶）+ 拖拽上传（浮层）+ 右键菜单（项: 打开/下载/重命名/删除；空白区: 上传/新建）+ 面包屑。传参约定：`/file/*` 的 list/createFolder/delete/rename 走 query；upload 走 multipart（自定义 fetch，不走 `lib/api`）；download 走 GET blob+token（触发浏览器下载）。`_components/`(FileCard, FileRow, FileMenuItems, NameDialog)。
 - `dynamicForm/`：动态表单填写页。`/dynamicForm?formId=&version=`，`<RequireAuth>`。复用后台设计器的 `DynamicFormRenderer`（渲染/联动/远程选项/校验）按 `info(formId,version)` 渲染已发布版本，`/dynamicForm/submit`（body formId/version/data）提交，成功态 + 再填一次（重拉）。hook `hooks/useDynamicFormFill`。
 - `ganDaShi/`：干大事论坛。`<RequirePermission>`。TipTap 富文本（详见同级 README）。`_components/`(ForumInner, PostList, PostDetail, NewPost, CommentSection, CommentThread, RichTextEditor, RichContent, ResizableImage)。
@@ -11,6 +15,6 @@ Route group（`(front)` 不进 URL）。`layout.tsx`(Server) = Header + `SystemP
 - `process/`：流程前台（申请中心 `application/` + 审批中心 `approval/`），`<RequirePermission>`。视图编排/接口/表单接入/候选人选择约定详见同级 README。
 - `code-maker/`：占位（`<RequirePermission>`）。
 - `settings/`：个人设置。`/settings` 构建期 `permanentRedirect` 到 `/settings/profile`。`<RequireAuth>`（仅登录，不查 authPaths）包在 layout 级，左竖导航（移动横滚，`SettingsNav` 的 `SETTINGS_NAV` 数组，加设置页 = 建子路由 + 加一项）。`profile/`（头像上传点选预览 + 昵称/性别/手机号，空手机提交 null 清除）、`security/`（改密码 query 传参，密码规则 7-19 位限定字符集）。头像上传 multipart 走 `lib/api/avatar.ts` 的 `uploadAvatar`，成功后广播 `avatar_change` 事件，所有 `UserAvatar` 实例订阅重拉（Header/后台 sidebar/设置页同步刷新）。
-- `_components/`：Header（NavigationMenu + mobile Sheet）、Footer、UserMenu（头像下拉：身份卡 + 后台管理(admin) + 个人设置 + 退出登录）。
+- `_components/`：FrontShell（双模式外壳，layout 与 NotFoundPage 共用）、Header（NavigationMenu + mobile Sheet）、FrontSidebar（side 模式侧栏，移植 ConsoleSidebar）、Footer、UserMenu（头像下拉：身份卡 + 后台管理(admin) + 个人设置 + 退出登录）。
 
 导航是 backend-driven（`useMenuTree` menuType=-2），图标读 `menu.icon`。守卫规则见 `components/README.md`。
