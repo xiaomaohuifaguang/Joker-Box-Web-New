@@ -15,7 +15,9 @@ import { AiChatSessionList } from "./AiChatSessionList";
 
 // AI 会话助手：右下角悬浮钮 + 右侧抽屉。前后台各挂一份（共享本组件）。
 // 仅登录后可见（接口需 token）；useMounted 防 hydration（token 是 client-only）。
-// 面板拆成 AiChatPanel 内层组件：仅登录挂载——useAiChat 的首挂请求（models/sessions）才不会对未登录空跑。
+// 面板拆成 AiChatPanel 内层组件：仅登录挂载——useAiChat 的请求才不会对未登录空跑。
+// 数据懒加载：点开面板才 chat.init()（拉 models/sessions，内部 ref 保证只拉一次），
+// 页面加载不白打接口；hook 仍挂面板层（非 SheetContent），关抽屉不丢进行中的流式对话。
 // raised：后台传入，FAB 抬高避开表格分页条（分页右对齐在视口右下，bottom-6 会压住「下一页」）。
 export function AiChatWidget({ raised = false }: { raised?: boolean }) {
   const mounted = useMounted();
@@ -36,7 +38,10 @@ function AiChatPanel({ raised }: { raised: boolean }) {
   return (
     <>
       <Button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          chat.init(); // 首次打开才拉 models/sessions
+          setOpen(true);
+        }}
         size="icon"
         className={cn(
           "fixed right-6 z-50 h-12 w-12 rounded-full shadow-lg",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   chatOnce,
@@ -59,26 +59,21 @@ export function useAiChat() {
   // 最后一次发送的入参：失败卡片的「重试」按它原样重发。
   const lastRequestRef = useRef<{ content: string; files?: ChatFileInfo[] } | null>(null);
 
-  // 首挂：拉模型（默认选第一个）+ 会话列表。模型拉取失败提示（否则 send 被静默禁用）。
-  useEffect(() => {
-    let cancelled = false;
+  // 懒加载：首挂不拉取，首次打开面板时由外部调 init()（initedRef 保证只拉一次）。
+  // 拉模型（默认选第一个）+ 会话列表。模型拉取失败提示（否则 send 被静默禁用）。
+  const initedRef = useRef(false);
+  const init = useCallback(() => {
+    if (initedRef.current) return;
+    initedRef.current = true;
     getChatModels()
       .then((list) => {
-        if (cancelled) return;
         setModels(list);
         setModelId((cur) => cur || list[0]?.id || "");
       })
-      .catch(() => {
-        if (!cancelled) toast.error("加载模型失败");
-      });
+      .catch(() => toast.error("加载模型失败"));
     getChatSessions()
-      .then((list) => {
-        if (!cancelled) setSessions(list);
-      })
+      .then(setSessions)
       .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const refreshSessions = useCallback(() => {
@@ -261,6 +256,7 @@ export function useAiChat() {
   }, [send, streaming]);
 
   return {
+    init,
     models,
     modelId,
     setModelId,
