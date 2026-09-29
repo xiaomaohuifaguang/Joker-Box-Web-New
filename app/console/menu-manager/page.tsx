@@ -36,16 +36,20 @@ export default function MenuManagerPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MenuNode | null>(null);
   const [defaultParentId, setDefaultParentId] = useState(-1);
+  const [defaultSort, setDefaultSort] = useState(0);
   const [deleting, setDeleting] = useState<MenuNode | null>(null);
 
   function openAddTop() {
     setEditing(null);
     setDefaultParentId(-1);
+    // sort 从 1 排：同级数量 + 1 即追加到末尾的值
+    setDefaultSort((tree?.length ?? 0) + 1);
     setFormOpen(true);
   }
   function openAddChild(parent: MenuNode) {
     setEditing(null);
     setDefaultParentId(parent.id);
+    setDefaultSort((parent.children?.length ?? 0) + 1);
     setFormOpen(true);
   }
   function openEdit(node: MenuNode) {
@@ -128,6 +132,7 @@ export default function MenuManagerPage() {
         tree={tree ?? []}
         editing={editing}
         defaultParentId={defaultParentId}
+        defaultSort={defaultSort}
         onSuccess={refresh}
       />
 

@@ -448,7 +448,7 @@ function SortableRow({
     <div
       ref={setNodeRef}
       className={cn(
-        "group relative grid grid-cols-[2rem_1fr_5rem_6rem] items-center border-b px-4 py-1.5 lg:grid-cols-[2rem_1fr_13rem_5rem_7.5rem_6.5rem]",
+        "group relative grid grid-cols-[2rem_1fr_5rem_6rem] items-center border-b px-4 py-1.5 transition-colors hover:bg-accent lg:grid-cols-[2rem_1fr_13rem_5rem_7.5rem_6.5rem]",
         isDragging && "opacity-40",
       )}
     >
