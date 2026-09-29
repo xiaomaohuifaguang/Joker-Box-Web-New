@@ -17,7 +17,7 @@ shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `li
 - `ThemeSelect`：主题预设切换（前台 Header / 后台顶栏共享）。
 - `ComingSoon`：占位页（Server）。
 - `Container`：流式内容容器 `w-[85%] max-w-[1600px]`，`className` 可覆盖（全宽页用 `w-full max-w-none`）。
-- `ai-chat/`：AI 会话助手（前后台共用，两个 layout 各挂一份）。右下角悬浮钮 + 右侧 Sheet 抽屉。`AiChatWidget` 总装（`useMounted`+`useAuth` 守卫，登录可见）+ Header（模型 Select 默认第一个/新建/历史）+ Messages（user 右 assistant 左，思考块流式展开、出 content 自动折叠，滚动到底）+ Input（Enter 发/Shift+Enter 换行/流式停止）+ SessionList。状态机 `hooks/useAiChat`（sessionId=null 首发后端隐式建会话，SSE 增量累积 content/reasonContent），数据层 `lib/api/aiChat`（流式走 `lib/sse.ts` fetch+ReadableStream 解 data: 帧）。
+- `ai-chat/`：AI 会话助手（前后台共用，两个 layout 各挂一份）。右下角悬浮钮 + 右侧 Sheet 抽屉。`AiChatWidget` 总装（`useMounted`+`useAuth` 守卫，登录可见；**点开面板才 `chat.init()` 拉 models/sessions**，hook 挂面板层不关抽屉丢流式状态）+ Header（模型 Select 默认第一个/新建/历史）+ Messages（user 右 assistant 左，思考块流式展开、出 content 自动折叠，滚动到底）+ Input（Enter 发/Shift+Enter 换行/流式停止）+ SessionList。状态机 `hooks/useAiChat`（sessionId=null 首发后端隐式建会话，SSE 增量累积 content/reasonContent），数据层 `lib/api/aiChat`（流式走 `lib/sse.ts` fetch+ReadableStream 解 data: 帧）。
   assistant 消息 Markdown 渲染（`AiMarkdown`：react-markdown+gfm 懒加载，prose 主题）；头部可切流式/非流式（localStorage `ai-chat-stream` 持久化，非流式走 `chatOnce`）。
   内容区：GFM 表格/任务列表/引用主题化，代码块卡（复制/语言标签/横向滚动 + Shiki css-var 高亮融入预设 token，流式降级），KaTeX 数学，Mermaid 图（懒加载 + token 主题 + DOMPurify 过滤 SVG），消息级复制全文 + 回到底部浮钮；样式统一 `[data-ai-md]` 作用域。
 

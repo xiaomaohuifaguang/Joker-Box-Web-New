@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { DynamicFormFieldType, DynamicFormPublishedVersion } from "@/types";
+import type { DynamicFormField, DynamicFormFieldType, DynamicFormPublishedVersion } from "@/types";
 import { useDesignerState, toPayload, stateFromForm, UNGROUPED_ID, groupKey } from "./designer-state";
 import { createField } from "./fields/registry";
 import { FieldPalette } from "./FieldPalette";
@@ -101,14 +101,16 @@ export function FormDesigner({
     return allFields.find((f) => f.fieldId === selectedId) ?? null;
   }, [allFields, selectedId]);
 
-  function handleAddField(
-    type: DynamicFormFieldType,
+  // 插入字段到目标容器（未分组/已有分组/新建分组），sort = 目标容器当前字段数，插入后选中。
+  // buildField 由调用方给（新建类型字段 / 模板转换字段），sort 在此定。
+  function insertField(
+    buildField: (sort: number) => DynamicFormField,
     containerId: string,
     newGroupName?: string,
   ) {
     // 新建分组：组 + 字段一次性加入（避免 setState 不同步）。
     if (newGroupName) {
-      const field = createField(type, 0);
+      const field = buildField(0);
       designer.reset({
         ...designer.state,
         groups: [
@@ -127,17 +129,34 @@ export function FormDesigner({
     }
     // 加入未分组或已有分组（containerId 是分组名或 UNGROUPED_ID）。
     if (containerId === UNGROUPED_ID || !containerId) {
-      const field = createField(type, designer.state.fields.length);
+      const field = buildField(designer.state.fields.length);
       designer.addField(field, UNGROUPED_ID);
       setSelectedId(field.fieldId);
       return;
     }
     const g = designer.state.groups.find((x) => x.name === containerId);
     if (g) {
-      const field = createField(type, g.fields.length);
+      const field = buildField(g.fields.length);
       designer.addField(field, groupKey(g));
       setSelectedId(field.fieldId);
     }
+  }
+
+  function handleAddField(
+    type: DynamicFormFieldType,
+    containerId: string,
+    newGroupName?: string,
+  ) {
+    insertField((sort) => createField(type, sort), containerId, newGroupName);
+  }
+
+  // 模板插入：field 已由 fieldFromTemplate 转换（fieldId 重生成、id/value 已剥），此处只补 sort。
+  function handleAddTemplateField(
+    field: DynamicFormField,
+    containerId: string,
+    newGroupName?: string,
+  ) {
+    insertField((sort) => ({ ...field, sort }), containerId, newGroupName);
   }
 
   async function save() {
@@ -251,7 +270,7 @@ export function FormDesigner({
           字段库/画布不可点（不可加字段、不可拖拽改排序），配置面板 fieldset disabled 禁用控件但保留滚动。 */}
       <div className={cn("flex min-h-0 flex-1 overflow-hidden rounded-lg border transition-opacity", switching && "pointer-events-none opacity-50")}>
         <div className={cn("w-56 shrink-0 overflow-hidden border-r bg-surface", readOnly && "pointer-events-none select-none")}>
-          <FieldPalette groupNames={designer.allGroupNames} onAdd={handleAddField} />
+          <FieldPalette groupNames={designer.allGroupNames} onAdd={handleAddField} onAddTemplate={handleAddTemplateField} />
         </div>
         <div className={cn("min-w-0 flex-1 overflow-hidden bg-muted/30", readOnly && "pointer-events-none select-none")}>
           <FormCanvas designer={designer} selectedId={selectedId} onSelect={readOnly ? () => {} : setSelectedId} />

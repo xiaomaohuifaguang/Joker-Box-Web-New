@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, LayoutTemplate, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,22 +26,41 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { DynamicFormFieldType } from "@/types";
+import type { DynamicFormField, DynamicFormFieldType } from "@/types";
 import { FIELD_GROUPS, FIELD_REGISTRY } from "./fields/registry";
+import { fieldFromTemplate } from "@/app/console/form/fieldTemplate";
 import { UNGROUPED_ID } from "./designer-state";
+import { TemplatePickerDialog } from "./TemplatePickerDialog";
 
-// 左栏字段库：分组列出所有字段类型，点击弹出「添加到分组」对话框。
+// 左栏字段库：顶部「从模板插入」+ 分组列出所有字段类型，点击弹出「添加到分组」对话框。
 export function FieldPalette({
   groupNames,
   onAdd,
+  onAddTemplate,
 }: {
   groupNames: string[];
   onAdd: (type: DynamicFormFieldType, containerId: string, newGroupName?: string) => void;
+  onAddTemplate: (field: DynamicFormField, containerId: string, newGroupName?: string) => void;
 }) {
   const [pending, setPending] = useState<DynamicFormFieldType | null>(null);
+  // 模板插入：选中的模板已转换为字段（fieldId 已重生成、id/value 已剥），待选目标分组。
+  const [pendingTemplate, setPendingTemplate] = useState<{
+    title: string;
+    field: DynamicFormField;
+  } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-3">
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => setPickerOpen(true)}
+      >
+        <LayoutTemplate className="h-4 w-4" />
+        从模板插入
+      </Button>
       {FIELD_GROUPS.map((group) => {
         const items = Object.values(FIELD_REGISTRY).filter((m) => m.group === group);
         if (!items.length) return null;
@@ -63,9 +83,21 @@ export function FieldPalette({
           </div>
         );
       })}
+      <TemplatePickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(tpl) => {
+          const field = fieldFromTemplate(tpl, 0);
+          if (!field) {
+            toast.error("模板内容无法解析");
+            return;
+          }
+          setPendingTemplate({ title: tpl.title || "字段模板", field });
+        }}
+      />
       {pending != null && (
         <AddFieldDialog
-          type={pending}
+          label={FIELD_REGISTRY[pending].label}
           groupNames={groupNames}
           onClose={() => setPending(null)}
           onConfirm={(containerId, newGroupName) => {
@@ -74,23 +106,34 @@ export function FieldPalette({
           }}
         />
       )}
+      {pendingTemplate != null && (
+        <AddFieldDialog
+          label={pendingTemplate.title}
+          groupNames={groupNames}
+          onClose={() => setPendingTemplate(null)}
+          onConfirm={(containerId, newGroupName) => {
+            onAddTemplate(pendingTemplate.field, containerId, newGroupName);
+            setPendingTemplate(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // 「添加字段到分组」对话框：Combobox 选已有分组（联想）/ 未分组 / 输入新建分组。
+// label = 弹窗标题里展示的名称（类型 label 或模板标题）。
 function AddFieldDialog({
-  type,
+  label,
   groupNames,
   onClose,
   onConfirm,
 }: {
-  type: DynamicFormFieldType;
+  label: string;
   groupNames: string[];
   onClose: () => void;
   onConfirm: (containerId: string, newGroupName?: string) => void;
 }) {
-  const meta = FIELD_REGISTRY[type];
   const [open, setOpen] = useState(false);
   // 选中的目标："" = 未分组；否则分组名。
   const [target, setTarget] = useState("");
@@ -124,7 +167,7 @@ function AddFieldDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>添加「{meta.label}」</DialogTitle>
+          <DialogTitle>添加「{label}」</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <Label>目标分组</Label>
