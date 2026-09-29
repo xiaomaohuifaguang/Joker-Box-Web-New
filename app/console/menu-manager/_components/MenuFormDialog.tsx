@@ -53,6 +53,23 @@ function collectSubtreeIds(node: MenuNode, acc = new Set<number>()): Set<number>
   return acc;
 }
 
+function findNode(nodes: MenuNode[], id: number): MenuNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children?.length) {
+      const r = findNode(n.children, id);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+// 新增 sort 默认值（从 1 排，追加到末尾 = 同级数量 + 1）：parentId 非真实节点 id（-1 根标记）取顶级数。
+function nextSort(nodes: MenuNode[], parentId: number): number {
+  if (parentId < 0) return nodes.length + 1;
+  return (findNode(nodes, parentId)?.children?.length ?? 0) + 1;
+}
+
 // 由选中集合 + api 树构建保存回传的 apiPathTree：见 lib/apiPathTree.ts buildApiPathSaveTree。
 
 type FormState = {
@@ -84,6 +101,7 @@ export function MenuFormDialog({
   tree,
   editing,
   defaultParentId,
+  defaultSort,
   onSuccess,
 }: {
   open: boolean;
@@ -92,6 +110,7 @@ export function MenuFormDialog({
   tree: MenuNode[];
   editing: MenuNode | null;
   defaultParentId: number;
+  defaultSort: number;
   onSuccess: () => void;
 }) {
   const isEdit = !!editing;
@@ -121,7 +140,7 @@ export function MenuFormDialog({
               whiteList: editing.whiteList,
               description: editing.description ?? "",
             }
-          : { ...EMPTY, parentId: defaultParentId },
+          : { ...EMPTY, parentId: defaultParentId, sort: defaultSort },
       );
       if (editing) {
         setApiLoading(true);
@@ -253,7 +272,15 @@ export function MenuFormDialog({
             <Label className="text-sm text-muted-foreground">父级菜单</Label>
             <Select
               value={String(form.parentId)}
-              onValueChange={(v) => set("parentId", Number(v))}
+              onValueChange={(v) => {
+                const pid = Number(v);
+                // 新增模式下换父级：sort 默认值随新同级数量重算（编辑保留原值）
+                setForm((f) => ({
+                  ...f,
+                  parentId: pid,
+                  ...(isEdit ? {} : { sort: nextSort(tree, pid) }),
+                }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="选择父级" />
