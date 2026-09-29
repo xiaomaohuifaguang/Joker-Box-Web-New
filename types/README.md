@@ -4,7 +4,7 @@ API 请求/响应与领域模型类型，**按后端模块分文件**（与 `lib
 
 - `index.ts` 统一汇出，组件里 `import type { X } from "@/types"`。
 - 通用信封：`ApiResponse<T>`（`{ code, msg, data }`）、`Page<T>`（分页 `{ records, total, ... }`）在 `api.ts`。
-- 文件 → 域：`api-path` `auth`(在 user.ts) `code-table` `dynamic-form` `file` `ganDaShi` `mail` `menu`(前台导航) `menu-manager`(后台菜单管理) `org` `role-manager` `user-manager` `user` `website`(前台) `website-manager`(后台)。
+- 文件 → 域：`api-path` `auth`(在 user.ts) `code-table` `dynamic-form` `file` `ganDaShi` `mail` `menu`(前台导航) `menu-manager`(后台菜单管理) `org` `role-manager` `statistics`(数据展板统计) `user-manager` `user` `website`(前台) `website-manager`(后台)。
 
 ## 约定
 
