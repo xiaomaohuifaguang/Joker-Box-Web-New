@@ -17,9 +17,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { DynamicFormField, DynamicFormFieldType, DynamicFormPublishedVersion } from "@/types";
+import type {
+  DynamicFormField,
+  DynamicFormFieldGroupTemplate,
+  DynamicFormFieldType,
+  DynamicFormPublishedVersion,
+} from "@/types";
 import { useDesignerState, toPayload, stateFromForm, UNGROUPED_ID, groupKey } from "./designer-state";
 import { createField } from "./fields/registry";
+import { groupFromTemplate } from "@/app/console/form/fieldTemplate";
 import { FieldPalette } from "./FieldPalette";
 import { FormCanvas } from "./FormCanvas";
 import { FieldConfigPanel } from "./FieldConfigPanel";
@@ -159,6 +165,72 @@ export function FormDesigner({
     insertField((sort) => ({ ...field, sort }), containerId, newGroupName);
   }
 
+  // 组合模板插入：groupFromTemplate 重生成 fieldId + remapLinkageRules 改写规则引用；
+  // 按目标容器追加整组字段，改写后的联动规则并入 linkageRules。单次引用无关联。
+  function handleAddGroupTemplate(
+    tpl: DynamicFormFieldGroupTemplate,
+    containerId: string,
+    newGroupName?: string,
+  ) {
+    const created = groupFromTemplate(tpl, 0);
+    if (!created) {
+      toast.error("组合模板内容无法解析");
+      return;
+    }
+    const { fields, rules } = created;
+
+    // 新建分组：组 + 整组字段 + 规则一次性加入。
+    if (newGroupName) {
+      designer.reset({
+        ...designer.state,
+        groups: [
+          ...designer.state.groups,
+          {
+            name: newGroupName,
+            sort: designer.state.groups.length,
+            collapsed: "0",
+            fields: fields.map((f, i) => ({ ...f, sort: i })),
+            clientId: randomId(),
+          },
+        ],
+        linkageRules: [...designer.state.linkageRules, ...rules],
+      });
+      setSelectedId(fields[0]?.fieldId ?? null);
+      return;
+    }
+    // 加入未分组或已有分组：按当前容器长度定 sortBase。
+    let containerFields: DynamicFormField[];
+    let containerIdResolved: string;
+    if (containerId === UNGROUPED_ID || !containerId) {
+      containerFields = designer.state.fields;
+      containerIdResolved = UNGROUPED_ID;
+    } else {
+      const g = designer.state.groups.find((x) => x.name === containerId);
+      if (!g) return;
+      containerFields = g.fields;
+      containerIdResolved = groupKey(g);
+    }
+    const sortBase = containerFields.length;
+    const placed = fields.map((f, i) => ({ ...f, sort: sortBase + i }));
+    designer.reset({
+      ...designer.state,
+      fields:
+        containerIdResolved === UNGROUPED_ID
+          ? [...designer.state.fields, ...placed]
+          : designer.state.fields,
+      groups:
+        containerIdResolved === UNGROUPED_ID
+          ? designer.state.groups
+          : designer.state.groups.map((g) =>
+              groupKey(g) === containerIdResolved
+                ? { ...g, fields: [...g.fields, ...placed] }
+                : g,
+            ),
+      linkageRules: [...designer.state.linkageRules, ...rules],
+    });
+    setSelectedId(placed[0]?.fieldId ?? null);
+  }
+
   async function save() {
     const s = designer.state;
     if (!s.name.trim()) {
@@ -270,7 +342,12 @@ export function FormDesigner({
           字段库/画布不可点（不可加字段、不可拖拽改排序），配置面板 fieldset disabled 禁用控件但保留滚动。 */}
       <div className={cn("flex min-h-0 flex-1 overflow-hidden rounded-lg border transition-opacity", switching && "pointer-events-none opacity-50")}>
         <div className={cn("w-56 shrink-0 overflow-hidden border-r bg-surface", readOnly && "pointer-events-none select-none")}>
-          <FieldPalette groupNames={designer.allGroupNames} onAdd={handleAddField} onAddTemplate={handleAddTemplateField} />
+          <FieldPalette
+            groupNames={designer.allGroupNames}
+            onAdd={handleAddField}
+            onAddTemplate={handleAddTemplateField}
+            onAddGroupTemplate={handleAddGroupTemplate}
+          />
         </div>
         <div className={cn("min-w-0 flex-1 overflow-hidden bg-muted/30", readOnly && "pointer-events-none select-none")}>
           <FormCanvas designer={designer} selectedId={selectedId} onSelect={readOnly ? () => {} : setSelectedId} />

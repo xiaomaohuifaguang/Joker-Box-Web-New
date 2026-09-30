@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, LayoutTemplate, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, LayoutTemplate, Layers, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,21 +26,28 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { DynamicFormField, DynamicFormFieldType } from "@/types";
+import type { DynamicFormField, DynamicFormFieldGroupTemplate, DynamicFormFieldType } from "@/types";
 import { FIELD_GROUPS, FIELD_REGISTRY } from "./fields/registry";
-import { fieldFromTemplate } from "@/app/console/form/fieldTemplate";
+import { fieldFromTemplate, groupFromTemplate } from "@/app/console/form/fieldTemplate";
 import { UNGROUPED_ID } from "./designer-state";
 import { TemplatePickerDialog } from "./TemplatePickerDialog";
+import { GroupTemplatePickerDialog } from "./GroupTemplatePickerDialog";
 
-// 左栏字段库：顶部「从模板插入」+ 分组列出所有字段类型，点击弹出「添加到分组」对话框。
+// 左栏字段库：顶部「从模板插入」/「从组合模板插入」+ 分组列出所有字段类型，点击弹出「添加到分组」对话框。
 export function FieldPalette({
   groupNames,
   onAdd,
   onAddTemplate,
+  onAddGroupTemplate,
 }: {
   groupNames: string[];
   onAdd: (type: DynamicFormFieldType, containerId: string, newGroupName?: string) => void;
   onAddTemplate: (field: DynamicFormField, containerId: string, newGroupName?: string) => void;
+  onAddGroupTemplate: (
+    tpl: DynamicFormFieldGroupTemplate,
+    containerId: string,
+    newGroupName?: string,
+  ) => void;
 }) {
   const [pending, setPending] = useState<DynamicFormFieldType | null>(null);
   // 模板插入：选中的模板已转换为字段（fieldId 已重生成、id/value 已剥），待选目标分组。
@@ -48,19 +55,34 @@ export function FieldPalette({
     title: string;
     field: DynamicFormField;
   } | null>(null);
+  // 组合模板插入：选中的组合模板（groupFromTemplate 在 FormDesigner 插入时转换），待选目标分组。
+  const [pendingGroupTemplate, setPendingGroupTemplate] =
+    useState<DynamicFormFieldGroupTemplate | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-3">
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => setPickerOpen(true)}
-      >
-        <LayoutTemplate className="h-4 w-4" />
-        从模板插入
-      </Button>
+      <div className="flex flex-col gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setPickerOpen(true)}
+        >
+          <LayoutTemplate className="h-4 w-4" />
+          从模板插入
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setGroupPickerOpen(true)}
+        >
+          <Layers className="h-4 w-4" />
+          从组合模板插入
+        </Button>
+      </div>
       {FIELD_GROUPS.map((group) => {
         const items = Object.values(FIELD_REGISTRY).filter((m) => m.group === group);
         if (!items.length) return null;
@@ -95,6 +117,18 @@ export function FieldPalette({
           setPendingTemplate({ title: tpl.title || "字段模板", field });
         }}
       />
+      <GroupTemplatePickerDialog
+        open={groupPickerOpen}
+        onOpenChange={setGroupPickerOpen}
+        onPick={(tpl) => {
+          // 校验可解析（fieldsTemplate 合法）才进分组选择；真正转换在 FormDesigner 插入时做。
+          if (!groupFromTemplate(tpl, 0)) {
+            toast.error("组合模板内容无法解析");
+            return;
+          }
+          setPendingGroupTemplate(tpl);
+        }}
+      />
       {pending != null && (
         <AddFieldDialog
           label={FIELD_REGISTRY[pending].label}
@@ -114,6 +148,17 @@ export function FieldPalette({
           onConfirm={(containerId, newGroupName) => {
             onAddTemplate(pendingTemplate.field, containerId, newGroupName);
             setPendingTemplate(null);
+          }}
+        />
+      )}
+      {pendingGroupTemplate != null && (
+        <AddFieldDialog
+          label={pendingGroupTemplate.title || "字段组合模板"}
+          groupNames={groupNames}
+          onClose={() => setPendingGroupTemplate(null)}
+          onConfirm={(containerId, newGroupName) => {
+            onAddGroupTemplate(pendingGroupTemplate, containerId, newGroupName);
+            setPendingGroupTemplate(null);
           }}
         />
       )}
