@@ -25,14 +25,17 @@ import { UNGROUPED_ID, groupKey, type DesignerApi } from "./designer-state";
 import { GroupSection } from "./GroupSection";
 
 // 画布：未分组（顶部固定）+ 各分组。dnd-kit 多容器跨组拖拽排序。
+// hideUngroupedTitle：隐藏未分组容器标题（如字段组合模板弹窗，整个集合就是一个、无分组概念）。
 export function FormCanvas({
   designer,
   selectedId,
   onSelect,
+  hideUngroupedTitle = false,
 }: {
   designer: DesignerApi;
   selectedId: string | null;
   onSelect: (fieldId: string | null) => void;
+  hideUngroupedTitle?: boolean;
 }) {
   const { state, moveField, removeField } = designer;
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -99,7 +102,7 @@ export function FormCanvas({
         {/* 未分组（固定顶部） */}
         <FieldContainer
           containerId={UNGROUPED_ID}
-          title="未分组"
+          title={hideUngroupedTitle ? undefined : "未分组"}
           fields={state.fields}
           selectedId={selectedId}
           onSelect={onSelect}
