@@ -129,6 +129,19 @@ export interface DeployedProcessDefinition {
   version?: string;
 }
 
+// 流程追踪（/processInstance/info 返回，与 processDefinitionName 同级）。
+// 注意：JSON 无 Set，后端 Set<String> 序列化为数组。id 与 rawData 内节点/连线 id 同源。
+export interface ProcessTrack {
+  /** 已走过的节点id */
+  doneNodeIds?: string[];
+  /** 走过的连线id（rawData edge id，即 e_<source>_<target>） */
+  passedEdgeIds?: string[];
+  /** 当前所有活动节点id（并行分支可多个） */
+  activeNodeIds?: string[];
+  /** 当前任务节点id——仅处理场景（info 传了 taskId）返回，值为该任务所在节点 */
+  currentNodeId?: string;
+}
+
 // 流程实例（/processInstance/queryPage 元素）。processStatus：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中。
 export interface ProcessInstance {
   /** 流程实例id */
@@ -139,6 +152,8 @@ export interface ProcessInstance {
   processDefinitionName?: string;
   /** 流程定义版本 */
   processDefinitionVersion?: string;
+  /** 流程追踪信息（仅 info 详情返回；草稿/未启动无） */
+  processTrack?: ProcessTrack;
   /** 流程标题 */
   title?: string;
   /** 流程编号 */
@@ -147,6 +162,8 @@ export interface ProcessInstance {
   processStatus?: string;
   /** 当前任务id（审批中心列表返回，与 processDefinitionName 同级；详情 info 需回传） */
   taskId?: string;
+  /** 当前任务名称（与 taskId 同级；待办/待认领列表 + 处理/认领详情返回） */
+  taskName?: string;
   /** 处理页可用的审批按钮（info 返回，与 processDefinitionName 同级）：pass 通过 / back 驳回 / reject 拒绝 */
   buttonActions?: string[];
   /** 驳回配置（info 返回，与 buttonActions 同级；含驳回按钮时携带） */

@@ -166,7 +166,8 @@ export function InstanceListPanel({
                   PROCESS_INSTANCE_STATUS[r.processStatus ?? ""] ??
                   PROCESS_INSTANCE_STATUS_FALLBACK;
                 return (
-                  <TableRow key={r.id} className="transition-colors hover:bg-brand-2/10">
+                  // key 用 id+taskId 复合：待处理 tab 同一实例可产生多个任务（多行同 id），单 id 会撞 key。
+                  <TableRow key={`${r.id}-${r.taskId ?? ""}`} className="transition-colors hover:bg-brand-2/10">
                     <TableCell className="font-mono text-xs font-medium tracking-wide text-foreground/80">
                       <span className="mr-0.5 text-muted-foreground">№</span>
                       {r.code || "-"}

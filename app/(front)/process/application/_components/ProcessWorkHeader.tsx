@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -15,6 +16,8 @@ export function ProcessWorkHeader({
   title,
   subtitle,
   processStatus,
+  taskName,
+  action,
   className,
 }: {
   /** 流程编号（工单号） */
@@ -25,6 +28,10 @@ export function ProcessWorkHeader({
   subtitle?: string;
   /** 流程状态（决定状态章 label/variant） */
   processStatus?: string;
+  /** 当前任务名称（待办/待认领详情返回；有值时副标下加一行「当前任务」） */
+  taskName?: string;
+  /** 头部右侧操作（如「流程预览/追踪」按钮组），渲染在状态章上方 */
+  action?: ReactNode;
   className?: string;
 }) {
   const st =
@@ -45,14 +52,22 @@ export function ProcessWorkHeader({
           {subtitle && (
             <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           )}
+          {taskName && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              当前任务：<span className="font-medium text-foreground">{taskName}</span>
+            </p>
+          )}
         </div>
-        {/* 状态章：微倾斜像盖上去的章；reduced-motion/打印回正 */}
-        <Badge
-          variant={st.variant}
-          className="motion-safe:-rotate-2 mt-1 shrink-0 px-2.5 py-1 text-xs motion-safe:shadow-sm motion-safe:print:rotate-0"
-        >
-          {st.label}
-        </Badge>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {action}
+          {/* 状态章：微倾斜像盖上去的章；reduced-motion/打印回正 */}
+          <Badge
+            variant={st.variant}
+            className="motion-safe:-rotate-2 mt-1 px-2.5 py-1 text-xs motion-safe:shadow-sm motion-safe:print:rotate-0"
+          >
+            {st.label}
+          </Badge>
+        </div>
       </div>
     </header>
   );

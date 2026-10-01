@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Container } from "@/components/Container";
+import { ProcessFlowButtons } from "@/components/process-flow/ProcessFlowButtons";
 import type { DynamicFormRendererHandle } from "@/app/console/form/dynamicForm-manager/_components/DynamicFormRenderer";
 import {
   hasProcessForm,
@@ -207,6 +208,14 @@ export function HandleView({
                 : ""
             }`}
             processStatus={detail?.processStatus}
+            taskName={detail?.taskName}
+            action={
+              <ProcessFlowButtons
+                definitionId={detail?.processDefinitionId}
+                version={detail?.processDefinitionVersion}
+                track={detail?.processTrack}
+              />
+            }
           />
         )}
       </header>

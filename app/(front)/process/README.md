@@ -15,8 +15,9 @@ state 驱动视图 + **原生 `window.history.pushState` 同步 URL**（可分�
 
 - 列表：`useProcessInstancePage` → `POST /processInstance/queryPage`（body 带 `processCategory`=路由 `[type]`，通用页=默认分类传 `default`；两个 Inner 透传到列表面板）。申请 tab `INSTANCE_TABS`（待处理6/进行中1/全部5/草稿0），审批 tab `APPROVAL_INSTANCE_TABS`（待办2/待认领3/已办4）。
 - 发起区块：`StartProcessSection` → `POST /processDefinition/deployList`（**query 传 `processCategory`**，同上通用页传 `default`）。
-- 详情：`getProcessInstanceInfo(id, taskId?)` → `POST /processInstance/info`（**query 传参**，审批/处理场景带 taskId）。
+- 详情：`getProcessInstanceInfo(id, taskId?)` → `POST /processInstance/info`（**query 传参**，审批/处理场景带 taskId）。`ProcessInstance.taskName`（与 taskId 同级，待办/待认领列表 + 处理/认领详情返回）：审批列表「任务」列**仅待办(2)/待认领(3)渲染**（常驻可见——同实例多任务行的关键区分；已办(4) 不渲染该列），详情页走 `ProcessWorkHeader` 的 `taskName`（副标下「当前任务」行）。
 - 发起定义信息：`getProcessDefinitionStartInfo` → `POST /processDefinition/startInfo`（query 传 processDefinitionId）。
+- 流程预览/追踪：`getProcessDefinitionInfo(id, version?)` → `POST /processDefinition/info`（body id + query 可选 version，不传=最新）。入口=`components/process-flow` 的 `ProcessFlowButtons`（「流程预览」常驻纯图；传 `track` 追加「流程追踪」按钮；两按钮共享一次请求、按 `definitionId|version` 缓存）：DetailView/HandleView 走 `ProcessWorkHeader` 的 `action` 槽位，StartView/EditView 自定义 header 直插；version 一律传实例自身的 `processDefinitionVersion`（预览图与实例版本一致）。**流程追踪**：`processInstance/info` 返回 `processTrack`（doneNodeIds/passedEdgeIds/activeNodeIds/currentNodeId，后者仅处理页带 taskId 时返回）——DetailView/HandleView 透传给按钮组（绿=已走过/蓝=当前/灰=未经过 + 图例，视觉契约见 `components/process-flow/README.md`）；StartView/EditView 无 track 只有「流程预览」。
 - 动作：`start` / `saveDraft` / `claim` / `pass` / `reject` / `back`，body 均 `ProcessHandleParam`，响应只看 code。
 
 ## 共享件（`_components/`，申请/审批跨目录复用，申请侧放 application/_components）
@@ -33,5 +34,5 @@ state 驱动视图 + **原生 `window.history.pushState` 同步 URL**（可分�
 
 ## 各 `_components/`
 
-- 申请：`InstanceListPanel`（tab+搜索+表格+分页；操作列 待处理=处理/草稿=编辑/其他=查看）、`StartProcessSection`（搜索式下拉选已发布流程）、`StartView`（发起）、`EditView`（草稿编辑，body 带 processInstanceId）、`DetailView`（只读详情 + 待认领时「确认认领」）。
-- 审批：`ApprovalListPanel`（tab+列表；操作进 handle/claim/view）、`HandleView`（处理：可编辑表单+联动 + 审批操作 pass/reject/back，点按钮弹确认框可填意见；back 仅 backType=choose 需选目标节点）。
+- 申请：`InstanceListPanel`（tab+搜索+表格+分页；操作列 待处理=处理/草稿=编辑/其他=查看；**行 key=id+taskId 复合**——待处理 tab 同一实例可多任务多行，单 id 撞 key）、`StartProcessSection`（搜索式下拉选已发布流程）、`StartView`（发起）、`EditView`（草稿编辑，body 带 processInstanceId）、`DetailView`（只读详情 + 待认领时「确认认领」）。
+- 审批：`ApprovalListPanel`（tab+列表；操作进 handle/claim/view；行 key 同上做 id+taskId 复合——待办/待认领同一实例多任务多行）、`HandleView`（处理：可编辑表单+联动 + 审批操作 pass/reject/back，点按钮弹确认框可填意见；back 仅 backType=choose 需选目标节点）。

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Container } from "@/components/Container";
+import { ProcessFlowButtons } from "@/components/process-flow/ProcessFlowButtons";
 import type { ProcessInstance } from "@/types";
 import { ProcessWorkHeader } from "./ProcessWorkHeader";
 import {
@@ -113,6 +114,14 @@ export function DetailView({
                 : ""
             }`}
             processStatus={detail?.processStatus}
+            taskName={detail?.taskName}
+            action={
+              <ProcessFlowButtons
+                definitionId={detail?.processDefinitionId}
+                version={detail?.processDefinitionVersion}
+                track={detail?.processTrack}
+              />
+            }
           />
         )}
       </header>

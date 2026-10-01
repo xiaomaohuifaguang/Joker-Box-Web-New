@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Container } from "@/components/Container";
+import { ProcessFlowButtons } from "@/components/process-flow/ProcessFlowButtons";
 import type { DynamicFormRendererHandle } from "@/app/console/form/dynamicForm-manager/_components/DynamicFormRenderer";
 import {
   hasProcessForm,
@@ -132,14 +133,17 @@ export function StartView({
         {loading ? (
           <Skeleton className="h-8 w-64" />
         ) : (
-          <>
-            <h1 className="font-display text-2xl font-semibold">
-              发起流程{info?.processName ? ` · ${info.processName}` : ""}
-            </h1>
-            {info?.version && (
-              <p className="mt-1 text-sm text-muted-foreground">v{info.version}</p>
-            )}
-          </>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="font-display text-2xl font-semibold">
+                发起流程{info?.processName ? ` · ${info.processName}` : ""}
+              </h1>
+              {info?.version && (
+                <p className="mt-1 text-sm text-muted-foreground">v{info.version}</p>
+              )}
+            </div>
+            <ProcessFlowButtons definitionId={definitionId} version={info?.version} />
+          </div>
         )}
       </header>
 

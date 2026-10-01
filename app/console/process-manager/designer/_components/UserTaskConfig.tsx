@@ -27,7 +27,7 @@ import {
   type ProcessFlowNode,
   type ProcessNodeData,
   type ProcessNodeKind,
-} from "./nodes";
+} from "@/components/process-flow/nodes";
 
 // 审批类型（approvalType）。value 为字符串入 node.data。
 const APPROVAL_TYPES = [

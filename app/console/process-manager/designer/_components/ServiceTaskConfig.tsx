@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { getDelegateExpressions } from "@/lib/api/process";
 import type { SelectOption } from "@/types";
-import type { ProcessFlowNode, ProcessNodeData } from "./nodes";
+import type { ProcessFlowNode, ProcessNodeData } from "@/components/process-flow/nodes";
 
 // 服务任务（serviceTask）属性配置：delegateExpression 委托表达式（下拉，远程拉取）+ async 异步开关。
 // 值入 node.data（delegateExpression=string / async=boolean），保存时随 rawData 入 rawData。

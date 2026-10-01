@@ -15,6 +15,62 @@
     0 0 18px rgb(96 165 250 / 0.6);
 }
 
+/* ===== 流程追踪（前台实例页「流程追踪」弹窗）=====
+   三色语义：绿=已走过（历史路径）/ 蓝=当前（活动节点，复用上方 flow-node-active）/ 灰=未经过（默认）。
+   绿色同样恒定不随预设——与工程蓝同属画布信号色。 */
+
+/* 已走过节点：绿色环 glow。 */
+.flow-node-done {
+  box-shadow:
+    0 0 0 2px #16a34a,
+    0 0 12px rgb(22 163 74 / 0.45);
+}
+.dark .flow-node-done {
+  box-shadow:
+    0 0 0 2px #4ade80,
+    0 0 16px rgb(74 222 128 / 0.5);
+}
+
+/* 当前任务节点（currentNodeId，仅处理页返回）：与 flow-node-active 叠加——蓝 glow 之上加脉冲，
+   与并行场景的其余活动节点（仅 glow 不脉冲）区分。reduced-motion 静止。 */
+@keyframes flow-node-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px #2563eb,
+      0 0 10px rgb(37 99 235 / 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #2563eb,
+      0 0 22px rgb(37 99 235 / 0.75);
+  }
+}
+.flow-node-current {
+  animation: flow-node-pulse 1.6s ease-in-out infinite;
+}
+.dark .flow-node-current {
+  animation-name: flow-node-pulse-dark;
+}
+@keyframes flow-node-pulse-dark {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px #60a5fa,
+      0 0 14px rgb(96 165 250 / 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #60a5fa,
+      0 0 26px rgb(96 165 250 / 0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-node-current {
+    animation: none;
+  }
+}
+
 /* 连接句柄：缩小 + 中性描边，hover 变工程蓝（图纸接线柱）。
    出/入形态区分：入点=空心环（描边+透明内填透出节点底色，默认样式），出点=实心点（.flow-handle-out，
    由节点组件给 source Handle 加 class）——流程「左进右出」的方向在节点层面自解释。

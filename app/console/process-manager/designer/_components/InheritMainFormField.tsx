@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { NodeFieldPermissions } from "./NodeFieldPermissions";
 import type { ProcessNodeFieldPermission } from "@/types";
-import type { ProcessNodeData } from "./nodes";
+import type { ProcessNodeData } from "@/components/process-flow/nodes";
 
 // 是否继承主表单字段（inheritMainForm，开始/用户任务共用）。
 // 主表单=流程「表单绑定」(globalFormBinding) 绑定的表单：勾选则本节点表单在主表单字段上追加。
