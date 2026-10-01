@@ -15,22 +15,35 @@
     0 0 18px rgb(96 165 250 / 0.6);
 }
 
-/* 连接句柄：缩小 + 中性描边，hover 变工程蓝（图纸接线柱）。 */
+/* 连接句柄：缩小 + 中性描边，hover 变工程蓝（图纸接线柱）。
+   出/入形态区分：入点=空心环（描边+节点底色，默认样式），出点=实心点（.flow-handle-out，
+   由节点组件给 source Handle 加 class）——流程「左进右出」的方向在节点层面自解释。 */
 .react-flow__handle {
   width: 7px;
   height: 7px;
-  background: var(--surface);
+  background: var(--card);
   border: 1.5px solid var(--muted-foreground);
   transition: background 120ms, border-color 120ms, box-shadow 120ms;
 }
+/* 出点：实心（与入点空心环形态区分）。 */
+.react-flow__handle.flow-handle-out {
+  background: var(--muted-foreground);
+  border-color: var(--muted-foreground);
+}
 .react-flow__handle:hover,
-.react-flow__handle.connecting {
+.react-flow__handle.connecting,
+.react-flow__handle.connectingto.valid {
   background: #2563eb;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.22);
 }
+/* 拖线期悬停的落点不合法（checkLink 拒绝：超 maxIn/maxOut/自连/重复）→ 禁放光标提示。 */
+.react-flow__handle.connectingto:not(.valid) {
+  cursor: not-allowed;
+}
 .dark .react-flow__handle:hover,
-.dark .react-flow__handle.connecting {
+.dark .react-flow__handle.connecting,
+.dark .react-flow__handle.connectingto.valid {
   background: #60a5fa;
   border-color: #60a5fa;
   box-shadow: 0 0 0 3px rgb(96 165 250 / 0.3);
