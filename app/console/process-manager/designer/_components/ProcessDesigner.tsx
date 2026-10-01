@@ -282,6 +282,8 @@ function DesignerInner({
   const [sim, setSim] = useState<{ running: boolean; runKey: number; activeIds: string[] } | null>(null);
   // 拖节点插入连线：当前拖动命中的 edge id（高亮提示「松手会插进去」）。
   const [hoverEdgeId, setHoverEdgeId] = useState<string | null>(null);
+  // 悬停聚焦：当前悬停的节点/连线（选中态由 selectedNode/selectedEdge 派生，悬停优先）。
+  const [hoverFocus, setHoverFocus] = useState<{ kind: "node" | "edge"; id: string } | null>(null);
   // 右栏上下文：点空白（onPaneClick）显流程配置；点节点（有 selectedNode）显节点配置。
   const [paneActive, setPaneActive] = useState(false);
   const { screenToFlowPosition, getEdge } = useReactFlow();
@@ -742,17 +744,44 @@ function DesignerInner({
   const edgeBase = isDark ? EDGE_BASE_DARK : EDGE_BASE_LIGHT;
   const edgeActive = isDark ? EDGE_ACTIVE_DARK : EDGE_ACTIVE_LIGHT;
   const edgeDefault = isDark ? EDGE_DEFAULT_DARK : EDGE_DEFAULT_LIGHT;
+
+  // ===== 悬停/选中聚焦（focus mode）=====
+  // 悬停优先于选中。命中节点→该节点+相邻连线+邻接节点保持全亮；命中连线→该线+两端节点全亮；
+  // 其余元素统一降透明度（flow-focus-dim）。纯渲染层（displayNodes/displayEdges 注入 className），
+  // 不改数据、不碰约束；只读态同样生效（查看复杂流程时的主要阅读辅助）。
+  const focusSets = useMemo(() => {
+    const target =
+      hoverFocus ??
+      (selectedNode
+        ? { kind: "node" as const, id: selectedNode.id }
+        : selectedEdge
+          ? { kind: "edge" as const, id: selectedEdge.id }
+          : null);
+    if (!target) return null;
+    if (target.kind === "edge") {
+      const e = edges.find((x) => x.id === target.id);
+      if (!e) return null;
+      return { nodes: new Set([e.source, e.target]), edges: new Set([e.id]) };
+    }
+    const rel = edges.filter((x) => x.source === target.id || x.target === target.id);
+    return {
+      nodes: new Set([target.id, ...rel.flatMap((x) => [x.source, x.target])]),
+      edges: new Set(rel.map((x) => x.id)),
+    };
+  }, [hoverFocus, selectedNode, selectedEdge, edges]);
+
   // 边显示态：所有边在一个 useMemo 里按 scheme 统一算 style（创建时不烘焙颜色，切明/暗自动跟随）。
-  // 单锚点（左进右出），无 handle id，React Flow 自动取唯一 source/target。颜色用具体色值——SVG 解析不到 :root 变量。
+  // 颜色用具体色值——SVG 解析不到 :root 变量。聚焦 dim 追加 className（与各状态样式正交）。
   //   常态=中性石墨；默认分支=紫色虚线+「默认」标；hover 待插入/选中=工程蓝（优先于默认色）。
   const displayEdges = useMemo(
     () =>
       edges.map((e) => {
+        const dimCls = focusSets != null && !focusSets.edges.has(e.id) ? "flow-focus-dim" : undefined;
         const isDefaultEdge = e.data?.isDefault === true;
         if (e.id === hoverEdgeId) {
           return {
             ...e,
-            className: "flow-edge-animated",
+            className: cn("flow-edge-animated", dimCls),
             animated: true,
             style: { stroke: edgeActive, strokeWidth: 2.5 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: edgeActive },
@@ -761,6 +790,7 @@ function DesignerInner({
         if (e.selected) {
           return {
             ...e,
+            className: dimCls,
             style: { stroke: edgeActive, strokeWidth: 2.5 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: edgeActive },
           };
@@ -768,6 +798,7 @@ function DesignerInner({
         if (isDefaultEdge) {
           return {
             ...e,
+            className: dimCls,
             // 默认分支：紫色虚线 + 默认标记（无 label 时显示「默认」，有 label 保留用户的）。
             label: e.label ?? "默认",
             labelStyle: { fill: edgeDefault, fontWeight: 600, fontSize: 11 },
@@ -778,12 +809,21 @@ function DesignerInner({
         }
         return {
           ...e,
+          className: dimCls,
           style: { stroke: edgeBase, strokeWidth: 1.5 },
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: edgeBase },
         };
       }),
-    [edges, hoverEdgeId, edgeBase, edgeActive, edgeDefault],
+    [edges, hoverEdgeId, edgeBase, edgeActive, edgeDefault, focusSets],
   );
+
+  // 节点聚焦 dim 注入（无聚焦时原样返回，避免无意义重渲染）。
+  const displayNodes = useMemo(() => {
+    if (!focusSets) return simNodes;
+    return simNodes.map((n) =>
+      focusSets.nodes.has(n.id) ? n : { ...n, className: cn(n.className, "flow-focus-dim") },
+    );
+  }, [simNodes, focusSets]);
 
   const menuNode = menu ? nodes.find((n) => n.id === menu.nodeId) : undefined;
 
@@ -906,7 +946,7 @@ function DesignerInner({
           onDragOver={onDragOver}
         >
           <ReactFlow
-            nodes={simNodes}
+            nodes={displayNodes}
             edges={displayEdges}
             nodeTypes={processNodeTypes}
             onNodesChange={handleNodesChange}
@@ -915,6 +955,10 @@ function DesignerInner({
             isValidConnection={isValidConnection}
             onNodeDrag={onNodeDrag}
             onNodeDragStop={onNodeDragStop}
+            onNodeMouseEnter={(_, n) => setHoverFocus({ kind: "node", id: n.id })}
+            onNodeMouseLeave={() => setHoverFocus(null)}
+            onEdgeMouseEnter={(_, e) => setHoverFocus({ kind: "edge", id: e.id })}
+            onEdgeMouseLeave={() => setHoverFocus(null)}
             onPaneClick={() => setPaneActive(true)}
             onNodeClick={() => setPaneActive(false)}
             onEdgeClick={() => setPaneActive(false)}

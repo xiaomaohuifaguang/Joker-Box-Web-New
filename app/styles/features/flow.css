@@ -96,6 +96,16 @@
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.6);
 }
 
+/* 悬停/选中聚焦（focus mode）：非相关元素整体降透明度（连线含 label），突出当前路径。
+   transition 只挂 opacity——节点拖动的 transform 由 React Flow 直写，不能过渡。 */
+.react-flow__node,
+.react-flow__edge {
+  transition: opacity 150ms ease;
+}
+.flow-focus-dim {
+  opacity: 0.22;
+}
+
 /* 模拟运行：连边 dash 流动（电流方向感），reduced-motion 时静止。 */
 @keyframes flow-dash {
   to { stroke-dashoffset: -14; }
