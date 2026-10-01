@@ -15,22 +15,37 @@
     0 0 18px rgb(96 165 250 / 0.6);
 }
 
-/* 连接句柄：缩小 + 中性描边，hover 变工程蓝（图纸接线柱）。 */
-.react-flow__handle {
+/* 连接句柄：缩小 + 中性描边，hover 变工程蓝（图纸接线柱）。
+   出/入形态区分：入点=空心环（描边+透明内填透出节点底色，默认样式），出点=实心点（.flow-handle-out，
+   由节点组件给 source Handle 加 class）——流程「左进右出」的方向在节点层面自解释。
+   注意：@xyflow/react 的 style.css 随路由 chunk 后于全局 CSS 加载，同特异性会盖掉本节——
+   故基础规则一律加 .react-flow 前缀提特异性（否则句柄会回退成库默认的「白边黑心」圆点）。 */
+.react-flow .react-flow__handle {
   width: 7px;
   height: 7px;
-  background: var(--surface);
+  background: transparent;
   border: 1.5px solid var(--muted-foreground);
   transition: background 120ms, border-color 120ms, box-shadow 120ms;
 }
+/* 出点：实心（与入点空心环形态区分）。 */
+.react-flow .react-flow__handle.flow-handle-out {
+  background: var(--muted-foreground);
+  border-color: var(--muted-foreground);
+}
 .react-flow__handle:hover,
-.react-flow__handle.connecting {
+.react-flow__handle.connecting,
+.react-flow__handle.connectingto.valid {
   background: #2563eb;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.22);
 }
+/* 拖线期悬停的落点不合法（checkLink 拒绝：超 maxIn/maxOut/自连/重复）→ 禁放光标提示。 */
+.react-flow__handle.connectingto:not(.valid) {
+  cursor: not-allowed;
+}
 .dark .react-flow__handle:hover,
-.dark .react-flow__handle.connecting {
+.dark .react-flow__handle.connecting,
+.dark .react-flow__handle.connectingto.valid {
   background: #60a5fa;
   border-color: #60a5fa;
   box-shadow: 0 0 0 3px rgb(96 165 250 / 0.3);
@@ -80,6 +95,16 @@
 .dark .react-flow__minimap {
   border-color: var(--muted-foreground);
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.6);
+}
+
+/* 悬停/选中聚焦（focus mode）：非相关元素整体降透明度（连线含 label），突出当前路径。
+   transition 只挂 opacity——节点拖动的 transform 由 React Flow 直写，不能过渡。 */
+.react-flow__node,
+.react-flow__edge {
+  transition: opacity 150ms ease;
+}
+.flow-focus-dim {
+  opacity: 0.22;
 }
 
 /* 模拟运行：连边 dash 流动（电流方向感），reduced-motion 时静止。 */

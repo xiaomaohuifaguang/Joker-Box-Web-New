@@ -19,7 +19,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowLeft, Database, Play, Save, Search, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, Database, Play, Save, Search, Square, Trash2, Undo2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, randomId } from "@/lib/utils";
 import { useIsDark } from "@/hooks/useIsDark";
@@ -98,8 +98,13 @@ function createEdge(source: string, target: string, base?: Partial<Edge>): Edge 
     id: `e_${source}_${target}`,
     source,
     target,
+    // 正交折线（横竖分明，交叉处比贝塞尔可辨），小圆角过渡；type/pathOptions 是渲染细节，
+    // 保存时 stripEdge 会剥掉、加载时由这里统一补，不进 rawData。
+    // pathOptions 不在基础 Edge 类型上（仅 BuiltInEdge 各变体有），故用断言补上。
+    type: "smoothstep",
     ...base,
-  };
+    pathOptions: { borderRadius: 8 },
+  } as Edge;
 }
 
 // 生成节点 id 后缀：randomId() 去连字符；crypto.randomUUID 是安全上下文(Secure Context)限定 API，
@@ -167,6 +172,37 @@ function stripEdge(e: Edge, sourceKind?: string) {
   };
 }
 
+// ===== 网关出边锚点自动分配 =====
+// 网关有 右(默认,无 id)/上(out-top)/下(out-bottom) 三个出锚点，按目标节点中心方位选：
+// |中心 dy| 超过阈值才改走上/下，否则保持右侧默认。目的：多条分支不再挤在右角同点出发重合。
+// 仅网关多出锚点（任务/开始 maxOut=1 无扇出问题）；sourceHandle 随 stripEdge 入 rawData、加载时还原。
+// 注意：只影响连线「从哪个点出发」，出入边数量约束（checkLink 的 maxIn/maxOut）按节点计边数，不受影响。
+const GATEWAY_FAN_THRESHOLD = 48;
+
+function nodeCenterY(n: ProcessFlowNode): number {
+  // measured 是 React Flow 实测高；未测（刚加载/未渲染完）按形状族兜底（事件40/任务32/网关44）。
+  const shape = PROCESS_NODE_REGISTRY[(n.type as ProcessNodeKind) ?? "serviceTask"].shape;
+  const fallback = shape === "gateway" ? 44 : shape === "event" ? 40 : 32;
+  return n.position.y + (n.measured?.height ?? fallback) / 2;
+}
+
+// 节点外框尺寸（dagre 布局用）：优先实测，否则按形状族兜底（与 nodes.tsx 固定尺寸一致）。
+function nodeSizeFor(n: ProcessFlowNode): { w: number; h: number } {
+  const shape = PROCESS_NODE_REGISTRY[(n.type as ProcessNodeKind) ?? "serviceTask"].shape;
+  const fallback = shape === "task" ? { w: 128, h: 32 } : { w: 44, h: 44 };
+  return { w: n.measured?.width ?? fallback.w, h: n.measured?.height ?? fallback.h };
+}
+
+// 返回 undefined=默认右锚点（不写 sourceHandle，兼容旧数据）。非网关源恒 undefined（没有上下锚点）。
+function pickGatewaySourceHandle(source: ProcessFlowNode, target: ProcessFlowNode): string | undefined {
+  if (PROCESS_NODE_REGISTRY[(source.type as ProcessNodeKind) ?? "serviceTask"].shape !== "gateway")
+    return undefined;
+  const dy = nodeCenterY(target) - nodeCenterY(source);
+  if (dy < -GATEWAY_FAN_THRESHOLD) return "out-top";
+  if (dy > GATEWAY_FAN_THRESHOLD) return "out-bottom";
+  return undefined;
+}
+
 // rawData（保存的结构）→ React Flow nodes/edges。nodes 直接还原；edges 由 createEdge 补回渲染样式。
 // rawData 即 add/save 存的 {nodes, edges}（剥样式/运行时），后端透传存储。
 // 序列化当前画布为 rawData（保存 + 查看数据共用，保证所见即所存）。
@@ -181,15 +217,22 @@ function nodesFromRaw(raw: unknown): ProcessFlowNode[] {
   const list = (raw as { nodes?: unknown[] } | undefined)?.nodes;
   return Array.isArray(list) ? (list as ProcessFlowNode[]) : [];
 }
-function edgesFromRaw(raw: unknown): Edge[] {
-  const list = (raw as { edges?: Array<{ id?: string; source: string; target: string; label?: unknown; data?: unknown }> } | undefined)?.edges;
+function edgesFromRaw(raw: unknown, nodes: ProcessFlowNode[]): Edge[] {
+  const list = (raw as { edges?: Array<{ id?: string; source: string; target: string; sourceHandle?: string; targetHandle?: string; label?: unknown; data?: unknown }> } | undefined)?.edges;
   if (!Array.isArray(list)) return [];
+  const byId = new Map(nodes.map((n) => [n.id, n]));
   return list.map((e) => {
     const data = e.data as Edge["data"];
     // label 双写兼容：原生 label 优先；缺则回退 data.label（旧数据/后端只在 data 里放 label 的情况）。
     const label = e.label ?? (data as { label?: unknown } | undefined)?.label;
+    // 扇出锚点还原：优先存量 sourceHandle；旧数据没有则按节点方位补算（仅网关有上/下锚点）。
+    const src = byId.get(e.source);
+    const tgt = byId.get(e.target);
+    const sourceHandle = e.sourceHandle ?? (src && tgt ? pickGatewaySourceHandle(src, tgt) : undefined);
     return createEdge(e.source, e.target, {
       ...(e.id ? { id: e.id } : {}),
+      ...(sourceHandle ? { sourceHandle } : {}),
+      ...(e.targetHandle ? { targetHandle: e.targetHandle } : {}),
       ...(label != null ? { label: label as Edge["label"] } : {}),
       ...(data != null ? { data } : {}),
     });
@@ -246,9 +289,14 @@ function DesignerInner({
   const [sim, setSim] = useState<{ running: boolean; runKey: number; activeIds: string[] } | null>(null);
   // 拖节点插入连线：当前拖动命中的 edge id（高亮提示「松手会插进去」）。
   const [hoverEdgeId, setHoverEdgeId] = useState<string | null>(null);
+  // 悬停聚焦：当前悬停的节点/连线（选中态由 selectedNode/selectedEdge 派生，悬停优先）。
+  const [hoverFocus, setHoverFocus] = useState<{ kind: "node" | "edge"; id: string } | null>(null);
+  // 一键整理布局：整理中 flag + 整理前坐标快照（一次性「撤销整理」用，恢复后清空）。
+  const [layouting, setLayouting] = useState(false);
+  const [layoutSnapshot, setLayoutSnapshot] = useState<Record<string, { x: number; y: number }> | null>(null);
   // 右栏上下文：点空白（onPaneClick）显流程配置；点节点（有 selectedNode）显节点配置。
   const [paneActive, setPaneActive] = useState(false);
-  const { screenToFlowPosition, getEdge } = useReactFlow();
+  const { screenToFlowPosition, getEdge, fitView } = useReactFlow();
 
   const editing = !readOnly && !sim;
 
@@ -286,8 +334,10 @@ function DesignerInner({
         setDescription(info.processDescription ?? "");
         const raw = info.rawData;
         const ns = nodesFromRaw(raw);
-        setNodes(ns.length > 0 ? ns : initialNodes);
-        setEdges(edgesFromRaw(raw));
+        const effNodes = ns.length > 0 ? ns : initialNodes;
+        setNodes(effNodes);
+        // 回填边需要节点坐标来补算网关扇出锚点，传同一份 nodes 保证一致。
+        setEdges(edgesFromRaw(raw, effNodes));
         // 表单绑定回填（payload 顶层 globalFormBinding，与 processName 同级）。
         setFormId(info.globalFormBinding?.formId ?? "");
         setFormVersion(info.globalFormBinding?.formVersion ?? "");
@@ -378,9 +428,20 @@ function DesignerInner({
         return;
       }
       if (!connection.source || !connection.target) return;
-      setEdges((eds) => addEdge(createEdge(connection.source!, connection.target!), eds));
+      // 从默认右锚点拉线（sourceHandle=null）时按方位自动分配扇出锚点；
+      // 显式从上/下锚点拉的（sourceHandle=out-top/out-bottom）尊重用户选择。
+      const src = nodes.find((n) => n.id === connection.source);
+      const tgt = nodes.find((n) => n.id === connection.target);
+      const sourceHandle =
+        connection.sourceHandle ?? (src && tgt ? pickGatewaySourceHandle(src, tgt) : undefined);
+      setEdges((eds) =>
+        addEdge(
+          createEdge(connection.source!, connection.target!, sourceHandle ? { sourceHandle } : {}),
+          eds,
+        ),
+      );
     },
-    [checkLink, setEdges],
+    [checkLink, nodes, setEdges],
   );
 
   // 是否可插入连线中间（有进有出的节点：任务/网关；start/end 自动排除）。
@@ -394,11 +455,13 @@ function DesignerInner({
 
   // 把 nodeId 插入 edgeId 中间：A→B 拆成 A→nodeId（保留原边 label/data 等语义，渲染样式由默认外观补）→ nodeId→B。
   // 用一次 setEdges 原子替换（不混用 updateEdge+addEdges 两个内部 batch 调用，时序/样式更可控）。
+  // droppedNode：面板拖入时节点刚 setNodes、闭包里 nodes 还是上一帧的（不含新节点，find 不到会静默不插入），
+  // 故由 onDrop 把刚创建的新节点对象直接传入；画布内拖动插入不传（节点已在 nodes 里）。
   const insertIntoEdge = useCallback(
-    (nodeId: string, edgeId: string) => {
+    (nodeId: string, edgeId: string, droppedNode?: ProcessFlowNode) => {
       const edge = getEdge(edgeId);
       if (!edge) return;
-      const node = nodes.find((n) => n.id === nodeId);
+      const node = droppedNode ?? nodes.find((n) => n.id === nodeId);
       if (!node) return;
       if (!canInsertKind((node.type as ProcessNodeKind) ?? "serviceTask")) {
         toast.info("开始/结束节点不能插入连线中间");
@@ -412,21 +475,114 @@ function DesignerInner({
         return;
       }
       setEdges((eds) =>
-        eds.flatMap((e) =>
-          e.id === edgeId
-            ? [
-                // 入边：原边改 target=新节点。
-                { ...e, target: nodeId },
-                // 出边：新节点 → 原 target。
-                createEdge(nodeId, edge.target),
-              ]
-            : [e],
-        ),
+        eds.flatMap((e) => {
+          if (e.id !== edgeId) return [e];
+          const src = nodes.find((n) => n.id === e.source);
+          const tgt = nodes.find((n) => n.id === e.target);
+          return [
+            // 入边：原边改 target=新节点；源为网关时按新落点重算扇出锚点。
+            { ...e, target: nodeId, ...(src ? { sourceHandle: pickGatewaySourceHandle(src, node) } : {}) },
+            // 出边：新节点 → 原 target；新节点为网关时同样按方位分锚点。
+            createEdge(nodeId, e.target, tgt ? { sourceHandle: pickGatewaySourceHandle(node, tgt) } : {}),
+          ];
+        }),
       );
       toast.success(`已插入「${node.data.label}」`);
     },
     [getEdge, nodes, canInsertKind, checkLink, setEdges],
   );
+
+  // 拖动结束重排网关出边锚点：节点位置变了，所有网关出边按新方位重算 上/下/右。
+  // moved=本次拖动的节点（onNodeDragStop 第三参，含最终坐标——state 可能落后一帧）；结果无变化则不动 state。
+  // 注意：手动从上/下锚点拉的线，拖动节点后也会被按方位重算（实验分支的既定行为——自动优先于手动）。
+  const reflowGatewayHandles = useCallback(
+    (moved: ProcessFlowNode[]) => {
+      setEdges((eds) => {
+        const byId = new Map(nodes.map((n) => [n.id, n]));
+        for (const m of moved) byId.set(m.id, m);
+        let changed = false;
+        const next = eds.map((e) => {
+          const src = byId.get(e.source);
+          const tgt = byId.get(e.target);
+          if (!src || !tgt) return e;
+          const h = pickGatewaySourceHandle(src, tgt) ?? null;
+          if ((e.sourceHandle ?? null) === h) return e;
+          changed = true;
+          return { ...e, sourceHandle: h };
+        });
+        return changed ? next : eds;
+      });
+    },
+    [nodes, setEdges],
+  );
+
+  // ===== 一键整理布局（dagre 分层布局，方向 LR）=====
+  // 分层 + barycenter 交叉最小化；回边（驳回回上游形成的环）dagre 内部反转参与分层，会绕行展示。
+  // 整理前拍坐标快照 → 顶栏出现「撤销整理」可一次性还原；整理后按新坐标重排网关扇出锚点 + fitView。
+  // dagre ~100KB，动态 import 只在点击时加载，不进首屏 bundle。
+  // 定位是「起点生成器/乱了之后的一键复位」——整理完用户仍可自由拖动微调。
+  async function autoLayout() {
+    if (layouting) return;
+    setLayouting(true);
+    try {
+      const dagre = (await import("@dagrejs/dagre")).default;
+      const g = new dagre.graphlib.Graph();
+      g.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 100, marginx: 24, marginy: 24 });
+      g.setDefaultEdgeLabel(() => ({}));
+      const sizeById = new Map(nodes.map((n) => [n.id, nodeSizeFor(n)]));
+      for (const n of nodes) {
+        const s = sizeById.get(n.id)!;
+        g.setNode(n.id, { width: s.w, height: s.h });
+      }
+      for (const e of edges) g.setEdge(e.source, e.target);
+      dagre.layout(g);
+      // 快照整理前坐标（撤销用，只留 id→position）。
+      setLayoutSnapshot(Object.fromEntries(nodes.map((n) => [n.id, { ...n.position }])));
+      // dagre 给的是节点中心，React Flow position 是左上角。
+      const laidOut = nodes.map((n) => {
+        const p = g.node(n.id);
+        const s = sizeById.get(n.id)!;
+        return { ...n, position: { x: p.x - s.w / 2, y: p.y - s.h / 2 } };
+      });
+      setNodes(laidOut);
+      // 扇出锚点按新坐标重排（与 reflowGatewayHandles 同规则，但基于 laidOut 而非落后一帧的 state）。
+      const byId = new Map(laidOut.map((n) => [n.id, n]));
+      setEdges((eds) =>
+        eds.map((e) => {
+          const src = byId.get(e.source);
+          const tgt = byId.get(e.target);
+          if (!src || !tgt) return e;
+          return { ...e, sourceHandle: pickGatewaySourceHandle(src, tgt) ?? null };
+        }),
+      );
+      // 等节点重渲染/测量完再 fit（fitView 需要 measured）。
+      setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+      toast.success("已自动整理布局，可点「撤销整理」还原");
+    } catch {
+      toast.error("自动整理失败");
+    } finally {
+      setLayouting(false);
+    }
+  }
+
+  // 撤销整理：恢复快照坐标 + 按恢复后坐标重排扇出锚点（一次性，恢复即清快照）。
+  function undoAutoLayout() {
+    if (!layoutSnapshot) return;
+    const snap = layoutSnapshot;
+    setLayoutSnapshot(null);
+    const restored = nodes.map((n) => (snap[n.id] ? { ...n, position: snap[n.id] } : n));
+    setNodes(restored);
+    const byId = new Map(restored.map((n) => [n.id, n]));
+    setEdges((eds) =>
+      eds.map((e) => {
+        const src = byId.get(e.source);
+        const tgt = byId.get(e.target);
+        if (!src || !tgt) return e;
+        return { ...e, sourceHandle: pickGatewaySourceHandle(src, tgt) ?? null };
+      }),
+    );
+    setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+  }
 
   // 选中节点（单选），属性面板编辑它。
   const selectedNode = useMemo(() => nodes.find((n) => n.selected), [nodes]);
@@ -575,15 +731,18 @@ function DesignerInner({
     [editing, canInsertKind, hoverEdgeId],
   );
 
-  // 拖动结束：压着 edge 松手 → 插入该 edge 中间；否则普通落点。
+  // 拖动结束：压着 edge 松手 → 插入该 edge 中间；否则普通落点。结束后重排网关出边锚点。
+  // 手动拖过节点 = 布局已被用户改动 → 清掉整理快照（否则之后「撤销整理」会把手动调整一起打回）。
   const onNodeDragStop = useCallback(
-    (_event: MouseEvent | TouchEvent, node: Node) => {
+    (_event: MouseEvent | TouchEvent, node: Node, dragged: Node[]) => {
       if (!editing) return;
+      setLayoutSnapshot(null);
       const edgeId = hoverEdgeId;
       setHoverEdgeId(null);
       if (edgeId) insertIntoEdge(node.id, edgeId);
+      reflowGatewayHandles((dragged.length > 0 ? dragged : [node]) as ProcessFlowNode[]);
     },
-    [editing, hoverEdgeId, insertIntoEdge],
+    [editing, hoverEdgeId, insertIntoEdge, reflowGatewayHandles],
   );
 
   // 拖入画布：换算屏幕坐标→画布坐标。落在某 edge 热区上则插入该线中间，否则普通放置。
@@ -608,7 +767,7 @@ function DesignerInner({
         };
         setNodes((nds) => nds.concat(node));
         const edgeId = hitEdgeIdAt(e.clientX, e.clientY);
-        if (edgeId) insertIntoEdge(node.id, edgeId);
+        if (edgeId) insertIntoEdge(node.id, edgeId, node);
         return;
       }
 
@@ -627,9 +786,9 @@ function DesignerInner({
         data: { label: nextKindLabel(kind as ProcessNodeKind, nodes) },
       };
       setNodes((nds) => nds.concat(node));
-      // 落点压着连线 → 插入该线中间（仅任务/网关类）。
+      // 落点压着连线 → 插入该线中间（仅任务/网关类）。传入新建节点——闭包 nodes 还是上一帧的。
       const edgeId = hitEdgeIdAt(e.clientX, e.clientY);
-      if (edgeId && canInsertKind(kind as ProcessNodeKind)) insertIntoEdge(node.id, edgeId);
+      if (edgeId && canInsertKind(kind as ProcessNodeKind)) insertIntoEdge(node.id, edgeId, node);
     },
     [editing, nodes, screenToFlowPosition, setNodes, canInsertKind, insertIntoEdge],
   );
@@ -665,17 +824,44 @@ function DesignerInner({
   const edgeBase = isDark ? EDGE_BASE_DARK : EDGE_BASE_LIGHT;
   const edgeActive = isDark ? EDGE_ACTIVE_DARK : EDGE_ACTIVE_LIGHT;
   const edgeDefault = isDark ? EDGE_DEFAULT_DARK : EDGE_DEFAULT_LIGHT;
+
+  // ===== 悬停/选中聚焦（focus mode）=====
+  // 悬停优先于选中。命中节点→该节点+相邻连线+邻接节点保持全亮；命中连线→该线+两端节点全亮；
+  // 其余元素统一降透明度（flow-focus-dim）。纯渲染层（displayNodes/displayEdges 注入 className），
+  // 不改数据、不碰约束；只读态同样生效（查看复杂流程时的主要阅读辅助）。
+  const focusSets = useMemo(() => {
+    const target =
+      hoverFocus ??
+      (selectedNode
+        ? { kind: "node" as const, id: selectedNode.id }
+        : selectedEdge
+          ? { kind: "edge" as const, id: selectedEdge.id }
+          : null);
+    if (!target) return null;
+    if (target.kind === "edge") {
+      const e = edges.find((x) => x.id === target.id);
+      if (!e) return null;
+      return { nodes: new Set([e.source, e.target]), edges: new Set([e.id]) };
+    }
+    const rel = edges.filter((x) => x.source === target.id || x.target === target.id);
+    return {
+      nodes: new Set([target.id, ...rel.flatMap((x) => [x.source, x.target])]),
+      edges: new Set(rel.map((x) => x.id)),
+    };
+  }, [hoverFocus, selectedNode, selectedEdge, edges]);
+
   // 边显示态：所有边在一个 useMemo 里按 scheme 统一算 style（创建时不烘焙颜色，切明/暗自动跟随）。
-  // 单锚点（左进右出），无 handle id，React Flow 自动取唯一 source/target。颜色用具体色值——SVG 解析不到 :root 变量。
+  // 颜色用具体色值——SVG 解析不到 :root 变量。聚焦 dim 追加 className（与各状态样式正交）。
   //   常态=中性石墨；默认分支=紫色虚线+「默认」标；hover 待插入/选中=工程蓝（优先于默认色）。
   const displayEdges = useMemo(
     () =>
       edges.map((e) => {
+        const dimCls = focusSets != null && !focusSets.edges.has(e.id) ? "flow-focus-dim" : undefined;
         const isDefaultEdge = e.data?.isDefault === true;
         if (e.id === hoverEdgeId) {
           return {
             ...e,
-            className: "flow-edge-animated",
+            className: cn("flow-edge-animated", dimCls),
             animated: true,
             style: { stroke: edgeActive, strokeWidth: 2.5 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: edgeActive },
@@ -684,6 +870,7 @@ function DesignerInner({
         if (e.selected) {
           return {
             ...e,
+            className: dimCls,
             style: { stroke: edgeActive, strokeWidth: 2.5 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: edgeActive },
           };
@@ -691,6 +878,7 @@ function DesignerInner({
         if (isDefaultEdge) {
           return {
             ...e,
+            className: dimCls,
             // 默认分支：紫色虚线 + 默认标记（无 label 时显示「默认」，有 label 保留用户的）。
             label: e.label ?? "默认",
             labelStyle: { fill: edgeDefault, fontWeight: 600, fontSize: 11 },
@@ -701,12 +889,21 @@ function DesignerInner({
         }
         return {
           ...e,
+          className: dimCls,
           style: { stroke: edgeBase, strokeWidth: 1.5 },
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: edgeBase },
         };
       }),
-    [edges, hoverEdgeId, edgeBase, edgeActive, edgeDefault],
+    [edges, hoverEdgeId, edgeBase, edgeActive, edgeDefault, focusSets],
   );
+
+  // 节点聚焦 dim 注入（无聚焦时原样返回，避免无意义重渲染）。
+  const displayNodes = useMemo(() => {
+    if (!focusSets) return simNodes;
+    return simNodes.map((n) =>
+      focusSets.nodes.has(n.id) ? n : { ...n, className: cn(n.className, "flow-focus-dim") },
+    );
+  }, [simNodes, focusSets]);
 
   const menuNode = menu ? nodes.find((n) => n.id === menu.nodeId) : undefined;
 
@@ -743,6 +940,20 @@ function DesignerInner({
           {id == null ? "v1.0.0" : `#${id}`}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          {editing && (
+            <>
+              <Button variant="outline" size="sm" onClick={autoLayout} disabled={layouting}>
+                <Wand2 className="h-4 w-4" />
+                {layouting ? "整理中…" : "自动整理"}
+              </Button>
+              {layoutSnapshot && (
+                <Button variant="ghost" size="sm" onClick={undoAutoLayout}>
+                  <Undo2 className="h-4 w-4" />
+                  撤销整理
+                </Button>
+              )}
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={() => setDataOpen(true)}>
             <Database className="h-4 w-4" />
             查看数据
@@ -829,7 +1040,7 @@ function DesignerInner({
           onDragOver={onDragOver}
         >
           <ReactFlow
-            nodes={simNodes}
+            nodes={displayNodes}
             edges={displayEdges}
             nodeTypes={processNodeTypes}
             onNodesChange={handleNodesChange}
@@ -838,6 +1049,10 @@ function DesignerInner({
             isValidConnection={isValidConnection}
             onNodeDrag={onNodeDrag}
             onNodeDragStop={onNodeDragStop}
+            onNodeMouseEnter={(_, n) => setHoverFocus({ kind: "node", id: n.id })}
+            onNodeMouseLeave={() => setHoverFocus(null)}
+            onEdgeMouseEnter={(_, e) => setHoverFocus({ kind: "edge", id: e.id })}
+            onEdgeMouseLeave={() => setHoverFocus(null)}
             onPaneClick={() => setPaneActive(true)}
             onNodeClick={() => setPaneActive(false)}
             onEdgeClick={() => setPaneActive(false)}
