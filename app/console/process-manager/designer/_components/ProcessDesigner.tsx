@@ -98,8 +98,13 @@ function createEdge(source: string, target: string, base?: Partial<Edge>): Edge 
     id: `e_${source}_${target}`,
     source,
     target,
+    // 正交折线（横竖分明，交叉处比贝塞尔可辨），小圆角过渡；type/pathOptions 是渲染细节，
+    // 保存时 stripEdge 会剥掉、加载时由这里统一补，不进 rawData。
+    // pathOptions 不在基础 Edge 类型上（仅 BuiltInEdge 各变体有），故用断言补上。
+    type: "smoothstep",
     ...base,
-  };
+    pathOptions: { borderRadius: 8 },
+  } as Edge;
 }
 
 // 生成节点 id 后缀：randomId() 去连字符；crypto.randomUUID 是安全上下文(Secure Context)限定 API，
