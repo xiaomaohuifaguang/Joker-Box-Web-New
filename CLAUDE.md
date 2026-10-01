@@ -106,4 +106,5 @@ This is the single most important thing to know. **本项目是 static export（
 - **`crypto.randomUUID` 是 Secure-Context 限定**：仅 https/localhost 有；http 内网（nginx 部署）里 `crypto.randomUUID is not a function` -> 一律用 `@/lib/utils` 的 `randomId()`（内部已兜底时间戳+随机数）。流程节点 id 要 NCName 再去连字符。
 - **`@uiw/react-codemirror` 不定高不滚动**：`height="100%"` 只作用于 `.cm-editor`，其外层容器 div 默认 `height:auto` → 编辑器随内容撑高、内部滚动失效（看不到全部行、无滚动条）。必须再给组件加 `className="h-full"`（容器定高），且祖先链有确定高度（如 `h-[70vh]`，别依赖 console 滚动容器里的 `h-full` flex 链）。
 - **共享 `Textarea` 带 `field-sizing-content`**：高度随内容自适应，`rows` 属性失效（空内容时永远矮）-> 要固定高文本框就覆写 `field-sizing-fixed` + 显式 `h-*`（如系统提示词编辑弹窗 `h-[50vh]`）。
+- **`@xyflow/react` 的 style.css 随路由 chunk 后于全局 CSS 加载**：同特异性 (0,1,0) 的全局覆盖会被库默认样式盖掉（句柄回退成「白边黑心」）-> 覆盖库组件样式时提特异性（如 `.react-flow .react-flow__handle` 前缀），见 `app/styles/features/flow.css`。
 - **Radix DropdownMenu 误触贴边菜单项**：Trigger `pointerdown` 即开菜单，且 MenuItem 会把「内容内没有对应 pointerdown 的 pointerup」合成 click（按住-拖动-松开选中模式）-> 快速点触发器时抬起漂移落进菜单项会被误触发（向上展开时最后一项贴触发器，最危险）。修法：触发器 `onPointerDownCapture` 置 flag=false、Content `onPointerDownCapture` 置 true + `onPointerUpCapture` 里 flag=false 则 `stopPropagation`（见 ConsoleSidebar 用户菜单）。
