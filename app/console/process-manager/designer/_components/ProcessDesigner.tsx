@@ -19,7 +19,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowLeft, Database, Play, Save, Search, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, Database, Play, Save, Search, Square, Trash2, Undo2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, randomId } from "@/lib/utils";
 import { useIsDark } from "@/hooks/useIsDark";
@@ -186,6 +186,13 @@ function nodeCenterY(n: ProcessFlowNode): number {
   return n.position.y + (n.measured?.height ?? fallback) / 2;
 }
 
+// 节点外框尺寸（dagre 布局用）：优先实测，否则按形状族兜底（与 nodes.tsx 固定尺寸一致）。
+function nodeSizeFor(n: ProcessFlowNode): { w: number; h: number } {
+  const shape = PROCESS_NODE_REGISTRY[(n.type as ProcessNodeKind) ?? "serviceTask"].shape;
+  const fallback = shape === "task" ? { w: 128, h: 32 } : { w: 44, h: 44 };
+  return { w: n.measured?.width ?? fallback.w, h: n.measured?.height ?? fallback.h };
+}
+
 // 返回 undefined=默认右锚点（不写 sourceHandle，兼容旧数据）。非网关源恒 undefined（没有上下锚点）。
 function pickGatewaySourceHandle(source: ProcessFlowNode, target: ProcessFlowNode): string | undefined {
   if (PROCESS_NODE_REGISTRY[(source.type as ProcessNodeKind) ?? "serviceTask"].shape !== "gateway")
@@ -284,9 +291,12 @@ function DesignerInner({
   const [hoverEdgeId, setHoverEdgeId] = useState<string | null>(null);
   // 悬停聚焦：当前悬停的节点/连线（选中态由 selectedNode/selectedEdge 派生，悬停优先）。
   const [hoverFocus, setHoverFocus] = useState<{ kind: "node" | "edge"; id: string } | null>(null);
+  // 一键整理布局：整理中 flag + 整理前坐标快照（一次性「撤销整理」用，恢复后清空）。
+  const [layouting, setLayouting] = useState(false);
+  const [layoutSnapshot, setLayoutSnapshot] = useState<Record<string, { x: number; y: number }> | null>(null);
   // 右栏上下文：点空白（onPaneClick）显流程配置；点节点（有 selectedNode）显节点配置。
   const [paneActive, setPaneActive] = useState(false);
-  const { screenToFlowPosition, getEdge } = useReactFlow();
+  const { screenToFlowPosition, getEdge, fitView } = useReactFlow();
 
   const editing = !readOnly && !sim;
 
@@ -505,6 +515,74 @@ function DesignerInner({
     },
     [nodes, setEdges],
   );
+
+  // ===== 一键整理布局（dagre 分层布局，方向 LR）=====
+  // 分层 + barycenter 交叉最小化；回边（驳回回上游形成的环）dagre 内部反转参与分层，会绕行展示。
+  // 整理前拍坐标快照 → 顶栏出现「撤销整理」可一次性还原；整理后按新坐标重排网关扇出锚点 + fitView。
+  // dagre ~100KB，动态 import 只在点击时加载，不进首屏 bundle。
+  // 定位是「起点生成器/乱了之后的一键复位」——整理完用户仍可自由拖动微调。
+  async function autoLayout() {
+    if (layouting) return;
+    setLayouting(true);
+    try {
+      const dagre = (await import("@dagrejs/dagre")).default;
+      const g = new dagre.graphlib.Graph();
+      g.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 100, marginx: 24, marginy: 24 });
+      g.setDefaultEdgeLabel(() => ({}));
+      const sizeById = new Map(nodes.map((n) => [n.id, nodeSizeFor(n)]));
+      for (const n of nodes) {
+        const s = sizeById.get(n.id)!;
+        g.setNode(n.id, { width: s.w, height: s.h });
+      }
+      for (const e of edges) g.setEdge(e.source, e.target);
+      dagre.layout(g);
+      // 快照整理前坐标（撤销用，只留 id→position）。
+      setLayoutSnapshot(Object.fromEntries(nodes.map((n) => [n.id, { ...n.position }])));
+      // dagre 给的是节点中心，React Flow position 是左上角。
+      const laidOut = nodes.map((n) => {
+        const p = g.node(n.id);
+        const s = sizeById.get(n.id)!;
+        return { ...n, position: { x: p.x - s.w / 2, y: p.y - s.h / 2 } };
+      });
+      setNodes(laidOut);
+      // 扇出锚点按新坐标重排（与 reflowGatewayHandles 同规则，但基于 laidOut 而非落后一帧的 state）。
+      const byId = new Map(laidOut.map((n) => [n.id, n]));
+      setEdges((eds) =>
+        eds.map((e) => {
+          const src = byId.get(e.source);
+          const tgt = byId.get(e.target);
+          if (!src || !tgt) return e;
+          return { ...e, sourceHandle: pickGatewaySourceHandle(src, tgt) ?? null };
+        }),
+      );
+      // 等节点重渲染/测量完再 fit（fitView 需要 measured）。
+      setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+      toast.success("已自动整理布局，可点「撤销整理」还原");
+    } catch {
+      toast.error("自动整理失败");
+    } finally {
+      setLayouting(false);
+    }
+  }
+
+  // 撤销整理：恢复快照坐标 + 按恢复后坐标重排扇出锚点（一次性，恢复即清快照）。
+  function undoAutoLayout() {
+    if (!layoutSnapshot) return;
+    const snap = layoutSnapshot;
+    setLayoutSnapshot(null);
+    const restored = nodes.map((n) => (snap[n.id] ? { ...n, position: snap[n.id] } : n));
+    setNodes(restored);
+    const byId = new Map(restored.map((n) => [n.id, n]));
+    setEdges((eds) =>
+      eds.map((e) => {
+        const src = byId.get(e.source);
+        const tgt = byId.get(e.target);
+        if (!src || !tgt) return e;
+        return { ...e, sourceHandle: pickGatewaySourceHandle(src, tgt) ?? null };
+      }),
+    );
+    setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+  }
 
   // 选中节点（单选），属性面板编辑它。
   const selectedNode = useMemo(() => nodes.find((n) => n.selected), [nodes]);
@@ -860,6 +938,20 @@ function DesignerInner({
           {id == null ? "v1.0.0" : `#${id}`}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          {editing && (
+            <>
+              <Button variant="outline" size="sm" onClick={autoLayout} disabled={layouting}>
+                <Wand2 className="h-4 w-4" />
+                {layouting ? "整理中…" : "自动整理"}
+              </Button>
+              {layoutSnapshot && (
+                <Button variant="ghost" size="sm" onClick={undoAutoLayout}>
+                  <Undo2 className="h-4 w-4" />
+                  撤销整理
+                </Button>
+              )}
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={() => setDataOpen(true)}>
             <Database className="h-4 w-4" />
             查看数据
