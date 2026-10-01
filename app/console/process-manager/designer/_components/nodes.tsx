@@ -360,9 +360,13 @@ function GatewayNode({ id, data, type, selected }: NodeProps) {
   return (
     <div onContextMenu={(e) => onContextMenu(id, e)} className="relative flex items-center justify-center">
       {/* 菱形锚点在四个顶点（Left/Right/Top/Bottom 即菱形的角）。句柄要提到菱形之上（!z-10），
-          否则落点在旋转方形内侧、被实底菱形盖住无法拖动连线。 */}
+          否则落点在旋转方形内侧、被实底菱形盖住无法拖动连线。
+          出锚点三个：右(默认,无 id——旧数据 sourceHandle 为空仍落它) + 上/下(out-top/out-bottom，
+          出边按目标方位自动分配，避免多条分支挤在右角同点出发重合)。进锚点仍只有左角。 */}
       {meta.target && <Handle type="target" position={Position.Left} className="!z-10 !h-2 !w-2" />}
       {meta.source && <Handle type="source" position={Position.Right} className="!z-10 !h-2 !w-2" />}
+      {meta.source && <Handle id="out-top" type="source" position={Position.Top} className="!z-10 !h-2 !w-2" />}
+      {meta.source && <Handle id="out-bottom" type="source" position={Position.Bottom} className="!z-10 !h-2 !w-2" />}
       <div
         className={cn(
           "flex h-11 w-11 rotate-45 items-center justify-center rounded-[4px] border-2 transition-shadow",

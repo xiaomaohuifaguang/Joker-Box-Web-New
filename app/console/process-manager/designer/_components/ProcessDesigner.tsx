@@ -172,6 +172,30 @@ function stripEdge(e: Edge, sourceKind?: string) {
   };
 }
 
+// ===== 网关出边锚点自动分配 =====
+// 网关有 右(默认,无 id)/上(out-top)/下(out-bottom) 三个出锚点，按目标节点中心方位选：
+// |中心 dy| 超过阈值才改走上/下，否则保持右侧默认。目的：多条分支不再挤在右角同点出发重合。
+// 仅网关多出锚点（任务/开始 maxOut=1 无扇出问题）；sourceHandle 随 stripEdge 入 rawData、加载时还原。
+// 注意：只影响连线「从哪个点出发」，出入边数量约束（checkLink 的 maxIn/maxOut）按节点计边数，不受影响。
+const GATEWAY_FAN_THRESHOLD = 48;
+
+function nodeCenterY(n: ProcessFlowNode): number {
+  // measured 是 React Flow 实测高；未测（刚加载/未渲染完）按形状族兜底（事件40/任务32/网关44）。
+  const shape = PROCESS_NODE_REGISTRY[(n.type as ProcessNodeKind) ?? "serviceTask"].shape;
+  const fallback = shape === "gateway" ? 44 : shape === "event" ? 40 : 32;
+  return n.position.y + (n.measured?.height ?? fallback) / 2;
+}
+
+// 返回 undefined=默认右锚点（不写 sourceHandle，兼容旧数据）。非网关源恒 undefined（没有上下锚点）。
+function pickGatewaySourceHandle(source: ProcessFlowNode, target: ProcessFlowNode): string | undefined {
+  if (PROCESS_NODE_REGISTRY[(source.type as ProcessNodeKind) ?? "serviceTask"].shape !== "gateway")
+    return undefined;
+  const dy = nodeCenterY(target) - nodeCenterY(source);
+  if (dy < -GATEWAY_FAN_THRESHOLD) return "out-top";
+  if (dy > GATEWAY_FAN_THRESHOLD) return "out-bottom";
+  return undefined;
+}
+
 // rawData（保存的结构）→ React Flow nodes/edges。nodes 直接还原；edges 由 createEdge 补回渲染样式。
 // rawData 即 add/save 存的 {nodes, edges}（剥样式/运行时），后端透传存储。
 // 序列化当前画布为 rawData（保存 + 查看数据共用，保证所见即所存）。
@@ -186,15 +210,22 @@ function nodesFromRaw(raw: unknown): ProcessFlowNode[] {
   const list = (raw as { nodes?: unknown[] } | undefined)?.nodes;
   return Array.isArray(list) ? (list as ProcessFlowNode[]) : [];
 }
-function edgesFromRaw(raw: unknown): Edge[] {
-  const list = (raw as { edges?: Array<{ id?: string; source: string; target: string; label?: unknown; data?: unknown }> } | undefined)?.edges;
+function edgesFromRaw(raw: unknown, nodes: ProcessFlowNode[]): Edge[] {
+  const list = (raw as { edges?: Array<{ id?: string; source: string; target: string; sourceHandle?: string; targetHandle?: string; label?: unknown; data?: unknown }> } | undefined)?.edges;
   if (!Array.isArray(list)) return [];
+  const byId = new Map(nodes.map((n) => [n.id, n]));
   return list.map((e) => {
     const data = e.data as Edge["data"];
     // label 双写兼容：原生 label 优先；缺则回退 data.label（旧数据/后端只在 data 里放 label 的情况）。
     const label = e.label ?? (data as { label?: unknown } | undefined)?.label;
+    // 扇出锚点还原：优先存量 sourceHandle；旧数据没有则按节点方位补算（仅网关有上/下锚点）。
+    const src = byId.get(e.source);
+    const tgt = byId.get(e.target);
+    const sourceHandle = e.sourceHandle ?? (src && tgt ? pickGatewaySourceHandle(src, tgt) : undefined);
     return createEdge(e.source, e.target, {
       ...(e.id ? { id: e.id } : {}),
+      ...(sourceHandle ? { sourceHandle } : {}),
+      ...(e.targetHandle ? { targetHandle: e.targetHandle } : {}),
       ...(label != null ? { label: label as Edge["label"] } : {}),
       ...(data != null ? { data } : {}),
     });
@@ -291,8 +322,10 @@ function DesignerInner({
         setDescription(info.processDescription ?? "");
         const raw = info.rawData;
         const ns = nodesFromRaw(raw);
-        setNodes(ns.length > 0 ? ns : initialNodes);
-        setEdges(edgesFromRaw(raw));
+        const effNodes = ns.length > 0 ? ns : initialNodes;
+        setNodes(effNodes);
+        // 回填边需要节点坐标来补算网关扇出锚点，传同一份 nodes 保证一致。
+        setEdges(edgesFromRaw(raw, effNodes));
         // 表单绑定回填（payload 顶层 globalFormBinding，与 processName 同级）。
         setFormId(info.globalFormBinding?.formId ?? "");
         setFormVersion(info.globalFormBinding?.formVersion ?? "");
@@ -383,9 +416,20 @@ function DesignerInner({
         return;
       }
       if (!connection.source || !connection.target) return;
-      setEdges((eds) => addEdge(createEdge(connection.source!, connection.target!), eds));
+      // 从默认右锚点拉线（sourceHandle=null）时按方位自动分配扇出锚点；
+      // 显式从上/下锚点拉的（sourceHandle=out-top/out-bottom）尊重用户选择。
+      const src = nodes.find((n) => n.id === connection.source);
+      const tgt = nodes.find((n) => n.id === connection.target);
+      const sourceHandle =
+        connection.sourceHandle ?? (src && tgt ? pickGatewaySourceHandle(src, tgt) : undefined);
+      setEdges((eds) =>
+        addEdge(
+          createEdge(connection.source!, connection.target!, sourceHandle ? { sourceHandle } : {}),
+          eds,
+        ),
+      );
     },
-    [checkLink, setEdges],
+    [checkLink, nodes, setEdges],
   );
 
   // 是否可插入连线中间（有进有出的节点：任务/网关；start/end 自动排除）。
@@ -399,11 +443,13 @@ function DesignerInner({
 
   // 把 nodeId 插入 edgeId 中间：A→B 拆成 A→nodeId（保留原边 label/data 等语义，渲染样式由默认外观补）→ nodeId→B。
   // 用一次 setEdges 原子替换（不混用 updateEdge+addEdges 两个内部 batch 调用，时序/样式更可控）。
+  // droppedNode：面板拖入时节点刚 setNodes、闭包里 nodes 还是上一帧的（不含新节点，find 不到会静默不插入），
+  // 故由 onDrop 把刚创建的新节点对象直接传入；画布内拖动插入不传（节点已在 nodes 里）。
   const insertIntoEdge = useCallback(
-    (nodeId: string, edgeId: string) => {
+    (nodeId: string, edgeId: string, droppedNode?: ProcessFlowNode) => {
       const edge = getEdge(edgeId);
       if (!edge) return;
-      const node = nodes.find((n) => n.id === nodeId);
+      const node = droppedNode ?? nodes.find((n) => n.id === nodeId);
       if (!node) return;
       if (!canInsertKind((node.type as ProcessNodeKind) ?? "serviceTask")) {
         toast.info("开始/结束节点不能插入连线中间");
@@ -417,20 +463,45 @@ function DesignerInner({
         return;
       }
       setEdges((eds) =>
-        eds.flatMap((e) =>
-          e.id === edgeId
-            ? [
-                // 入边：原边改 target=新节点。
-                { ...e, target: nodeId },
-                // 出边：新节点 → 原 target。
-                createEdge(nodeId, edge.target),
-              ]
-            : [e],
-        ),
+        eds.flatMap((e) => {
+          if (e.id !== edgeId) return [e];
+          const src = nodes.find((n) => n.id === e.source);
+          const tgt = nodes.find((n) => n.id === e.target);
+          return [
+            // 入边：原边改 target=新节点；源为网关时按新落点重算扇出锚点。
+            { ...e, target: nodeId, ...(src ? { sourceHandle: pickGatewaySourceHandle(src, node) } : {}) },
+            // 出边：新节点 → 原 target；新节点为网关时同样按方位分锚点。
+            createEdge(nodeId, e.target, tgt ? { sourceHandle: pickGatewaySourceHandle(node, tgt) } : {}),
+          ];
+        }),
       );
       toast.success(`已插入「${node.data.label}」`);
     },
     [getEdge, nodes, canInsertKind, checkLink, setEdges],
+  );
+
+  // 拖动结束重排网关出边锚点：节点位置变了，所有网关出边按新方位重算 上/下/右。
+  // moved=本次拖动的节点（onNodeDragStop 第三参，含最终坐标——state 可能落后一帧）；结果无变化则不动 state。
+  // 注意：手动从上/下锚点拉的线，拖动节点后也会被按方位重算（实验分支的既定行为——自动优先于手动）。
+  const reflowGatewayHandles = useCallback(
+    (moved: ProcessFlowNode[]) => {
+      setEdges((eds) => {
+        const byId = new Map(nodes.map((n) => [n.id, n]));
+        for (const m of moved) byId.set(m.id, m);
+        let changed = false;
+        const next = eds.map((e) => {
+          const src = byId.get(e.source);
+          const tgt = byId.get(e.target);
+          if (!src || !tgt) return e;
+          const h = pickGatewaySourceHandle(src, tgt) ?? null;
+          if ((e.sourceHandle ?? null) === h) return e;
+          changed = true;
+          return { ...e, sourceHandle: h };
+        });
+        return changed ? next : eds;
+      });
+    },
+    [nodes, setEdges],
   );
 
   // 选中节点（单选），属性面板编辑它。
@@ -580,15 +651,16 @@ function DesignerInner({
     [editing, canInsertKind, hoverEdgeId],
   );
 
-  // 拖动结束：压着 edge 松手 → 插入该 edge 中间；否则普通落点。
+  // 拖动结束：压着 edge 松手 → 插入该 edge 中间；否则普通落点。结束后重排网关出边锚点。
   const onNodeDragStop = useCallback(
-    (_event: MouseEvent | TouchEvent, node: Node) => {
+    (_event: MouseEvent | TouchEvent, node: Node, dragged: Node[]) => {
       if (!editing) return;
       const edgeId = hoverEdgeId;
       setHoverEdgeId(null);
       if (edgeId) insertIntoEdge(node.id, edgeId);
+      reflowGatewayHandles((dragged.length > 0 ? dragged : [node]) as ProcessFlowNode[]);
     },
-    [editing, hoverEdgeId, insertIntoEdge],
+    [editing, hoverEdgeId, insertIntoEdge, reflowGatewayHandles],
   );
 
   // 拖入画布：换算屏幕坐标→画布坐标。落在某 edge 热区上则插入该线中间，否则普通放置。
@@ -613,7 +685,7 @@ function DesignerInner({
         };
         setNodes((nds) => nds.concat(node));
         const edgeId = hitEdgeIdAt(e.clientX, e.clientY);
-        if (edgeId) insertIntoEdge(node.id, edgeId);
+        if (edgeId) insertIntoEdge(node.id, edgeId, node);
         return;
       }
 
@@ -632,9 +704,9 @@ function DesignerInner({
         data: { label: nextKindLabel(kind as ProcessNodeKind, nodes) },
       };
       setNodes((nds) => nds.concat(node));
-      // 落点压着连线 → 插入该线中间（仅任务/网关类）。
+      // 落点压着连线 → 插入该线中间（仅任务/网关类）。传入新建节点——闭包 nodes 还是上一帧的。
       const edgeId = hitEdgeIdAt(e.clientX, e.clientY);
-      if (edgeId && canInsertKind(kind as ProcessNodeKind)) insertIntoEdge(node.id, edgeId);
+      if (edgeId && canInsertKind(kind as ProcessNodeKind)) insertIntoEdge(node.id, edgeId, node);
     },
     [editing, nodes, screenToFlowPosition, setNodes, canInsertKind, insertIntoEdge],
   );
