@@ -21,7 +21,8 @@
 .react-flow__handle {
   width: 7px;
   height: 7px;
-  background: var(--card);
+  /* 入点=真·空心环：透明内填透出节点底色（半透明主题色），只剩描边——任何预设/明暗下都是环。 */
+  background: transparent;
   border: 1.5px solid var(--muted-foreground);
   transition: background 120ms, border-color 120ms, box-shadow 120ms;
 }
