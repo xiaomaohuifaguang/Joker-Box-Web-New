@@ -732,9 +732,11 @@ function DesignerInner({
   );
 
   // 拖动结束：压着 edge 松手 → 插入该 edge 中间；否则普通落点。结束后重排网关出边锚点。
+  // 手动拖过节点 = 布局已被用户改动 → 清掉整理快照（否则之后「撤销整理」会把手动调整一起打回）。
   const onNodeDragStop = useCallback(
     (_event: MouseEvent | TouchEvent, node: Node, dragged: Node[]) => {
       if (!editing) return;
+      setLayoutSnapshot(null);
       const edgeId = hoverEdgeId;
       setHoverEdgeId(null);
       if (edgeId) insertIntoEdge(node.id, edgeId);
