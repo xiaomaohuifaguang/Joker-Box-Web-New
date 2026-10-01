@@ -25,3 +25,4 @@ shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `li
 - `menuIcons.tsx`：Menu 图标注册表（`MENU_ICON_GROUPS` 14 类 ~149 个）+ `MenuIcon` switch 渲染（菜单管理选择 + 前台/后台导航渲染共用；硬编码 switch 规避 react-hooks static-components）。
 - `ApiPathBindingTree`：api 绑定树（服务/分组/apiPath 三级 checkbox，`roleBind` 回显、`whiteList` 禁用）；菜单/角色管理共用。
 - `TriCheckbox`：三态勾选框（all/some/none）；`ApiPathBindingTree` + `MenuCheckboxTree` 共用。
+- `process-flow/`：流程图共享件（后台流程设计器 + 前台实例页「流程预览」弹窗共用）——节点体系 `nodes.tsx`、rawData↔画布纯函数 `flow-utils.ts`、只读画布 `ProcessFlowCanvas`、自包含触发件 `ProcessPreviewButton`。详见同级 README。

@@ -34,10 +34,14 @@ export async function addProcessDefinition(
   await api.post<unknown>("/processDefinition/add", { body: payload });
 }
 
-// 详情：POST /processDefinition/info，body { id }。响应 data = ProcessDefinition（含 rawData）。
-export async function getProcessDefinitionInfo(id: number): Promise<ProcessDefinition> {
+// 详情：POST /processDefinition/info，body { id }，query 可选 version（String；不传=最新版本，传了取对应版本）。响应 data = ProcessDefinition（含 rawData）。
+export async function getProcessDefinitionInfo(
+  id: number,
+  version?: string,
+): Promise<ProcessDefinition> {
   const { data } = await api.post<ProcessDefinition>("/processDefinition/info", {
     body: { id },
+    params: version ? { version } : undefined,
   });
   return data;
 }

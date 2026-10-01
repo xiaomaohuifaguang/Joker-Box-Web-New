@@ -64,7 +64,16 @@ import {
   type ProcessNodeKind,
   type ProcessEdgeData,
   type KindMeta,
-} from "./nodes";
+} from "@/components/process-flow/nodes";
+import {
+  createEdge,
+  edgesFromRaw,
+  nodesFromRaw,
+  nodeSizeFor,
+  pickGatewaySourceHandle,
+  edgeColors,
+  DEFAULT_EDGE_OPTIONS,
+} from "@/components/process-flow/flow-utils";
 import { UserTaskConfig } from "./UserTaskConfig";
 import { ServiceTaskConfig } from "./ServiceTaskConfig";
 import { InheritMainFormField } from "./InheritMainFormField";
@@ -75,37 +84,6 @@ const initialNodes: ProcessFlowNode[] = [
   { id: "end", type: "endEvent", position: { x: 560, y: 140 }, data: { label: "结束" } },
 ];
 const initialEdges: Edge[] = [];
-
-// ===== 画布「接线图」视觉系统 =====
-// 刻意不跟随各主题品牌色：画布是工程工具不是品牌页，选中/带电信号要在所有预设+明暗下恒定可预期。
-//   EDGE_ACTIVE 选中 + 拖动插入 + 模拟运行带电：工程蓝（接线图「通电」信号），dark 下用更亮的蓝保证可读。
-//   EDGE_BASE   连线常态：中性石墨，light/dark 两档（JS 写的 stroke 无法像 CSS 自动跟 scheme）。
-// 具体色值而非 CSS 变量——SVG path/marker 的渲染上下文解析不到 :root 上的 var(--x)，会致线不渲染。
-const EDGE_BASE_LIGHT = "#9aa3ae";
-const EDGE_BASE_DARK = "#6b7280";
-const EDGE_ACTIVE_LIGHT = "#2563eb";
-const EDGE_ACTIVE_DARK = "#60a5fa";
-// 默认分支（排他网关唯一兜底出线）专用紫，与常态灰/选中蓝明显区分。
-const EDGE_DEFAULT_LIGHT = "#9333ea";
-const EDGE_DEFAULT_DARK = "#c084fc";
-
-const DEFAULT_EDGE_OPTIONS = { interactionWidth: 24 };
-
-function createEdge(source: string, target: string, base?: Partial<Edge>): Edge {
-  return {
-    // edge id 须符合 NCName（BPMN id 是 xsd:ID）：字母/下划线开头，不含 > 等标记字符。
-    // 故用 e_source_target（_ 连接），不用「source->target」（> 非法）。
-    id: `e_${source}_${target}`,
-    source,
-    target,
-    // 正交折线（横竖分明，交叉处比贝塞尔可辨），小圆角过渡；type/pathOptions 是渲染细节，
-    // 保存时 stripEdge 会剥掉、加载时由这里统一补，不进 rawData。
-    // pathOptions 不在基础 Edge 类型上（仅 BuiltInEdge 各变体有），故用断言补上。
-    type: "smoothstep",
-    ...base,
-    pathOptions: { borderRadius: 8 },
-  } as Edge;
-}
 
 // 生成节点 id 后缀：randomId() 去连字符；crypto.randomUUID 是安全上下文(Secure Context)限定 API，
 // nginx 部署后走 http://<内网IP/域名> 非安全上下文时没有它（randomId 内已兜底时间戳+随机数）。结果仍以 n_ 字母开头、仅字母数字，符合 NCName。
@@ -172,71 +150,15 @@ function stripEdge(e: Edge, sourceKind?: string) {
   };
 }
 
-// ===== 网关出边锚点自动分配 =====
-// 网关有 右(默认,无 id)/上(out-top)/下(out-bottom) 三个出锚点，按目标节点中心方位选：
-// |中心 dy| 超过阈值才改走上/下，否则保持右侧默认。目的：多条分支不再挤在右角同点出发重合。
-// 仅网关多出锚点（任务/开始 maxOut=1 无扇出问题）；sourceHandle 随 stripEdge 入 rawData、加载时还原。
-// 注意：只影响连线「从哪个点出发」，出入边数量约束（checkLink 的 maxIn/maxOut）按节点计边数，不受影响。
-const GATEWAY_FAN_THRESHOLD = 48;
-
-function nodeCenterY(n: ProcessFlowNode): number {
-  // measured 是 React Flow 实测高；未测（刚加载/未渲染完）按形状族兜底（事件40/任务32/网关44）。
-  const shape = PROCESS_NODE_REGISTRY[(n.type as ProcessNodeKind) ?? "serviceTask"].shape;
-  const fallback = shape === "gateway" ? 44 : shape === "event" ? 40 : 32;
-  return n.position.y + (n.measured?.height ?? fallback) / 2;
-}
-
-// 节点外框尺寸（dagre 布局用）：优先实测，否则按形状族兜底（与 nodes.tsx 固定尺寸一致）。
-function nodeSizeFor(n: ProcessFlowNode): { w: number; h: number } {
-  const shape = PROCESS_NODE_REGISTRY[(n.type as ProcessNodeKind) ?? "serviceTask"].shape;
-  const fallback = shape === "task" ? { w: 128, h: 32 } : { w: 44, h: 44 };
-  return { w: n.measured?.width ?? fallback.w, h: n.measured?.height ?? fallback.h };
-}
-
-// 返回 undefined=默认右锚点（不写 sourceHandle，兼容旧数据）。非网关源恒 undefined（没有上下锚点）。
-function pickGatewaySourceHandle(source: ProcessFlowNode, target: ProcessFlowNode): string | undefined {
-  if (PROCESS_NODE_REGISTRY[(source.type as ProcessNodeKind) ?? "serviceTask"].shape !== "gateway")
-    return undefined;
-  const dy = nodeCenterY(target) - nodeCenterY(source);
-  if (dy < -GATEWAY_FAN_THRESHOLD) return "out-top";
-  if (dy > GATEWAY_FAN_THRESHOLD) return "out-bottom";
-  return undefined;
-}
-
-// rawData（保存的结构）→ React Flow nodes/edges。nodes 直接还原；edges 由 createEdge 补回渲染样式。
-// rawData 即 add/save 存的 {nodes, edges}（剥样式/运行时），后端透传存储。
 // 序列化当前画布为 rawData（保存 + 查看数据共用，保证所见即所存）。
 // edges 经 stripEdge 归一化（排他/包容网关出边补必传字段）。
+// 反方向（rawData → nodes/edges）的 nodesFromRaw/edgesFromRaw 与网关锚点补算
+// 在 @/components/process-flow/flow-utils（前台流程预览共用）。
 function buildRawData(nodes: ProcessFlowNode[], edges: Edge[]): ProcessRawData {
   return {
     nodes: nodes.map(stripNode),
     edges: edges.map((e) => stripEdge(e, nodes.find((n) => n.id === e.source)?.type)),
   };
-}
-function nodesFromRaw(raw: unknown): ProcessFlowNode[] {
-  const list = (raw as { nodes?: unknown[] } | undefined)?.nodes;
-  return Array.isArray(list) ? (list as ProcessFlowNode[]) : [];
-}
-function edgesFromRaw(raw: unknown, nodes: ProcessFlowNode[]): Edge[] {
-  const list = (raw as { edges?: Array<{ id?: string; source: string; target: string; sourceHandle?: string; targetHandle?: string; label?: unknown; data?: unknown }> } | undefined)?.edges;
-  if (!Array.isArray(list)) return [];
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  return list.map((e) => {
-    const data = e.data as Edge["data"];
-    // label 双写兼容：原生 label 优先；缺则回退 data.label（旧数据/后端只在 data 里放 label 的情况）。
-    const label = e.label ?? (data as { label?: unknown } | undefined)?.label;
-    // 扇出锚点还原：优先存量 sourceHandle；旧数据没有则按节点方位补算（仅网关有上/下锚点）。
-    const src = byId.get(e.source);
-    const tgt = byId.get(e.target);
-    const sourceHandle = e.sourceHandle ?? (src && tgt ? pickGatewaySourceHandle(src, tgt) : undefined);
-    return createEdge(e.source, e.target, {
-      ...(e.id ? { id: e.id } : {}),
-      ...(sourceHandle ? { sourceHandle } : {}),
-      ...(e.targetHandle ? { targetHandle: e.targetHandle } : {}),
-      ...(label != null ? { label: label as Edge["label"] } : {}),
-      ...(data != null ? { data } : {}),
-    });
-  });
 }
 
 // 流程设计画布：顶栏（返回 + 元信息 + 查看数据 + 模拟运行 + 保存）+ 三栏。
@@ -821,9 +743,7 @@ function DesignerInner({
   }, [paletteSearch]);
 
   const isDark = useIsDark();
-  const edgeBase = isDark ? EDGE_BASE_DARK : EDGE_BASE_LIGHT;
-  const edgeActive = isDark ? EDGE_ACTIVE_DARK : EDGE_ACTIVE_LIGHT;
-  const edgeDefault = isDark ? EDGE_DEFAULT_DARK : EDGE_DEFAULT_LIGHT;
+  const { base: edgeBase, active: edgeActive, default: edgeDefault } = edgeColors(isDark);
 
   // ===== 悬停/选中聚焦（focus mode）=====
   // 悬停优先于选中。命中节点→该节点+相邻连线+邻接节点保持全亮；命中连线→该线+两端节点全亮；

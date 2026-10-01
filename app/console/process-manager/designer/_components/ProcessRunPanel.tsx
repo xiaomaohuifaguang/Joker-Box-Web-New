@@ -5,7 +5,7 @@ import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import type { Edge } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PROCESS_NODE_REGISTRY, type ProcessFlowNode, type ProcessNodeKind } from "./nodes";
+import { PROCESS_NODE_REGISTRY, type ProcessFlowNode, type ProcessNodeKind } from "@/components/process-flow/nodes";
 
 // 模拟运行面板：从「开始」沿连线 BFS 走到「结束」，逐步点亮节点并输出执行轨迹（纯前端，不调后端）。
 interface Step {

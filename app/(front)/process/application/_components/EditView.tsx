@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Container } from "@/components/Container";
+import { ProcessFlowButtons } from "@/components/process-flow/ProcessFlowButtons";
 import type { DynamicFormRendererHandle } from "@/app/console/form/dynamicForm-manager/_components/DynamicFormRenderer";
 import {
   hasProcessForm,
@@ -137,12 +138,18 @@ export function EditView({
         <ArrowLeft className="h-4 w-4" />
         返回
       </Button>
-      <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">编辑草稿</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {metaName}
-          {metaVersion ? ` · v${metaVersion}` : ""}
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-semibold">编辑草稿</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {metaName}
+            {metaVersion ? ` · v${metaVersion}` : ""}
+          </p>
+        </div>
+        <ProcessFlowButtons
+          definitionId={definitionId ?? undefined}
+          version={metaVersion || undefined}
+        />
       </header>
       {loading ? (
         <Skeleton className="h-9 w-full" />

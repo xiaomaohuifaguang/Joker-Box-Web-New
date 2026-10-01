@@ -91,6 +91,13 @@ export function ApprovalListPanel({
   const total = page?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
   const pageNumbers = getPageNumbers(current, totalPages);
+  // 「任务」列仅待办(2)/待认领(3)显示（taskName 仅这两个 tab 返回；同实例多任务行的关键区分）。
+  // 已办(4) 不渲染该列，列数/骨架/空态 colSpan 随之切换。
+  const showTask = activeTab === "2" || activeTab === "3";
+  const colCount = showTask ? 9 : 8;
+  // 骨架屏移动端隐藏列模式（lg 以下只留 编号/标题/任务?/状态/操作）。
+  const skeletonHidden = (j: number) =>
+    showTask ? j >= 3 && j !== 5 && j !== 8 : j >= 2 && j !== 4 && j !== 7;
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,6 +134,10 @@ export function ApprovalListPanel({
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-xs font-medium text-muted-foreground">编号</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground">标题</TableHead>
+              {/* 任务列常驻可见（仅待办/待认领渲染）：同实例多任务多行，任务名是行的关键区分信息 */}
+              {showTask && (
+                <TableHead className="text-xs font-medium text-muted-foreground">任务</TableHead>
+              )}
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">流程</TableHead>
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">版本</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground">状态</TableHead>
@@ -139,10 +150,10 @@ export function ApprovalListPanel({
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: colCount }).map((_, j) => (
                     <TableCell
                       key={j}
-                      className={j >= 2 && j !== 4 && j !== 7 ? "hidden lg:table-cell" : ""}
+                      className={skeletonHidden(j) ? "hidden lg:table-cell" : ""}
                     >
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
@@ -152,7 +163,7 @@ export function ApprovalListPanel({
             ) : records.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={8}
+                  colSpan={colCount}
                   className="h-40 text-center text-sm text-muted-foreground"
                 >
                   暂无审批记录
@@ -164,7 +175,8 @@ export function ApprovalListPanel({
                   PROCESS_INSTANCE_STATUS[r.processStatus ?? ""] ??
                   PROCESS_INSTANCE_STATUS_FALLBACK;
                 return (
-                  <TableRow key={r.id} className="transition-colors hover:bg-brand-2/10">
+                  // key 用 id+taskId 复合：待办/待认领中同一实例可产生多个任务（多行同 id），单 id 会撞 key。
+                  <TableRow key={`${r.id}-${r.taskId ?? ""}`} className="transition-colors hover:bg-brand-2/10">
                     <TableCell className="font-mono text-xs font-medium tracking-wide text-foreground/80">
                       <span className="mr-0.5 text-muted-foreground">№</span>
                       {r.code || "-"}
@@ -172,6 +184,11 @@ export function ApprovalListPanel({
                     <TableCell className="max-w-56 truncate text-sm font-medium">
                       {r.title || "-"}
                     </TableCell>
+                    {showTask && (
+                      <TableCell className="max-w-40 truncate text-sm text-muted-foreground">
+                        {r.taskName || "-"}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden max-w-40 truncate text-xs text-muted-foreground lg:table-cell">
                       {r.processDefinitionName || "-"}
                     </TableCell>
