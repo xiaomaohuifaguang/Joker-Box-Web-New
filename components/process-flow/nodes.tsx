@@ -40,6 +40,8 @@ export interface ProcessNodeData extends Record<string, unknown> {
   __done?: boolean;
   /** 流程追踪·当前任务节点（运行时注入，保存前剥离；与 __active 叠加——蓝 glow + 脉冲） */
   __current?: boolean;
+  /** 流程追踪·面板选中节点（运行时注入，保存前剥离；预览画布 elementsSelectable=false 走不到 RF 的 selected，用自有字段） */
+  __selected?: boolean;
 
   // ---- userTask 专属（BPMN 候选人配置）----
   /** 审批类型：0 申请人自审 / 1 会签 / 2 或签 / 3 随机1人 / 4 认领 / 5 随机多人会签 / 6 随机多人或签 / 7 上一节点选择1人 / 8 上一节点选择多人会签 / 9 上一节点选择多人或签 */
@@ -312,6 +314,7 @@ function EventNode({ id, data, type, selected }: NodeProps) {
           d.__active && "flow-node-active",
           d.__done && "flow-node-done",
           d.__current && "flow-node-current",
+          d.__selected && FLOW_NODE_SELECTED,
         )}
       >
         <div
@@ -346,6 +349,7 @@ function TaskNode({ id, data, type, selected }: NodeProps) {
         d.__active && "flow-node-active",
         d.__done && "flow-node-done",
         d.__current && "flow-node-current",
+        d.__selected && FLOW_NODE_SELECTED,
       )}
     >
       {meta.target && <Handle type="target" position={Position.Left} className="!z-10 !h-2 !w-2" />}
@@ -383,6 +387,7 @@ function GatewayNode({ id, data, type, selected }: NodeProps) {
           d.__active && "flow-node-active",
           d.__done && "flow-node-done",
           d.__current && "flow-node-current",
+          d.__selected && FLOW_NODE_SELECTED,
         )}
       >
         {/* 内容反向旋转回正 */}

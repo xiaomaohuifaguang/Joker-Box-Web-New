@@ -50,12 +50,24 @@ function initialSizeFor(n: ProcessFlowNode): { initialWidth: number; initialHeig
 export function ProcessFlowCanvas({
   rawData,
   track,
+  selectedNodeId,
+  clickableNodeIds,
+  onNodeClick,
+  onPaneClick,
   className,
 }: {
   /** 流程定义画布数据（ProcessDefinition.rawData） */
   rawData?: ProcessRawData;
   /** 流程追踪信息（ProcessInstance.processTrack）；不传=纯预览 */
   track?: ProcessTrack;
+  /** 记录面板选中的节点 id（注入 __selected 中性 ring） */
+  selectedNodeId?: string | null;
+  /** 有处理记录的节点 id 集合（注入 cursor-pointer 可点性提示） */
+  clickableNodeIds?: ReadonlySet<string>;
+  /** 节点点击（流程追踪面板联动用；不传则不可点） */
+  onNodeClick?: (nodeId: string) => void;
+  /** 空白点击（清除节点选中、面板回流程时间线） */
+  onPaneClick?: () => void;
   /** 外层容器类名（必须含确定高度，如 h-[70vh]） */
   className?: string;
 }) {
@@ -63,7 +75,7 @@ export function ProcessFlowCanvas({
   // memo 稳定引用：edgeColors 每次返回新对象，不 memo 会让 edges memo 每次渲染都失效。
   const colors = useMemo(() => edgeColors(isDark), [isDark]);
 
-  // 节点：rawData 还原 + 初始尺寸提示 + 追踪高亮注入（__ 前缀运行时字段，不入库——同设计器 simNodes 的 __active 做法）。
+  // 节点：rawData 还原 + 初始尺寸提示 + 追踪高亮/选中注入（__ 前缀运行时字段，不入库——同设计器 simNodes 的 __active 做法）。
   const nodes = useMemo(() => {
     const list = nodesFromRaw(rawData);
     const done = new Set(track?.doneNodeIds ?? []);
@@ -71,13 +83,23 @@ export function ProcessFlowCanvas({
     const current = track?.currentNodeId;
     return list.map((n) => {
       const sized = { ...n, ...initialSizeFor(n) };
-      if (current === n.id)
-        return { ...sized, data: { ...n.data, __active: true, __current: true } };
-      if (active.has(n.id)) return { ...sized, data: { ...n.data, __active: true } };
-      if (done.has(n.id)) return { ...sized, data: { ...n.data, __done: true } };
-      return sized;
+      const withClick =
+        clickableNodeIds != null && clickableNodeIds.has(n.id)
+          ? { ...sized, className: "cursor-pointer" }
+          : sized;
+      const data: ProcessNodeData = { ...n.data };
+      if (current === n.id) {
+        data.__active = true;
+        data.__current = true;
+      } else if (active.has(n.id)) {
+        data.__active = true;
+      } else if (done.has(n.id)) {
+        data.__done = true;
+      }
+      if (selectedNodeId === n.id) data.__selected = true;
+      return { ...withClick, data };
     });
-  }, [rawData, track]);
+  }, [rawData, track, selectedNodeId, clickableNodeIds]);
 
   // 边：edgesFromRaw 补回渲染细节后统一上显示色。追踪优先：走过的连线绿色加粗（默认分支保留虚线变绿）；
   // 未走过的——默认分支（排他网关兜底）紫虚线 + 「默认」标，其余常态中性石墨。
@@ -126,6 +148,8 @@ export function ProcessFlowCanvas({
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
+        onNodeClick={(_, n) => onNodeClick?.(n.id)}
+        onPaneClick={onPaneClick}
         defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
         fitView
         proOptions={{ hideAttribution: true }}

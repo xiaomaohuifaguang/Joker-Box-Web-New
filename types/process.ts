@@ -129,6 +129,36 @@ export interface DeployedProcessDefinition {
   version?: string;
 }
 
+// 流程处理记录（RoundRecordVO.handleInfos 元素）。
+export interface ProcessHandleInfo {
+  /** 处理类型：apply 申请 / pass 通过 / auto_pass 自动通过 / reject 拒绝 / transfter 转办 / back 驳回 / claim 认领 / to_claim 待认领 / to_do 待办（后两者=当前活动任务：to_claim 无处理人无时间，to_do 有处理人无时间） */
+  handleType?: string;
+  /** 处理人id */
+  handleUser?: string;
+  /** 处理人名称 */
+  handleUserName?: string;
+  /** 轮次 */
+  round?: number;
+  /** 备注 */
+  remark?: string;
+  /** 处理时间（yyyy-MM-dd HH:mm:ss.SSS，GMT+8；展示截到秒） */
+  handleTime?: string;
+  /** 任务id（可空：申请等无任务的记录不返回） */
+  taskId?: string;
+  /** 任务名称（时间线显示用——全节点混排时区分记录所属节点） */
+  taskName?: string;
+  /** 节点id（与 rawData 节点 id 同源；taskName 空时可兜底查节点 label） */
+  taskDefinitionKey?: string;
+}
+
+// 节点轮次处理记录（nodeRoundRecordInfoList 的 value 元素）。
+export interface RoundRecordVO {
+  /** 轮次 */
+  round?: number;
+  /** 处理记录（List 后端已排序，前端原样渲染） */
+  handleInfos?: ProcessHandleInfo[];
+}
+
 // 流程追踪（/processInstance/info 返回，与 processDefinitionName 同级）。
 // 注意：JSON 无 Set，后端 Set<String> 序列化为数组。id 与 rawData 内节点/连线 id 同源。
 export interface ProcessTrack {
@@ -140,7 +170,28 @@ export interface ProcessTrack {
   activeNodeIds?: string[];
   /** 当前任务节点id——仅处理场景（info 传了 taskId）返回，值为该任务所在节点 */
   currentNodeId?: string;
+  /** 节点轮次处理记录（key=节点 id；含当前活动任务 to_claim/to_do） */
+  nodeRoundRecordInfoList?: Record<string, RoundRecordVO[]>;
+  /** 流程处理时间线（全节点混排，含当前活动任务 to_claim/to_do；后端已按时间排序，前端原样渲染、不分轮次；点击画布空白处显示） */
+  processHandleInfoList?: ProcessHandleInfo[];
 }
+
+// 处理记录类型徽标映射（handleType 元素 -> 中文 + 徽标样式）。键外兜底 outline + 原样显示。
+// to_do=default（有人正在进行，主色强调「当前」）/ to_claim=outline（无人认领，弱一档）。
+export const PROCESS_HANDLE_TYPES: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  apply: { label: "申请", variant: "secondary" },
+  pass: { label: "通过", variant: "default" },
+  auto_pass: { label: "自动通过", variant: "outline" },
+  reject: { label: "拒绝", variant: "destructive" },
+  transfter: { label: "转办", variant: "secondary" },
+  back: { label: "驳回", variant: "outline" },
+  claim: { label: "认领", variant: "secondary" },
+  to_claim: { label: "待认领", variant: "outline" },
+  to_do: { label: "待办", variant: "default" },
+};
 
 // 流程实例（/processInstance/queryPage 元素）。processStatus：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中。
 export interface ProcessInstance {
