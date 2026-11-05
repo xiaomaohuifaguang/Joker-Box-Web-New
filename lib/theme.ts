@@ -20,7 +20,7 @@ export type Preset =
 
 // 预设元信息：id 对应 CSS data-theme；swatch 是切换器里的固定预览色（各主题 brand）。
 export const PRESETS: { id: Preset; name: string; swatch: string }[] = [
-  { id: "joker", name: "Joker", swatch: "#c9a227" },
+  { id: "joker", name: "Joker", swatch: "#d9b44a" },
   { id: "ocean", name: "深海", swatch: "#2d8b8b" },
   { id: "sunset", name: "日落大道", swatch: "#e76f51" },
   { id: "forest", name: "森林", swatch: "#2d4a2b" },

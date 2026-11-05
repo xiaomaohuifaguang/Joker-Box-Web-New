@@ -88,7 +88,7 @@ export default function LoginPage() {
         <div aria-hidden className="pointer-events-none absolute inset-8 border border-brand/30" />
         <JesterHat className="h-24 w-24 text-brand" />
         <div className="text-center">
-          <p className="font-display text-3xl font-semibold tracking-tight">Joker Box</p>
+          <p className="font-brand text-3xl font-semibold tracking-tight">Joker Box</p>
           <p className="mt-3 text-sm text-muted-foreground">万千功能，一站聚合</p>
         </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">

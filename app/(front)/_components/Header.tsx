@@ -9,6 +9,7 @@ import { useMenuTree } from "@/hooks/useMenuTree";
 import { useTheme } from "@/hooks/useTheme";
 import { useUser } from "@/hooks/useUser";
 import { UserMenu } from "./UserMenu";
+import { Container } from "@/components/Container";
 import { LayoutToggle } from "@/components/LayoutToggle";
 import { LogoMark } from "@/components/LogoMark";
 import { ThemeSelect } from "@/components/ThemeSelect";
@@ -62,15 +63,15 @@ function NavLink({
       {icon && <MenuIcon name={icon} className="h-4 w-4" />}
       {label}
       {active && (
-        <span className="absolute -bottom-1.5 left-0 h-px w-full bg-brand" />
+        <span className="absolute -bottom-1.5 left-0 h-0.5 w-full bg-brand" />
       )}
     </Link>
   );
 }
 
-// NavigationMenu trigger 样式：覆盖默认填充胶囊，匹配极简文字风。
+// NavigationMenu trigger 样式：覆盖默认填充胶囊，匹配极简文字风；子项命中时父级同样点亮。
 const navTriggerClass =
-  "inline-flex h-auto w-auto items-center gap-1.5 rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
+  "relative inline-flex h-auto w-auto items-center gap-1.5 rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[active=true]:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
 
 function SunIcon() {
   return (
@@ -140,12 +141,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
-      <div className="flex h-16 items-center px-6">
+      <Container className="flex h-16 items-center">
         {/* 左：logo--大王牌标记（小丑帽，无花色）+ 字标 */}
         <div className="flex flex-1 items-center">
           <Link href="/" className="flex items-center gap-2">
             <LogoMark />
-            <span data-slot="logo-text" className="font-display text-lg font-semibold tracking-tight">
+            <span data-slot="logo-text" className="font-brand text-lg font-semibold tracking-tight">
               Joker Box
             </span>
           </Link>
@@ -160,11 +161,23 @@ export function Header() {
             {menuItems.map((item) =>
               item.children?.length ? (
                 <NavigationMenuItem key={item.path}>
-                  <NavigationMenuTrigger className={navTriggerClass}>
+                  <NavigationMenuTrigger
+                    className={navTriggerClass}
+                    data-active={item.children.some(
+                      (c) =>
+                        pathname === c.path || pathname.startsWith(c.path + "/"),
+                    )}
+                  >
                     {item.icon && (
                       <MenuIcon name={item.icon} className="h-4 w-4" />
                     )}
                     {item.name}
+                    {item.children.some(
+                      (c) =>
+                        pathname === c.path || pathname.startsWith(c.path + "/"),
+                    ) && (
+                      <span className="absolute -bottom-1.5 left-0 h-0.5 w-full bg-brand" />
+                    )}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     {/* 子菜单：名称上 / 描述下（有值才渲染），发丝分割线分隔，hover 泛 felt 绿 */}
@@ -400,7 +413,7 @@ export function Header() {
             </SheetContent>
           </Sheet>
         </div>
-      </div>
+      </Container>
     </header>
   );
 }

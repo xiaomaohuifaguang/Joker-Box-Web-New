@@ -8,7 +8,7 @@ export default function Home() {
       {/* hero */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
         <LogoMark className="mb-6 h-12 w-10" />
-        <h1 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl">
+        <h1 className="font-brand text-5xl font-semibold tracking-tight sm:text-6xl">
           Joker Box
         </h1>
         <p className="mt-5 text-lg text-foreground">万千功能，一站聚合。</p>

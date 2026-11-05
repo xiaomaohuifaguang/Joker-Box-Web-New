@@ -116,7 +116,7 @@ export function FrontSidebar() {
               <Link href="/">
                 <LogoMark />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span data-slot="logo-text" className="font-display truncate font-semibold">
+                  <span data-slot="logo-text" className="font-brand truncate font-semibold">
                     Joker Box
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
@@ -215,7 +215,7 @@ export function FrontSidebar() {
                     >
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.name}>
+                          <SidebarMenuButton tooltip={item.name} data-group-active={active}>
                             <MenuIcon name={item.icon ?? ""} />
                             <span>{item.name}</span>
                             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />

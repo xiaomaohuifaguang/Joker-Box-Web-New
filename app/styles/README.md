@@ -28,7 +28,7 @@
 |---|---|
 | 颜色 ×7 | `--background --foreground --surface --muted-foreground --border --brand --brand-2` |
 | 语义色 ×4 | `--success --warning --error --info` |
-| 字体 ×3 | `--display-font --body-font --mono-font`（取值限 `--font-geist-sans / --font-fraunces / --font-geist-mono`，新增字体先在 `app/layout.tsx` 挂 next/font） |
+| 字体 ×3 | `--display-font --body-font --mono-font`（取值限 `--font-geist-sans / --font-fraunces / --font-geist-mono`，新增字体先在 `app/layout.tsx` 挂 next/font）。可选 `--brand-font`：字标专用（`font-brand`，用于 Logo 和首页大标题），未设时回退 `--display-font`。中文回退在 `tokens.css` 统一追加 |
 | 形状 | `--radius` |
 | 阴影分量 ×6 | `--shadow-x --shadow-y --shadow-blur --shadow-spread --shadow-opacity --shadow-color`（color 是 oklch 分量三段，不带 `oklch()`） |
 | 字距 ×2 | `--tracking-display --tracking-normal` |

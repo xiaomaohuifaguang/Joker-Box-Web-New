@@ -16,7 +16,7 @@ shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `li
 - `SystemPromptBanner`：全局公告横幅（仅前台 `(front)/layout.tsx` 挂在 Header 下方）。**悬浮条**：fixed 贴 sticky Header（h-16）下方浮于内容之上（不挤压布局，z-40 让 Header z-50 滚动时盖住它，外层 pointer-events-none 只卡片可点），限高 40vh 可滚。挂载拉 `POST /system/prompt`（白名单，无参 → 生效中公告），过滤当前身份已读后垂直堆叠、各自可关；**点 X = 已读**（`lib/systemPromptRead`：localStorage `read_system_prompts` = `{[owner]: id[]}`，owner=已登录 userId / 未登录 anon；登录时 anon 已读合并进账号——换账号会重新看到该账号未读的）；**拉取成功后 `pruneReadIds` 清掉已不在活跃列表的已读 id**（过期/被删），防 localStorage 越存越多。无公告/拉取失败不渲染。
 - `ThemeSelect`：主题预设切换（前台 Header / 后台顶栏共享）。
 - `ComingSoon`：占位页（Server）。
-- `Container`：流式内容容器 `w-[85%] max-w-[1600px]`，`className` 可覆盖（全宽页用 `w-full max-w-none`）。
+- `Container`：内容容器 `max-w-[1600px]` + 响应式左右内边距（`px-4 sm:px-6 lg:px-8`），`className` 可覆盖（全宽页用 `w-full max-w-none`）；前台 Header/Footer 也用它，保证与内容对齐。
 - `ai-chat/`：AI 会话助手（前后台共用，两个 layout 各挂一份）。右下角悬浮钮 + 右侧 Sheet 抽屉。`AiChatWidget` 总装（`useMounted`+`useAuth` 守卫，登录可见；**点开面板才 `chat.init()` 拉 models/sessions**，hook 挂面板层不关抽屉丢流式状态）+ Header（按渠道分组的模型 Select，优先选择 defaultModelSettings 的 CHAT 默认模型、不可用时回退首个，提交模型 id/新建/历史）+ Messages（user 右 assistant 左，思考块流式展开、出 content 自动折叠，滚动到底）+ Input（Enter 发/Shift+Enter 换行/流式停止）+ SessionList。状态机 `hooks/useAiChat`（sessionId=null 首发后端隐式建会话，SSE 增量累积 content/reasonContent），数据层 `lib/api/aiChat`（流式走 `lib/sse.ts` fetch+ReadableStream 解 data: 帧）。
   assistant 消息 Markdown 渲染（`AiMarkdown`：react-markdown+gfm 懒加载，prose 主题）；头部可切流式/非流式（localStorage `ai-chat-stream` 持久化，非流式走 `chatOnce`）。
   内容区：GFM 表格/任务列表/引用主题化，代码块卡（复制/语言标签/横向滚动 + Shiki css-var 高亮融入预设 token，流式降级），KaTeX 数学，Mermaid 图（懒加载 + token 主题 + DOMPurify 过滤 SVG），消息级复制全文 + 回到底部浮钮；样式统一 `[data-ai-md]` 作用域。

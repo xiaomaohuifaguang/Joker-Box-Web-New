@@ -92,7 +92,7 @@ This is the single most important thing to know. **本项目是 static export（
 
 - **Fonts** use `next/font/google` (`Geist`, `Geist_Mono`, `Fraunces`) exposing CSS variables wired into Tailwind via `@theme inline`. Prefer this over `<link>` font tags.
 - **Styling / 多维主题系统** - Tailwind v4 utilities over tokens，文件拆在 `app/styles/`（`globals.css` 只是入口按序 `@import`）。Two axes: **preset** (`data-theme` on `<html>`，11 套：`joker`(默认)/`ocean`/`sunset`/`forest`/`minimal`/`golden`/`arctic`/`rose`/`tech`/`botanical`/`midnight`) × **scheme** (`.dark`)。一套主题一个文件 `app/styles/themes/<id>.css`（id 对应 `lib/theme.ts` `PRESETS[].id`）；阴影公式统一在 `styles/tokens.css`（主题只填 6 个分量）；组件用 `rounded-*`/`shadow-*`/`bg-*`/`duration-*` 等自动跟随、**无需改组件**。**主题契约（必填 token/推导规则/新增 3 步）见 `app/styles/README.md`**。
-  - `components/Container.tsx`：流式内容容器（`w-[85%] max-w-[1600px]`），`className` 可覆盖（如 jsonFormat 全宽用 `w-full max-w-none`）。
+  - `components/Container.tsx`：内容容器（`max-w-[1600px]` + `px-4 sm:px-6 lg:px-8`），前台 Header/Footer 也用它以保证对齐；`className` 可覆盖（如 jsonFormat 全宽用 `w-full max-w-none`）。
   - `components.json` + `lib/utils.ts` (`cn` = clsx+tailwind-merge) for shadcn/ui. `lib/theme` + `hooks/useTheme` manage scheme+preset (localStorage `theme` + `theme-preset`); inline script in root layout applies both before paint. `hooks/useTheme` returns typed `scheme`/`preset`.
 
 ## 通用坑（跨模块，别再踩）
