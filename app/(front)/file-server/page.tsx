@@ -193,7 +193,8 @@ function FileServer() {
       <header className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-page-title font-semibold">码头</h1>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm">
-          {path.map((p, i) => (
+          {/* 只有根目录时不显示：和页面标题重复 */}
+          {path.length > 1 && path.map((p, i) => (
             <span key={p.id} className="flex shrink-0 items-center gap-1">
               {i > 0 && <span className="text-muted-foreground">/</span>}
               <button

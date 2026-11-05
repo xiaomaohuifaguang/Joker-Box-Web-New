@@ -81,7 +81,7 @@ export function AiCodeBlock({
     <div className="group/code relative mb-2 w-full max-w-full overflow-hidden rounded-md border border-border/60 bg-muted">
       {/* 顶栏：hover 浮现（移动端常驻，靠全局 CSS [data-ai-md] 下 hover:none 处理）。 */}
       <div className="ai-md-codebar flex items-center justify-between border-b border-border/60 bg-muted/80 px-2.5 py-1">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{lang || "code"}</span>
+        <span className="font-mono text-xs text-muted-foreground">{lang || "code"}</span>
         <Button variant="ghost" size="icon-xs" onClick={copy} aria-label="复制代码" title="复制代码">
           {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
         </Button>

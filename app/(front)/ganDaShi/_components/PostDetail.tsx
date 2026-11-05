@@ -85,7 +85,7 @@ export function PostDetail({
               <span className="font-medium text-foreground">
                 {post.createByName || post.createUsername || "匿名"}
               </span>
-              <span className="font-mono">{post.createTime}</span>
+              <span className="tabular-nums">{post.createTime}</span>
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
                 {post.viewCount}
@@ -94,7 +94,7 @@ export function PostDetail({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="ml-auto h-7 w-7 text-destructive"
+                  className="ml-auto h-7 w-7 text-muted-foreground hover:text-destructive"
                   onClick={handleDelete}
                   aria-label="删帖"
                 >

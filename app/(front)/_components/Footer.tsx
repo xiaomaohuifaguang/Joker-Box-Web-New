@@ -1,12 +1,11 @@
 import { Container } from "@/components/Container";
 
-// 前台底部：版权 + 平台标语（内容区同宽对齐）。
+// 前台底部：版权（右下角留给 AI 助手悬浮钮，不放内容）。
 export function Footer() {
   return (
     <footer className="border-t">
-      <Container className="flex items-center justify-between py-6 text-xs text-muted-foreground">
-        <span>© {new Date().getFullYear()} Joker Box</span>
-        <span className="font-mono">an aggregation platform</span>
+      <Container className="py-6 text-xs text-muted-foreground">
+        © {new Date().getFullYear()} Joker Box
       </Container>
     </footer>
   );

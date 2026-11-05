@@ -160,10 +160,10 @@ export function InstanceListPanel({
                     <TableCell>
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </TableCell>
-                    <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell tabular-nums">
                       {r.createTime || "-"}
                     </TableCell>
-                    <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell tabular-nums">
                       {r.updateTime || "-"}
                     </TableCell>
                     <TableCell className="text-right">
