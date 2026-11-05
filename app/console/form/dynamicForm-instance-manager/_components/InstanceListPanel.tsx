@@ -111,10 +111,10 @@ export function InstanceListPanel({
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {inst.id}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {inst.createTime}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {inst.updateTime}
                   </TableCell>
                   <TableCell className="text-right">

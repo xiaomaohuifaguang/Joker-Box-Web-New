@@ -37,9 +37,9 @@ import {
 import type { ProcessDefinition } from "@/types";
 import { DataPagination } from "@/components/DataPagination";
 
-const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+const STATUS: Record<string, { label: string; variant: "success" | "secondary" | "outline" }> = {
   "0": { label: "草稿", variant: "secondary" },
-  "1": { label: "已发布", variant: "default" },
+  "1": { label: "已发布", variant: "success" },
   "-1": { label: "停用", variant: "outline" },
 };
 
@@ -222,7 +222,7 @@ export function ProcessListPanel({
                         {STATUS[status]?.label ?? status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell tabular-nums">
                       {p.updateTime || "-"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -254,7 +254,7 @@ export function ProcessListPanel({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => setDeleting(p)}
                             aria-label="删除"
                           >

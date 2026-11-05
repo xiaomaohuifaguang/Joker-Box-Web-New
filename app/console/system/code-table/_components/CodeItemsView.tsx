@@ -162,12 +162,7 @@ export function CodeItemsView({
               {table.tree === "1" ? "树形" : "扁平"}
             </Badge>
             <Badge
-              variant={table.status === "1" ? "default" : "outline"}
-              className={
-                table.status === "1"
-                  ? "bg-brand text-background"
-                  : "text-muted-foreground"
-              }
+              variant={table.status === "1" ? "success" : "outline"}
             >
               {table.status === "1" ? "启用" : "停用"}
             </Badge>

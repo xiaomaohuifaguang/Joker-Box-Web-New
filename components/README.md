@@ -3,7 +3,7 @@
 路由私有的组件放该路由的 `_components/`（不进路由）；这里是**跨路由共享**的。
 
 ## ui/
-shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `lib/utils.ts` 的 `cn()`(clsx+tailwind-merge)。用主题 token（`bg-background`/`rounded-md`/`shadow-sm` 等），换预设只换 token 值。
+shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `lib/utils.ts` 的 `cn()`(clsx+tailwind-merge)。用主题 token（`bg-background`/`rounded-md`/`shadow-sm` 等），换预设只换 token 值。状态徽标用 `Badge` 语义变体（`success`/`warning`/`info`/`destructive`/`outline`），不要在 className 里写死颜色；`default` 是品牌金，留给主操作。列表里的删除图标默认中性色、悬停才变红。
 
 ## 守卫（统一规则：未登录或无权限 → 404，隐藏页面存在）
 - `RequireAuth`：登录守卫（如 `/file-server`）。

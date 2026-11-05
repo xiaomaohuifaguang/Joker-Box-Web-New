@@ -161,7 +161,7 @@ export default function SystemPromptManagerPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={4} title="暂无提示词" />
+              <TableEmptyRow colSpan={4} title="暂无提示词" description="调整搜索条件，或点右上角新增。" />
             ) : (
               records.map((record) => (
                 <TableRow key={record.id} className="group">
@@ -188,7 +188,7 @@ export default function SystemPromptManagerPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(record)}
                         aria-label="删除"
                       >

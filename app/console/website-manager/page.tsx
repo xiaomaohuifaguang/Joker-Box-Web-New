@@ -191,7 +191,7 @@ export default function WebsiteManagerPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={6} title="暂无收藏" />
+              <TableEmptyRow colSpan={6} title="暂无收藏" description="调整搜索条件，或点右上角新增。" />
             ) : (
               records.map((record) => (
                 <TableRow key={record.id} className="group">
@@ -213,7 +213,7 @@ export default function WebsiteManagerPage() {
                   <TableCell className="hidden max-w-48 truncate text-xs text-muted-foreground lg:table-cell">
                     {record.description || "-"}
                   </TableCell>
-                  <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                  <TableCell className="hidden text-xs text-muted-foreground lg:table-cell tabular-nums">
                     {record.updateTime}
                   </TableCell>
                   <TableCell className="text-right">
@@ -230,7 +230,7 @@ export default function WebsiteManagerPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(record)}
                         aria-label="删除"
                       >

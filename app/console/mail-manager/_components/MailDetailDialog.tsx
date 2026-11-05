@@ -85,7 +85,7 @@ export function MailDetailDialog({
             </span>
             <span>
               发送时间：
-              <span className="font-mono text-foreground">{mail?.sendTime}</span>
+              <span className="text-foreground tabular-nums">{mail?.sendTime}</span>
             </span>
           </DialogDescription>
         </DialogHeader>

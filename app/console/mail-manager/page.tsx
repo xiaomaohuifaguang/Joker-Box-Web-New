@@ -102,7 +102,7 @@ export default function MailManagerPage() {
                   <TableCell className="max-w-md truncate text-sm font-medium">
                     {mail.subject}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {mail.sendTime}
                   </TableCell>
                   <TableCell className="text-right">

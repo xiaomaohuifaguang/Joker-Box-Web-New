@@ -220,7 +220,7 @@ export default function ModelManagerPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={7} title="暂无模型" />
+              <TableEmptyRow colSpan={7} title="暂无模型" description="调整搜索条件，或点右上角新增。" />
             ) : (
               records.map((record) => (
                 <TableRow key={record.id} className="group">
@@ -296,7 +296,7 @@ export default function ModelManagerPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(record)}
                         aria-label="删除"
                       >

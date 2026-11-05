@@ -114,7 +114,7 @@ export function GatewayConditionEditor({
     <>
       <Button type="button" variant="outline" size="sm" className="h-9 w-full justify-start" onClick={openDialog}>
         配置条件
-        <span className="ml-auto text-[10px] text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           {condCount > 0 ? `${condCount} 项` : "未配置"}
         </span>
       </Button>

@@ -68,7 +68,7 @@ export default function TableControl({ value, onChange, disabled, field }: Field
                     type="button"
                     onClick={() => removeRow(r)}
                     aria-label="删除行"
-                    className="rounded-full p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-destructive"
+                    className="rounded-full p-1 text-muted-foreground/70 transition-colors hover:bg-muted text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

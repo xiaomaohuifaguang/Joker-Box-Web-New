@@ -473,7 +473,7 @@ export function AiChannelFormDialog({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-destructive"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                   onClick={() => removeModel(index)}
                                   aria-label={`删除第 ${index + 1} 行模型`}
                                 >

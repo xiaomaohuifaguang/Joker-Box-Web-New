@@ -412,7 +412,7 @@ export function MenuTreeTable({
 function IconChip({ name }: { name: string }) {
   if (!name) return null;
   return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border text-brand-2">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border text-brand">
       <MenuIcon name={name} className="h-3.5 w-3.5" />
     </span>
   );
@@ -505,19 +505,14 @@ function SortableRow({
       {/* 白名单 */}
       <div>
         <Badge
-          variant={node.whiteList === "1" ? "default" : "outline"}
-          className={cn(
-            node.whiteList === "1"
-              ? "bg-brand text-background"
-              : "text-muted-foreground",
-          )}
+          variant={node.whiteList === "1" ? "info" : "outline"}
         >
           {node.whiteList === "1" ? "是" : "否"}
         </Badge>
       </div>
 
       {/* 更新时间 */}
-      <div className="hidden truncate font-mono text-xs text-muted-foreground lg:block">
+      <div className="hidden truncate text-xs text-muted-foreground lg:block tabular-nums">
         {node.updateTime}
       </div>
 
@@ -544,7 +539,7 @@ function SortableRow({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-destructive"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
           onClick={onDelete}
           aria-label="删除"
         >

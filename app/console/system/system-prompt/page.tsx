@@ -169,7 +169,7 @@ export default function SystemPromptPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={6} title="暂无系统提示" />
+              <TableEmptyRow colSpan={6} title="暂无系统提示" description="调整搜索条件，或点右上角新增。" />
             ) : (
               records.map((record) => (
                 <TableRow key={record.id} className="group">
@@ -181,9 +181,9 @@ export default function SystemPromptPage() {
                   </TableCell>
                   <TableCell>
                     {isActive(record.deadTime, now) ? (
-                      <Badge>生效中</Badge>
+                      <Badge variant="success">生效中</Badge>
                     ) : (
-                      <Badge variant="secondary">已过期</Badge>
+                      <Badge variant="outline">已过期</Badge>
                     )}
                   </TableCell>
                   <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
@@ -209,7 +209,7 @@ export default function SystemPromptPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(record)}
                         aria-label="删除"
                       >

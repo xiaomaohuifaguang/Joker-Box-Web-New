@@ -138,7 +138,7 @@ export function ProcessRunPanel({
                 <Icon className="h-3 w-3" />
               </span>
               <span className="min-w-0 flex-1 truncate font-medium">{s.label}</span>
-              <span className="text-[10px] text-muted-foreground">{meta.label}</span>
+              <span className="text-xs text-muted-foreground">{meta.label}</span>
             </li>
           );
         })}

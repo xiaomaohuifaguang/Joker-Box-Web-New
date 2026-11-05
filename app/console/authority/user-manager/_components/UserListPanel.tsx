@@ -274,7 +274,7 @@ export function UserListPanel({
                   <TableCell className="font-mono text-xs">
                     {user.userExtend?.phone || "-"}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {user.createTime}
                   </TableCell>
                   <TableCell className="text-right">
@@ -300,7 +300,7 @@ export function UserListPanel({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(user)}
                         aria-label="删除"
                       >

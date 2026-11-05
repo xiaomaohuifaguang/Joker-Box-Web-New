@@ -44,7 +44,7 @@ export function OrgTreePanel({
         <div className="font-display text-sm font-semibold tracking-wide">
           机构树
         </div>
-        <div className="font-mono text-[10px] text-muted-foreground">
+        <div className="font-mono text-xs text-muted-foreground">
           {total} 个机构
         </div>
       </div>
@@ -115,7 +115,7 @@ function OrgTreeNode({
         >
           <span className="truncate">{node.name}</span>
           {hasChildren && (
-            <span className="ml-auto shrink-0 rounded-full border px-1.5 font-mono text-[10px] leading-4 text-muted-foreground">
+            <span className="ml-auto shrink-0 rounded-full border px-1.5 font-mono text-xs leading-4 text-muted-foreground">
               {childCount}
             </span>
           )}

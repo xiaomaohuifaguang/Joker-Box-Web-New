@@ -27,6 +27,13 @@ import { DataPagination } from "@/components/DataPagination";
 import { TableEmptyRow } from "@/components/TableEmptyRow";
 
 
+// 列表不展示完整密钥（查看详情或编辑时才显示）。
+function maskSecret(value?: string | null): string {
+  if (!value) return "-";
+  if (value.length <= 10) return "••••••";
+  return `${value.slice(0, 6)}••••••${value.slice(-4)}`;
+}
+
 export default function AiChannelPage() {
 
     const [searchInput, setSearchInput] = useState("");
@@ -129,16 +136,16 @@ export default function AiChannelPage() {
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
                                 <TableHead className="hidden md:table-cell">
-                                    渠道id
+                                    ID
                                 </TableHead>
-                                <TableHead className="hidden md:table-cell">
+                                <TableHead>
                                     渠道名称
                                 </TableHead>
                                 <TableHead className="hidden md:table-cell">
                                     供应商
                                 </TableHead>
                                 <TableHead className="hidden md:table-cell">
-                                    API KEY
+                                    API Key
                                 </TableHead>
                             <TableHead className="w-24 text-right">
                                 操作
@@ -153,7 +160,7 @@ export default function AiChannelPage() {
                             <TableCell
                                     key={j}
                                     className={
-                                    j === 1 || j === 2 ? "hidden md:table-cell" : ""
+                                    j === 0 || j === 2 || j === 3 ? "hidden md:table-cell" : ""
                             }
                             >
                             <Skeleton className="h-6 w-full" />
@@ -162,21 +169,21 @@ export default function AiChannelPage() {
                         </TableRow>
                         ))
                         ) : records.length === 0 ? (
-                        <TableEmptyRow colSpan={5} title="暂无数据" />
+                        <TableEmptyRow colSpan={5} title="暂无渠道" description="调整搜索条件，或点右上角新增。" />
                         ) : (
                         records.map((record) => (
                         <TableRow key={record.id} className="group">
                                 <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                                     {record.id ?? "-"}
                                 </TableCell>
-                                <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                                <TableCell className="text-sm font-medium">
                                     {record.name ?? "-"}
                                 </TableCell>
                                 <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                                     {record.isCustom ? "自定义渠道" : record.providerName ?? "-"}
                                 </TableCell>
                                 <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
-                                    {record.apiKey ?? "-"}
+                                    {maskSecret(record.apiKey)}
                                 </TableCell>
                             <TableCell className="text-right">
                                 <div className="flex justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
@@ -201,7 +208,7 @@ export default function AiChannelPage() {
                                     <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-destructive"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                             onClick={() => setDeleting(record)}
                                     aria-label="删除"
                                     >

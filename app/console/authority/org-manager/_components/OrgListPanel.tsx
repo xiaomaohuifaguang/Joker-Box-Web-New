@@ -216,10 +216,10 @@ export function OrgListPanel({
                   <TableCell className="text-muted-foreground">
                     {org.parentName || "—"}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {org.createTime}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {org.updateTime}
                   </TableCell>
                   <TableCell className="text-right">
@@ -236,7 +236,7 @@ export function OrgListPanel({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(org)}
                         aria-label="删除"
                       >

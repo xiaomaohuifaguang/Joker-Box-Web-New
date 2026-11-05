@@ -23,7 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { ApiPath, SelectOption } from "@/types";
 import { ServerGroupCascader } from "./_components/ServerGroupCascader";
 import { ApiPathEditDialog } from "./_components/ApiPathEditDialog";
@@ -150,7 +149,7 @@ export default function ApiManagerPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={7} title="暂无数据" />
+              <TableEmptyRow colSpan={7} title="没有符合条件的 API" description="调整或重置筛选条件后再试。" />
             ) : (
               records.map((item, idx) => (
                 <TableRow key={`${item.path}-${item.server}-${idx}`}>
@@ -162,17 +161,12 @@ export default function ApiManagerPage() {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={(item.whiteList ?? "0") === "1" ? "default" : "outline"}
-                      className={cn(
-                        (item.whiteList ?? "0") === "1"
-                          ? "bg-brand text-background"
-                          : "text-muted-foreground",
-                      )}
+                      variant={(item.whiteList ?? "0") === "1" ? "info" : "outline"}
                     >
                       {(item.whiteList ?? "0") === "1" ? "是" : "否"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {item.createTime}
                   </TableCell>
                   <TableCell className="text-right">

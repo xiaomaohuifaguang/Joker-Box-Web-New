@@ -219,7 +219,7 @@ export function CodeTableListPanel({
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={6} title="暂无码表" />
+              <TableEmptyRow colSpan={6} title="暂无码表" description="调整搜索条件，或点右上角新增。" />
             ) : (
               records.map((table) => (
                 <TableRow key={table.id} className="group">
@@ -232,12 +232,7 @@ export function CodeTableListPanel({
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={table.status === "1" ? "default" : "outline"}
-                      className={
-                        table.status === "1"
-                          ? "bg-brand text-background"
-                          : "text-muted-foreground"
-                      }
+                      variant={table.status === "1" ? "success" : "outline"}
                     >
                       {table.status === "1" ? "启用" : "停用"}
                     </Badge>
@@ -268,7 +263,7 @@ export function CodeTableListPanel({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(table)}
                         aria-label="删除"
                       >

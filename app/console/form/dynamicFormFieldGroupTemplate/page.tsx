@@ -140,7 +140,7 @@ export default function DynamicFormFieldGroupTemplatePage() {
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
                                 <TableHead className="hidden md:table-cell">
-                                    字段组模板id
+                                    ID
                                 </TableHead>
                                 <TableHead className="hidden md:table-cell">
                                     标题
@@ -176,7 +176,7 @@ export default function DynamicFormFieldGroupTemplatePage() {
                         </TableRow>
                         ))
                         ) : records.length === 0 ? (
-                        <TableEmptyRow colSpan={4} title="暂无数据" />
+                        <TableEmptyRow colSpan={4} title="暂无字段组模板" description="调整搜索条件，或点右上角新增。" />
                         ) : (
                         records.map((record) => (
                         <TableRow key={record.id} className="group">
@@ -209,7 +209,7 @@ export default function DynamicFormFieldGroupTemplatePage() {
                                     <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-destructive"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                             onClick={() => setDeleting(record)}
                                     aria-label="删除"
                                     >

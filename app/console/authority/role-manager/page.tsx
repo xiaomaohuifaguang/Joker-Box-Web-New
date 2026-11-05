@@ -173,19 +173,19 @@ export default function RoleManagerPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableEmptyRow colSpan={4} title="暂无角色" />
+              <TableEmptyRow colSpan={4} title="暂无角色" description="调整搜索条件，或点右上角新增。" />
             ) : (
               records.map((role) => (
                 <TableRow key={role.id} className="group">
                   <TableCell className="text-sm font-medium">{role.name}</TableCell>
                   <TableCell>
                     {role.admin === "1" ? (
-                      <Badge className="bg-brand text-background">后台管理</Badge>
+                      <Badge variant="info">后台管理</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {role.updateTime}
                   </TableCell>
                   <TableCell className="text-right">
@@ -202,7 +202,7 @@ export default function RoleManagerPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleting(role)}
                         aria-label="删除"
                       >

@@ -180,17 +180,17 @@ export interface ProcessTrack {
 // to_do=default（有人正在进行，主色强调「当前」）/ to_claim=outline（无人认领，弱一档）。
 export const PROCESS_HANDLE_TYPES: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" | "success" | "info" }
 > = {
   apply: { label: "申请", variant: "secondary" },
-  pass: { label: "通过", variant: "default" },
+  pass: { label: "通过", variant: "success" },
   auto_pass: { label: "自动通过", variant: "outline" },
   reject: { label: "拒绝", variant: "destructive" },
   transfter: { label: "转办", variant: "secondary" },
   back: { label: "驳回", variant: "outline" },
   claim: { label: "认领", variant: "secondary" },
   to_claim: { label: "待认领", variant: "outline" },
-  to_do: { label: "待办", variant: "default" },
+  to_do: { label: "待办", variant: "info" },
 };
 
 // 流程实例（/processInstance/queryPage 元素）。processStatus：0 草稿 / 10 已完成 / 11 已终止 / 其他 审批中。
@@ -280,17 +280,17 @@ export interface ProcessHandleParam {
 // 实例状态徽标映射。键外（非 0/10/11）视为审批中。
 export const PROCESS_INSTANCE_STATUS: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "outline" }
+  { label: string; variant: "success" | "secondary" | "outline" | "info" }
 > = {
   "0": { label: "草稿", variant: "secondary" },
-  "10": { label: "已完成", variant: "default" },
+  "10": { label: "已完成", variant: "success" },
   "11": { label: "已终止", variant: "outline" },
 };
 
 // 审批中（默认/回退）徽标。
 export const PROCESS_INSTANCE_STATUS_FALLBACK = {
   label: "审批中",
-  variant: "outline" as const,
+  variant: "info" as const,
 };
 
 // 审批操作按钮映射（buttonActions 元素 -> 中文 + 按钮样式）。pass 主操作，back/reject 次/危险。
