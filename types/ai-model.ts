@@ -37,6 +37,10 @@ export interface AiModel {
   model: string;
   /** 类型（CHAT 对话 / EMBEDDING 向量） */
   type: AiModelType;
+  /** 供应商名称（分页返回，可能为空） */
+  providerName?: string;
+  /** 渠道名称（分页返回，可能为空） */
+  channelName?: string;
   /** 向量维度（仅 EMBEDDING 有值） */
   dimension?: number;
   /** 图形理解能力（默认 false） */

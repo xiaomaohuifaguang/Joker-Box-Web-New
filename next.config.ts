@@ -22,6 +22,10 @@ if (process.env.TAURI_ENV_PLATFORM) {
 const nextConfig: NextConfig = {
   output: 'export',
   allowedDevOrigins: ['10.144.0.1', 'localhost'],
+  // 用户目录也存在 package-lock.json 时，避免 Turbopack 误把它推断为工作区根目录。
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 // 开发期把 /joker-box/* 代理到后端（同源、无 CORS）。
