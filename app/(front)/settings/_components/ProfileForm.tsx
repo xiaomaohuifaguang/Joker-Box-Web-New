@@ -95,7 +95,6 @@ function ProfileFormInner({ user }: { user: User }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-sm bg-brand" />
           个人资料
         </CardTitle>
         <CardDescription>更新你的头像、昵称、性别和手机号。</CardDescription>

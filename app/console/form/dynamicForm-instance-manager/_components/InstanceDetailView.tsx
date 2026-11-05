@@ -67,7 +67,7 @@ export function InstanceDetailView({
           <ArrowLeft className="h-4 w-4" />
           返回
         </Button>
-        <h1 className="font-display text-lg font-semibold">
+        <h1 className="text-page-title font-semibold">
           {form?.name ?? "实例详情"}
         </h1>
         {form?.version && (

@@ -77,13 +77,13 @@ export function FileCard({
           >
             <FileIcon
               item={item}
-              className={`h-9 w-9 ${isFolder ? "text-brand-2" : "text-muted-foreground"}`}
+              className={`h-9 w-9 ${isFolder ? "text-brand" : "text-muted-foreground"}`}
             />
             <span className="line-clamp-2 break-all text-xs font-medium">
               {item.filename}
             </span>
           </button>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {isFolder ? "文件夹" : formatBytes(item.size)}
           </span>
           <div className="absolute right-1 top-1 flex items-center gap-0.5 rounded-md bg-background/80 p-0.5 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
@@ -110,7 +110,7 @@ export function FileCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-destructive"
+              className="h-6 w-6 text-muted-foreground hover:text-destructive"
               onClick={onDelete}
               aria-label="删除"
             >

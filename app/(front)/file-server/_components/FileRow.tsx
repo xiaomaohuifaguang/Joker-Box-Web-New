@@ -35,7 +35,7 @@ export function FileRow({
             >
               <FileIcon
                 item={item}
-                className={`h-4 w-4 shrink-0 ${isFolder ? "text-brand-2" : "text-muted-foreground"}`}
+                className={`h-4 w-4 shrink-0 ${isFolder ? "text-brand" : "text-muted-foreground"}`}
               />
               <span className="truncate font-medium">{item.filename}</span>
             </button>
@@ -43,7 +43,7 @@ export function FileRow({
           <TableCell className="text-muted-foreground">
             {isFolder ? "—" : formatBytes(item.size)}
           </TableCell>
-          <TableCell className="font-mono text-xs text-muted-foreground">
+          <TableCell className="text-xs text-muted-foreground tabular-nums">
             {item.updateTime}
           </TableCell>
           <TableCell className="text-right">
@@ -71,7 +71,7 @@ export function FileRow({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-destructive"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 onClick={onDelete}
                 aria-label="删除"
               >

@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 
 import type {AiProvider} from "@/types";
 import {Button} from "@/components/ui/button";
-import {ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Search, Trash2} from "lucide-react";
+import { Pencil, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import {Input} from "@/components/ui/input";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Skeleton} from "@/components/ui/skeleton";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {useAiProviderPage} from "@/hooks/useAiProviderPage";
 import {toast} from "sonner";
 import {ApiError} from "@/lib/api";
@@ -23,16 +22,8 @@ import {
     AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { AiProviderFormDialog } from "./_components/AiProviderFormDialog";
-
-const PAGE_SIZES = [10, 20, 50];
-
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-    if (current >= total - 3)
-        return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-    return [1, "…", current - 1, current, current + 1, "…", total];
-}
+import { DataPagination } from "@/components/DataPagination";
+import { TableEmptyRow } from "@/components/TableEmptyRow";
 
 
 export default function AiProviderPage() {
@@ -64,8 +55,6 @@ export default function AiProviderPage() {
 
     const records = page?.records ?? [];
     const total = page?.total ?? 0;
-    const totalPages = Math.max(1, Math.ceil(total / size));
-    const pageNumbers = getPageNumbers(current, totalPages);
 
     function openAdd() {
         setEditing(null);
@@ -101,7 +90,7 @@ export default function AiProviderPage() {
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-lg font-semibold">供应商管理</h1>
+                <h1 className="text-page-title font-semibold">供应商管理</h1>
                 <Button
                     onClick={openAdd}
                     size="sm" className="ml-auto">
@@ -137,16 +126,16 @@ export default function AiProviderPage() {
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
-                            <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
-                                供应商id
+                            <TableHead className="hidden md:table-cell">
+                                ID
                             </TableHead>
-                            <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
+                            <TableHead className="hidden md:table-cell">
                                 供应商名称
                             </TableHead>
-                            <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
-                                供应商baseurl
+                            <TableHead className="hidden md:table-cell">
+                                Base URL
                             </TableHead>
-                            <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">
+                            <TableHead className="w-24 text-right">
                                 操作
                             </TableHead>
                         </TableRow>
@@ -168,14 +157,7 @@ export default function AiProviderPage() {
                                 </TableRow>
                             ))
                         ) : records.length === 0 ? (
-                            <TableRow className="hover:bg-transparent">
-                                <TableCell
-                                    colSpan={4}
-                                    className="h-40 text-center text-sm text-muted-foreground"
-                                >
-                                    暂无数据
-                                </TableCell>
-                            </TableRow>
+                            <TableEmptyRow colSpan={4} title="暂无供应商" description="调整搜索条件，或点右上角新增。" />
                         ) : (
                             records.map((record) => (
                                 <TableRow key={record.id} className="group">
@@ -202,7 +184,7 @@ export default function AiProviderPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8 text-destructive"
+                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                                 onClick={() => setDeleting(record)}
                                                 aria-label="删除"
                                             >
@@ -218,66 +200,16 @@ export default function AiProviderPage() {
             </div>
 
             {/* 分页 */}
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <span>共 {total} 条</span>
-                <div className="ml-auto flex items-center gap-1">
-                    <Select
-                        value={String(size)}
-                        onValueChange={(v) => {
-                            setSize(Number(v));
-                            setCurrent(1);
-                        }}
-                    >
-                        <SelectTrigger className="h-8 w-28">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {PAGE_SIZES.map((s) => (
-                                <SelectItem key={s} value={String(s)}>
-                                    {s} / 页
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={current <= 1}
-                        onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-                        aria-label="上一页"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    {pageNumbers.map((p, i) =>
-                            p === "…" ? (
-                                <span key={`e-${i}`} className="px-1 text-muted-foreground">
-                …
-              </span>
-                            ) : (
-                                <Button
-                                    key={p}
-                                    variant={p === current ? "default" : "outline"}
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => setCurrent(p)}
-                                >
-                                    {p}
-                                </Button>
-                            ),
-                    )}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={current >= totalPages}
-                        onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-                        aria-label="下一页"
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+            <DataPagination
+              current={current}
+              size={size}
+              total={total}
+              onCurrentChange={setCurrent}
+              onSizeChange={(s) => {
+                setSize(s);
+                setCurrent(1);
+              }}
+            />
             <AiProviderFormDialog
                 open={formOpen}
                 onOpenChange={setFormOpen}

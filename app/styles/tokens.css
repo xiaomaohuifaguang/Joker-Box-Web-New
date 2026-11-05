@@ -35,14 +35,15 @@
   --color-popover-foreground: var(--foreground);
   --color-primary: var(--brand);
   --color-primary-foreground: var(--background);
-  --color-secondary: var(--surface);
+  /* 中性填充由 foreground + surface 派生：在 background 和 surface 两种底色上都看得出层次。 */
+  --color-secondary: color-mix(in oklab, var(--foreground) 6%, var(--surface));
   --color-secondary-foreground: var(--foreground);
-  --color-muted: var(--surface);
-  --color-accent: var(--background);
+  --color-muted: color-mix(in oklab, var(--foreground) 5%, var(--surface));
+  --color-accent: color-mix(in oklab, var(--foreground) 9%, var(--surface));
   --color-accent-foreground: var(--foreground);
-  --color-destructive: var(--brand);
+  --color-destructive: var(--error);
   --color-destructive-foreground: var(--background);
-  --color-input: var(--border);
+  --color-input: color-mix(in oklab, var(--foreground) 30%, var(--surface));
   --color-ring: var(--brand);
 
   /* 语义色（success/warning/error/info）*/
@@ -56,7 +57,7 @@
   --color-sidebar-foreground: var(--foreground);
   --color-sidebar-primary: var(--brand);
   --color-sidebar-primary-foreground: var(--background);
-  --color-sidebar-accent: var(--background);
+  --color-sidebar-accent: color-mix(in oklab, var(--foreground) 9%, var(--surface));
   --color-sidebar-accent-foreground: var(--foreground);
   --color-sidebar-border: var(--border);
   --color-sidebar-ring: var(--brand);
@@ -84,9 +85,21 @@
   --shadow-2xl: var(--elevation-2xl);
 
   /* 字体（每套主题自带，跟随 data-theme）*/
-  --font-sans: var(--body-font);
-  --font-mono: var(--mono-font);
-  --font-display: var(--display-font);
+  --font-sans: var(--body-font), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-mono: var(--mono-font), "PingFang SC", "Microsoft YaHei", monospace;
+  --font-display: var(--display-font), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  /* 字标字体：只用于 Logo 和首页大标题；主题未设 --brand-font 时继承 Joker（:root）的 Fraunces。 */
+  --font-brand: var(--brand-font, var(--display-font)), "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /* 字号（页面标题 20/28、区块标题 16/24、正文 14/22、辅助 13/20、最小 12）*/
+  --text-page-title: 1.25rem;
+  --text-page-title--line-height: 1.75rem;
+  --text-section: 1rem;
+  --text-section--line-height: 1.5rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.25rem;
 
   /* 字距（每套主题 --tracking-normal 为基准，tracking-* 六档跟随）*/
   --tracking-tighter: calc(var(--tracking-normal, 0em) - 0.05em);

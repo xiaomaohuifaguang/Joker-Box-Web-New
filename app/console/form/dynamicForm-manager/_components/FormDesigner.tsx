@@ -278,7 +278,7 @@ export function FormDesigner({
           <ArrowLeft className="h-4 w-4" />
           返回
         </Button>
-        <h1 className="font-display text-lg font-semibold">
+        <h1 className="text-page-title font-semibold">
           {readOnly ? "查看表单" : id ? "编辑表单" : "新增表单"}
         </h1>
         {showVersionSwitch && (

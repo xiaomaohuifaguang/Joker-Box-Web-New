@@ -836,7 +836,7 @@ function DesignerInner({
             <ArrowLeft className="h-4 w-4" />
             返回列表
           </Button>
-          <h1 className="font-display text-lg font-semibold">{readOnly ? "查看流程" : "编辑流程"}</h1>
+          <h1 className="text-page-title font-semibold">{readOnly ? "查看流程" : "编辑流程"}</h1>
         </div>
         <div className="flex flex-1 items-center justify-center rounded-lg border text-sm text-muted-foreground">
           加载中…
@@ -853,7 +853,7 @@ function DesignerInner({
           <ArrowLeft className="h-4 w-4" />
           返回列表
         </Button>
-        <h1 className="font-display text-lg font-semibold">
+        <h1 className="text-page-title font-semibold">
           {readOnly ? "查看流程" : id == null ? "新增流程" : "编辑流程"}
         </h1>
         <span className="font-mono text-xs text-muted-foreground">
@@ -925,7 +925,7 @@ function DesignerInner({
             ) : (
               groupedPalette.map(([group, items]) => (
                 <div key={group} className="mb-3">
-                  <div className="mb-1.5 px-0.5 text-[11px] font-medium text-muted-foreground">{group}</div>
+                  <div className="mb-1.5 px-0.5 text-xs font-medium text-muted-foreground">{group}</div>
                   <div className="grid grid-cols-2 gap-1.5">
                     {items.map((meta) => {
                       const Icon = meta.icon;
@@ -949,7 +949,7 @@ function DesignerInner({
               ))
             )}
           </div>
-          <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
+          <p className="border-t px-3 py-2 text-xs text-muted-foreground">
             拖入画布放置；右键或 Delete 删除节点
           </p>
         </aside>
@@ -1140,7 +1140,7 @@ function ProcessConfig({
     <fieldset disabled={readOnly} className="flex flex-col gap-3">
       <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
         <span className="text-sm font-medium">流程</span>
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+        <span className="ml-auto font-mono text-xs text-muted-foreground">
           {id == null ? "未保存" : `#${id}`}
         </span>
       </div>
@@ -1269,7 +1269,7 @@ function NodeConfig({
           <meta.icon className="h-3.5 w-3.5" />
         </span>
         <span className="text-sm font-medium">{meta.label}</span>
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground">{node.type}</span>
+        <span className="ml-auto font-mono text-xs text-muted-foreground">{node.type}</span>
       </div>
       {/* 节点 id：只读展示（后端 BPMN 元素 id，NCName；n_<uuid> / start / end）。 */}
       <div className="grid gap-1.5">
@@ -1376,7 +1376,7 @@ function EdgeConfig({
     <fieldset disabled={readOnly} className="flex flex-col gap-3">
       <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
         <span className="text-sm font-medium">连线</span>
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+        <span className="ml-auto font-mono text-xs text-muted-foreground">
           {edge.source} → {edge.target}
         </span>
       </div>
@@ -1483,7 +1483,7 @@ function EdgeConfig({
                       onChange={(next) => onChange({ data: { ruleTree: next } })}
                     />
                   ) : (
-                    <p className="rounded-md border border-dashed px-2.5 py-2 text-[11px] text-muted-foreground">
+                    <p className="rounded-md border border-dashed px-2.5 py-2 text-xs text-muted-foreground">
                       需先在「流程配置」选好绑定表单和版本，才能配置自定义条件。
                     </p>
                   )}

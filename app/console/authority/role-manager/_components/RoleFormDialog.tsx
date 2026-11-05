@@ -223,19 +223,19 @@ export function RoleFormDialog({
                 <TabsList>
                   <TabsTrigger value="api">
                     apiPath 权限
-                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                    <span className="ml-1 font-mono text-xs text-muted-foreground">
                       {apiSelected.size}
                     </span>
                   </TabsTrigger>
                   <TabsTrigger value="front">
                     前台菜单
-                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                    <span className="ml-1 font-mono text-xs text-muted-foreground">
                       {frontSelected.size}
                     </span>
                   </TabsTrigger>
                   <TabsTrigger value="console">
                     后台菜单
-                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                    <span className="ml-1 font-mono text-xs text-muted-foreground">
                       {consoleSelected.size}
                     </span>
                   </TabsTrigger>

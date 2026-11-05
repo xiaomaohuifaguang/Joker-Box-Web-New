@@ -70,7 +70,7 @@ function recordItem(
         )}
       </div>
       {h.handleTime && (
-        <time className="mt-0.5 block font-mono text-[11px] tabular-nums text-muted-foreground">
+        <time className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
           {h.handleTime.slice(0, 19)}
         </time>
       )}
@@ -140,7 +140,7 @@ export function ProcessTrackRecordsPanel({
               <>
                 {nodeLabel || nodeId}
                 {nodeKindLabel && (
-                  <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
                     {nodeKindLabel}
                   </span>
                 )}

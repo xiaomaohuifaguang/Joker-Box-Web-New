@@ -223,7 +223,7 @@ export function UserTaskConfig({
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor="auto-approve-if-self" className="text-xs">
           自审批自动通过
-          <span className="block text-[11px] font-normal text-muted-foreground">
+          <span className="block text-xs font-normal text-muted-foreground">
             处理人为申请人时自动通过
           </span>
         </Label>
@@ -400,7 +400,7 @@ export function UserTaskConfig({
             <div className="grid gap-1.5">
               <Label className="text-xs">驳回节点</Label>
               {backNodeOptions.length === 0 ? (
-                <p className="rounded-md border border-dashed px-2.5 py-2 text-[11px] text-muted-foreground">
+                <p className="rounded-md border border-dashed px-2.5 py-2 text-xs text-muted-foreground">
                   无可驳回的上游任务节点
                 </p>
               ) : (
@@ -442,7 +442,7 @@ export function UserTaskConfig({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-xs leading-snug text-muted-foreground">
               {BACK_ASSIGNEE_POLICIES.find((p) => p.value === backAssigneePolicy)?.hint ??
                 "有上次办理人则派回，无则按配置重新分配"}
             </p>

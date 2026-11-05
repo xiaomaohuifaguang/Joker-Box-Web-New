@@ -67,7 +67,7 @@ export default function CronPage() {
     <RequirePermission>
     <Container className="flex flex-col gap-6 py-8 md:py-12">
         <div>
-          <h1 className="font-display text-lg font-semibold">
+          <h1 className="text-page-title font-semibold">
             cron 时间表达式转换
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">

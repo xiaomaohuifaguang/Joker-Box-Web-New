@@ -66,7 +66,7 @@ export default function WebsitePage() {
   return (
     <Container className="py-8 md:py-12">
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">收藏网站</h1>
+        <h1 className="text-page-title font-semibold">收藏网站</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           常用站点聚合，按分组整理。
         </p>
@@ -95,12 +95,12 @@ export default function WebsitePage() {
                   className={cn(
                     "flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors md:w-full",
                     active === g.groupName
-                      ? "bg-brand text-background"
+                      ? "bg-brand/12 font-medium text-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <span className="truncate">{g.groupName}</span>
-                  <span className="font-mono text-xs opacity-70">
+                  <span className="text-xs tabular-nums opacity-70">
                     {g.child.length}
                   </span>
                 </button>
@@ -113,11 +113,10 @@ export default function WebsitePage() {
             {(groups ?? []).map((g, i) => (
               <section key={g.groupName} id={`group-${i}`} className="scroll-mt-[calc(var(--front-chrome-h,4rem)+1rem)]">
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-sm bg-brand" />
-                  <h2 className="font-display text-lg font-semibold">
+                  <h2 className="text-section font-semibold">
                     {g.groupName}
                   </h2>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="text-xs tabular-nums text-muted-foreground">
                     {g.child.length}
                   </span>
                 </div>
@@ -128,7 +127,7 @@ export default function WebsitePage() {
                       href={w.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex flex-col gap-2 rounded-lg border p-4 transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-sm"
+                      className="group flex flex-col gap-2 rounded-lg border bg-card p-4 outline-none transition-colors hover:border-brand focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-medium text-foreground transition-colors group-hover:text-brand">
@@ -141,7 +140,7 @@ export default function WebsitePage() {
                           {w.description}
                         </p>
                       )}
-                      <span className="mt-auto font-mono text-xs text-muted-foreground">
+                      <span className="mt-auto truncate text-xs text-muted-foreground">
                         {domainOf(w.url)}
                       </span>
                     </a>

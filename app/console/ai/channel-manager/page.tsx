@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 
 import type {AiChannel} from "@/types";
 import {Button} from "@/components/ui/button";
-import {ChevronLeft, ChevronRight, Eye, Pencil, Plus, RotateCcw, Search, Trash2} from "lucide-react";
+import { Eye, Pencil, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import {Input} from "@/components/ui/input";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Skeleton} from "@/components/ui/skeleton";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {useAiChannelPage} from "@/hooks/useAiChannelPage";
 import {toast} from "sonner";
 import {ApiError} from "@/lib/api";
@@ -24,17 +23,16 @@ AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { AiChannelFormDialog } from "./_components/AiChannelFormDialog";
 import { AiChannelDetailDialog } from "./_components/AiChannelDetailDialog";
+import { DataPagination } from "@/components/DataPagination";
+import { TableEmptyRow } from "@/components/TableEmptyRow";
 
-const PAGE_SIZES = [10, 20, 50];
 
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-    if (current >= total - 3)
-        return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-    return [1, "…", current - 1, current, current + 1, "…", total];
+// 列表不展示完整密钥（查看详情或编辑时才显示）。
+function maskSecret(value?: string | null): string {
+  if (!value) return "-";
+  if (value.length <= 10) return "••••••";
+  return `${value.slice(0, 6)}••••••${value.slice(-4)}`;
 }
-
 
 export default function AiChannelPage() {
 
@@ -66,8 +64,6 @@ export default function AiChannelPage() {
 
     const records = page?.records ?? [];
     const total = page?.total ?? 0;
-    const totalPages = Math.max(1, Math.ceil(total / size));
-    const pageNumbers = getPageNumbers(current, totalPages);
 
     function openAdd() {
         setEditing(null);
@@ -103,7 +99,7 @@ export default function AiChannelPage() {
         return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-lg font-semibold">渠道管理</h1>
+                <h1 className="text-page-title font-semibold">渠道管理</h1>
                 <Button
                         onClick={openAdd}
                         size="sm" className="ml-auto">
@@ -139,19 +135,19 @@ export default function AiChannelPage() {
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
-                                <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
-                                    渠道id
+                                <TableHead className="hidden md:table-cell">
+                                    ID
                                 </TableHead>
-                                <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
+                                <TableHead>
                                     渠道名称
                                 </TableHead>
-                                <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
+                                <TableHead className="hidden md:table-cell">
                                     供应商
                                 </TableHead>
-                                <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
-                                    API KEY
+                                <TableHead className="hidden md:table-cell">
+                                    API Key
                                 </TableHead>
-                            <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">
+                            <TableHead className="w-24 text-right">
                                 操作
                             </TableHead>
                         </TableRow>
@@ -164,7 +160,7 @@ export default function AiChannelPage() {
                             <TableCell
                                     key={j}
                                     className={
-                                    j === 1 || j === 2 ? "hidden md:table-cell" : ""
+                                    j === 0 || j === 2 || j === 3 ? "hidden md:table-cell" : ""
                             }
                             >
                             <Skeleton className="h-6 w-full" />
@@ -173,28 +169,21 @@ export default function AiChannelPage() {
                         </TableRow>
                         ))
                         ) : records.length === 0 ? (
-                        <TableRow className="hover:bg-transparent">
-                            <TableCell
-                                    colSpan={5}
-                                    className="h-40 text-center text-sm text-muted-foreground"
-                            >
-                                暂无数据
-                            </TableCell>
-                        </TableRow>
+                        <TableEmptyRow colSpan={5} title="暂无渠道" description="调整搜索条件，或点右上角新增。" />
                         ) : (
                         records.map((record) => (
                         <TableRow key={record.id} className="group">
                                 <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                                     {record.id ?? "-"}
                                 </TableCell>
-                                <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                                <TableCell className="text-sm font-medium">
                                     {record.name ?? "-"}
                                 </TableCell>
                                 <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                                     {record.isCustom ? "自定义渠道" : record.providerName ?? "-"}
                                 </TableCell>
                                 <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
-                                    {record.apiKey ?? "-"}
+                                    {maskSecret(record.apiKey)}
                                 </TableCell>
                             <TableCell className="text-right">
                                 <div className="flex justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
@@ -219,7 +208,7 @@ export default function AiChannelPage() {
                                     <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-destructive"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                             onClick={() => setDeleting(record)}
                                     aria-label="删除"
                                     >
@@ -235,66 +224,16 @@ export default function AiChannelPage() {
             </div>
 
             {/* 分页 */}
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <span>共 {total} 条</span>
-                <div className="ml-auto flex items-center gap-1">
-                    <Select
-                            value={String(size)}
-                            onValueChange={(v) => {
-                    setSize(Number(v));
-                    setCurrent(1);
-                    }}
-                    >
-                    <SelectTrigger className="h-8 w-28">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {PAGE_SIZES.map((s) => (
-                        <SelectItem key={s} value={String(s)}>
-                            {s} / 页
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            disabled={current <= 1}
-                    onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-                    aria-label="上一页"
-                    >
-                    <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    {pageNumbers.map((p, i) =>
-                    p === "…" ? (
-                    <span key={`e-${i}`} className="px-1 text-muted-foreground">
-                …
-              </span>
-                    ) : (
-                    <Button
-                            key={p}
-                            variant={p === current ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setCurrent(p)}
-                    >
-                    {p}
-                    </Button>
-                    ),
-                    )}
-                    <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            disabled={current >= totalPages}
-                        onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-                        aria-label="下一页"
-                        >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+            <DataPagination
+              current={current}
+              size={size}
+              total={total}
+              onCurrentChange={setCurrent}
+              onSizeChange={(s) => {
+                setSize(s);
+                setCurrent(1);
+              }}
+            />
             <AiChannelFormDialog
                     open={formOpen}
                     onOpenChange={setFormOpen}

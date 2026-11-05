@@ -18,12 +18,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { AuthBrandPanel } from "@/components/AuthBrandPanel";
 import { LogoMark } from "@/components/LogoMark";
-import { JesterHat } from "@/components/JesterHat";
-
-// 方案 A：单线输入框（去框，底部 2px 线，聚焦亮 brand 线）。
-const underlineInput =
-  "h-11 rounded-none border-0 border-b-2 border-border bg-transparent px-0 shadow-none focus-visible:border-brand focus-visible:ring-0";
 
 // 注册表单校验：必填项 + 邮箱格式 + 两次密码一致（错误挂在 confirmPassword）。
 // 表单只收最少字段；nickname/sex 后端契约必填，提交时填默认值（nickname=用户名、sex=未知）。
@@ -107,31 +103,14 @@ export default function RegisterPage() {
 
   return (
     <main className="grid min-h-screen md:grid-cols-2">
-      {/* 品牌舞台（仅桌面）：harlequin 菱格 + 烫金内框 + 小丑帽 emblem，黑金剧场气质。全 token。 */}
-      <section
-        className="relative hidden flex-col items-center justify-center gap-10 overflow-hidden border-r bg-surface md:flex"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px), repeating-linear-gradient(-60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px)",
-        }}
-      >
-        <div aria-hidden className="pointer-events-none absolute inset-8 border border-brand/30" />
-        <JesterHat className="h-24 w-24 text-brand" />
-        <div className="text-center">
-          <p className="font-display text-3xl font-semibold tracking-tight">Joker Box</p>
-          <p className="mt-3 text-sm text-muted-foreground">不止于工具，更是你的全能数字助手</p>
-        </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-          Plate Nº 53
-        </p>
-      </section>
+      <AuthBrandPanel />
 
-      {/* 表单（右侧 / 移动全宽）：安静单栏，无牌面装扮。 */}
+      {/* 表单（右侧 / 移动全宽） */}
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <LogoMark className="h-10 w-8" />
-          <h1 className="mt-6 font-display text-4xl font-semibold tracking-tight">创建账号</h1>
-          <p className="mt-2 text-sm text-muted-foreground">注册以开始使用</p>
+          <h1 className="mt-6 text-3xl font-semibold">创建账号</h1>
+          <p className="mt-2 text-sm text-muted-foreground">所有项目都必填，邮箱用于接收验证码。</p>
 
           <Form {...form}>
             <form
@@ -146,9 +125,9 @@ export default function RegisterPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>用户名 *</FormLabel>
+                    <FormLabel>用户名</FormLabel>
                     <FormControl>
-                      <Input placeholder="用户名" autoComplete="off" {...field} className={underlineInput} />
+                      <Input autoComplete="off" {...field} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -160,13 +139,12 @@ export default function RegisterPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>密码 *</FormLabel>
+                    <FormLabel>密码</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="密码"
                         autoComplete="new-password"
-                        {...field} className={underlineInput} />
+                        {...field} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,13 +156,12 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>确认密码 *</FormLabel>
+                    <FormLabel>确认密码</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="再次输入密码"
                         autoComplete="new-password"
-                        {...field} className={underlineInput} />
+                        {...field} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -196,13 +173,12 @@ export default function RegisterPage() {
                 name="mail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>邮箱 *</FormLabel>
+                    <FormLabel>邮箱</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="邮箱"
                         autoComplete="off"
-                        {...field} className={underlineInput} />
+                        {...field} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,20 +190,19 @@ export default function RegisterPage() {
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>验证码 *</FormLabel>
+                    <FormLabel>验证码</FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
                         <Input
-                          placeholder="邮箱验证码"
                           autoComplete="off"
-                          {...field} className={underlineInput} />
+                          {...field} className="h-11" />
                       </FormControl>
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handleSendCode}
                         disabled={codeCooldown > 0 || !mail}
-                        className="shrink-0"
+                        className="h-11 shrink-0"
                       >
                         {codeCooldown > 0 ? `${codeCooldown}s` : "发送验证码"}
                       </Button>

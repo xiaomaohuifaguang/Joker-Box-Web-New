@@ -22,12 +22,11 @@ const SETTINGS_NAV = [
   },
 ] as const;
 
-// 卡片面板导航：桌面粘性竖列（选中项 brand 填充），移动端顶部横滚 chip 条（藏副标题）。
-// 选中态与 website 页分组导航一致（bg-brand text-background）。
+// 卡片面板导航：桌面粘性竖列，移动端顶部横滚 chip 条（藏副标题）。选中态与全站导航一致（品牌色淡底）。
 export function SettingsNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 overflow-x-auto rounded-xl border bg-surface p-1.5 md:flex-col md:overflow-visible">
+    <nav className="flex gap-1 overflow-x-auto rounded-lg border bg-surface p-1.5 md:flex-col md:overflow-visible">
       {SETTINGS_NAV.map(({ href, label, desc, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -38,7 +37,7 @@ export function SettingsNav() {
             className={cn(
               "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-brand font-medium text-background"
+                ? "bg-brand/12 font-medium text-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
@@ -48,7 +47,7 @@ export function SettingsNav() {
               <span
                 className={cn(
                   "hidden text-xs font-normal md:block",
-                  active ? "text-background/70" : "text-muted-foreground/70",
+                  "text-muted-foreground",
                 )}
               >
                 {desc}

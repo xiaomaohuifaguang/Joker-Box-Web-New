@@ -1,5 +1,7 @@
 # styles — 主题契约 & 全局样式拆分
 
+新增主题的完整步骤、模板和变量说明见 `docs/custom-theme.md`。
+
 `app/globals.css` 只是入口（tailwind 导入 + 按序 `@import` 本目录）。Tailwind v4 的 `@import` 构建期合并，拆分运行时零成本。
 
 ## 文件职责
@@ -28,7 +30,7 @@
 |---|---|
 | 颜色 ×7 | `--background --foreground --surface --muted-foreground --border --brand --brand-2` |
 | 语义色 ×4 | `--success --warning --error --info` |
-| 字体 ×3 | `--display-font --body-font --mono-font`（取值限 `--font-geist-sans / --font-fraunces / --font-geist-mono`，新增字体先在 `app/layout.tsx` 挂 next/font） |
+| 字体 ×3 | `--display-font --body-font --mono-font`（取值限 `--font-geist-sans / --font-fraunces / --font-geist-mono`，新增字体先在 `app/layout.tsx` 挂 next/font）。可选 `--brand-font`：字标专用（`font-brand`，用于 Logo 和首页大标题），未设时继承 Joker（挂在 `:root`）的 Fraunces。中文回退在 `tokens.css` 统一追加 |
 | 形状 | `--radius` |
 | 阴影分量 ×6 | `--shadow-x --shadow-y --shadow-blur --shadow-spread --shadow-opacity --shadow-color`（color 是 oklch 分量三段，不带 `oklch()`） |
 | 字距 ×2 | `--tracking-display --tracking-normal` |

@@ -145,7 +145,7 @@ export function NodeFieldPermissions({
         <ListChecks className="h-4 w-4" />
         配置字段权限
         {value.length > 0 && (
-          <span className="ml-auto rounded-full bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
+          <span className="ml-auto rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
             {value.length}
           </span>
         )}
@@ -244,7 +244,7 @@ export function NodeFieldPermissions({
                               applyPermissions(section.fields.map((f) => f.fieldId), v as FieldPermission)
                             }
                           >
-                            <SelectTrigger className="h-6 w-20 shrink-0 border-dashed px-1.5 text-[10px] text-muted-foreground">
+                            <SelectTrigger className="h-6 w-20 shrink-0 border-dashed px-1.5 text-xs text-muted-foreground">
                               <SelectValue placeholder="批量" />
                             </SelectTrigger>
                             <SelectContent position="popper">

@@ -103,7 +103,7 @@ function ServerRow({
           onChange={toggle}
         />
         <span className="text-sm font-medium">{svc.server}</span>
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+        <span className="ml-auto font-mono text-xs text-muted-foreground">
           {hit}/{selectable.length}
         </span>
       </div>
@@ -193,7 +193,7 @@ function GroupRow({
                   {ap.name}
                 </span>
                 {isWhite && (
-                  <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">
+                  <Badge variant="outline" className="ml-auto shrink-0 text-xs">
                     白名单
                   </Badge>
                 )}
