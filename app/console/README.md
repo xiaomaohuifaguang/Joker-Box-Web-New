@@ -1,6 +1,6 @@
 # app/console — 后台
 
-`layout.tsx` = `<RequireAdmin>` + `SidebarProvider`(Sidebar + SidebarInset)；顶栏 = SidebarTrigger + `ConsoleBreadcrumb`（菜单树+路由算路径链，纯文本）+ 主题预设/明暗切换。有 `loading.tsx`/`error.tsx`。`page.tsx` 是仪表盘（占位）。Sidebar 菜单 backend-driven（`useMenuTree` menuType=-1），折叠态父项点开向右浮层，footer 用户菜单。`_components/`：ConsoleSidebar、ConsoleBreadcrumb。
+`layout.tsx` = `<RequireAdmin>` + `SidebarProvider`(Sidebar + SidebarInset)；顶栏 = SidebarTrigger + `ConsoleBreadcrumb`（菜单树+路由算路径链，纯文本）+ 全局搜索 + 外观菜单。有 `loading.tsx`/`error.tsx`。`page.tsx` 是仪表盘（占位）。Sidebar 菜单 backend-driven（`useMenuTree` menuType=-1），折叠态父项点开向右浮层，footer 用户菜单。`_components/`：ConsoleSidebar（`components/app-shell/AppSidebar` 薄封装）、ConsoleBreadcrumb。
 
 路由权限：`<RequireAdmin>` 用后台菜单树判断（URL 直进无权限路由 → 404），见 `components/README.md`。
 
