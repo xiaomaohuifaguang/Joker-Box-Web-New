@@ -159,7 +159,7 @@ export function UserListPanel({
             ))
           )}
         </nav>
-        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {total} 条
         </span>
         <div className="relative shrink-0">
@@ -212,7 +212,7 @@ export function UserListPanel({
               <TableHead>
                 昵称
               </TableHead>
-              <TableHead>
+              <TableHead className="hidden 2xl:table-cell">
                 性别
               </TableHead>
               <TableHead>
@@ -224,7 +224,7 @@ export function UserListPanel({
               <TableHead>
                 创建时间
               </TableHead>
-              <TableHead className="w-32 text-right">
+              <TableHead className="sticky right-0 w-32 bg-muted text-right shadow-[-1px_0_0_var(--border)]">
                 操作
               </TableHead>
             </TableRow>
@@ -234,7 +234,7 @@ export function UserListPanel({
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}>
+                    <TableCell key={j} className={j === 2 ? "hidden 2xl:table-cell" : undefined}>
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   ))}
@@ -265,19 +265,19 @@ export function UserListPanel({
                     {user.username || "-"}
                   </TableCell>
                   <TableCell>{user.nickname || "-"}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground 2xl:table-cell">
                     {user.userExtend?.sex || "-"}
                   </TableCell>
-                  <TableCell className="break-all font-mono text-xs">
+                  <TableCell className="text-xs">
                     {user.userExtend?.mail || "-"}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="text-xs tabular-nums">
                     {user.userExtend?.phone || "-"}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {user.createTime}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="sticky right-0 bg-background text-right shadow-[-1px_0_0_var(--border)]">
                     <div className="flex justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
                       <Button
                         variant="ghost"

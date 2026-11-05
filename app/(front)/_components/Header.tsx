@@ -40,10 +40,10 @@ import { cn } from "@/lib/utils";
 import { MENU_TYPE } from "@/types";
 import { UserMenu } from "./UserMenu";
 
-// 当前页下划线（顶栏链接和带子菜单的触发器共用）。
-function ActiveMark() {
-  return <span className="absolute -bottom-1.5 left-0 h-0.5 w-full bg-brand" />;
-}
+// 顶栏导航项（链接和带子菜单的触发器共用）：悬停有底色，选中与侧栏同一套品牌色淡底。
+const navItemClass =
+  "inline-flex h-9 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
+const navItemActiveClass = "bg-brand/15 font-medium text-foreground hover:bg-brand/20";
 
 function NavLink({
   href,
@@ -61,26 +61,22 @@ function NavLink({
       href={href}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={cn(
-        "relative inline-flex items-center text-sm transition-colors hover:text-foreground",
-        active ? "font-medium text-foreground" : "text-muted-foreground",
-      )}
+      className={cn(navItemClass, active && navItemActiveClass)}
     >
       {label}
-      {active && <ActiveMark />}
     </Link>
   );
 }
 
-// NavigationMenu trigger 样式：覆盖默认填充胶囊，匹配顶栏文字风。
+// NavigationMenu trigger：覆盖默认样式，与顶栏链接一致；展开时保持悬停底色。
 const navTriggerClass =
-  "relative inline-flex h-auto w-auto items-center gap-1.5 rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[active=true]:font-medium data-[active=true]:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
+  "w-auto gap-1 bg-transparent font-normal focus:bg-accent focus:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground data-[state=open]:hover:bg-accent data-[state=open]:focus:bg-accent";
 
 // 移动菜单一行的样式。
 function mobileRowClass(active: boolean) {
   return cn(
     "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent",
-    active ? "bg-brand/12 font-medium text-foreground hover:bg-brand/18" : "text-muted-foreground",
+    active ? "bg-brand/15 font-medium text-foreground hover:bg-brand/20" : "text-muted-foreground",
   );
 }
 
@@ -112,7 +108,7 @@ export function Header() {
 
         {/* 中：导航（桌面；父菜单用 NavigationMenu，键盘可达）*/}
         <NavigationMenu viewport={false} className="hidden flex-none md:flex">
-          <NavigationMenuList className="gap-6">
+          <NavigationMenuList className="gap-1">
             <NavigationMenuItem>
               <NavLink href="/" label="首页" active={pathname === "/"} />
             </NavigationMenuItem>
@@ -120,9 +116,10 @@ export function Header() {
               const active = menuContains(item, activePath);
               return item.children?.length ? (
                 <NavigationMenuItem key={item.path}>
-                  <NavigationMenuTrigger className={navTriggerClass} data-active={active}>
+                  <NavigationMenuTrigger
+                    className={cn(navItemClass, navTriggerClass, active && navItemActiveClass)}
+                  >
                     {item.name}
-                    {active && <ActiveMark />}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     {/* 子菜单：名称上 / 描述下（有值才渲染） */}
@@ -137,7 +134,7 @@ export function Header() {
                               className={cn(
                                 "flex flex-col items-start gap-0.5 rounded-md px-3 py-2 transition-colors hover:bg-accent focus:bg-accent",
                                 childActive &&
-                                  "bg-brand/12 hover:bg-brand/18 focus:bg-brand/18 data-[active=true]:bg-brand/12",
+                                  "bg-brand/15 hover:bg-brand/20 focus:bg-brand/20 data-[active=true]:bg-brand/15",
                               )}
                             >
                               <Link href={c.path} onClick={(e) => navTo(e, c.path)}>

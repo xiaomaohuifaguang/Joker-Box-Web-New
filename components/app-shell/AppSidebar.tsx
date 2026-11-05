@@ -74,13 +74,14 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      {/* 高度与主区顶栏（h-14）对齐，分隔线连成一条 */}
+      <SidebarHeader className="h-14 justify-center border-b py-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild className="h-10 text-foreground hover:bg-transparent">
               <Link href={homeHref} onClick={closeMobile}>
                 <LogoMark />
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span data-slot="logo-text" className="font-brand truncate font-semibold">
                     Joker Box
                   </span>
@@ -145,10 +146,10 @@ export function AppSidebar({
                             <SidebarMenuButton isActive={active}>
                               <MenuIcon name={item.icon ?? ""} />
                               <span>{item.name}</span>
-                              <ChevronRight className="ml-auto" />
+                              <ChevronRight className="ml-auto group-data-[collapsible=icon]:hidden" />
                             </SidebarMenuButton>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent side="right" align="start" className="w-52">
+                          <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-52">
                             <DropdownMenuLabel>{item.name}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {item.children.map((child) => (
@@ -186,7 +187,7 @@ export function AppSidebar({
                           <SidebarMenuButton tooltip={item.name} data-group-active={active}>
                             <MenuIcon name={item.icon ?? ""} />
                             <span>{item.name}</span>
-                            <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                            <ChevronRight className="ml-auto text-muted-foreground transition-transform group-data-[state=open]/collapsible:rotate-90" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
@@ -221,7 +222,7 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>{footer}</SidebarFooter>
+      <SidebarFooter className="border-t">{footer}</SidebarFooter>
     </Sidebar>
   );
 }
