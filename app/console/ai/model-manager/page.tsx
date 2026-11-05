@@ -221,6 +221,12 @@ export default function ModelManagerPage() {
               <TableHead className="text-xs font-medium text-muted-foreground">名称</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground">模型</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground">类型</TableHead>
+              <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
+                供应商
+              </TableHead>
+              <TableHead className="hidden text-xs font-medium text-muted-foreground md:table-cell">
+                渠道
+              </TableHead>
               <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">描述</TableHead>
               <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
             </TableRow>
@@ -229,8 +235,11 @@ export default function ModelManagerPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <TableCell key={j} className={j === 3 ? "hidden lg:table-cell" : ""}>
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <TableCell
+                      key={j}
+                      className={j === 3 || j === 4 ? "hidden md:table-cell" : j === 5 ? "hidden lg:table-cell" : ""}
+                    >
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   ))}
@@ -238,7 +247,7 @@ export default function ModelManagerPage() {
               ))
             ) : records.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="h-40 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={7} className="h-40 text-center text-sm text-muted-foreground">
                   暂无模型
                 </TableCell>
               </TableRow>
@@ -270,6 +279,12 @@ export default function ModelManagerPage() {
                     <Badge variant="outline">
                       {AI_MODEL_TYPE_LABELS[record.type] ?? record.type}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                    {record.providerName || "-"}
+                  </TableCell>
+                  <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                    {record.channelName || "-"}
                   </TableCell>
                   <TableCell className="hidden max-w-64 truncate text-xs text-muted-foreground lg:table-cell">
                     {record.description || "-"}

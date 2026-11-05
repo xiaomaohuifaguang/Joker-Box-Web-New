@@ -4,9 +4,9 @@ import { getToken } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { streamSSE, type SSEMessage } from "@/lib/sse";
 import type {
+  ChatChannel,
   ChatFileInfo,
   ChatMessage,
-  ChatModel,
   ChatRequestParam,
   ChatSession,
 } from "@/types";
@@ -17,9 +17,9 @@ import type {
 
 const BASE = env.apiBase;
 
-/** CHAT 模型列表：POST /ai/completions/models，无参。 */
-export async function getChatModels(): Promise<ChatModel[]> {
-  const { data } = await api.post<ChatModel[]>("/ai/completions/models");
+/** 可用聊天渠道及模型：POST /ai/completions/channelsWithModels，无参。 */
+export async function getChatChannelsWithModels(): Promise<ChatChannel[]> {
+  const { data } = await api.post<ChatChannel[]>("/ai/completions/channelsWithModels");
   return data ?? [];
 }
 

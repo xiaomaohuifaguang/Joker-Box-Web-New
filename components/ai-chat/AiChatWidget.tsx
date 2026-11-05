@@ -56,7 +56,7 @@ function AiChatPanel({ raised }: { raised: boolean }) {
         <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-lg">
           <SheetTitle className="sr-only">AI 助手</SheetTitle>
           <AiChatHeader
-            models={chat.models}
+            channels={chat.channels}
             modelId={chat.modelId}
             onModelChange={chat.setModelId}
             stream={chat.stream}

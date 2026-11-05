@@ -22,11 +22,15 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type { AiSystemPrompt, AiSystemPromptPayload } from "@/types";
+import { DEFAULT_SYSTEM_PROMPT } from "./defaultSystemPrompt";
 
-const EMPTY: AiSystemPromptPayload = { description: "", prompt: "" };
+const EMPTY: AiSystemPromptPayload = {
+  description: "",
+  prompt: DEFAULT_SYSTEM_PROMPT,
+};
 
 // 新增 / 编辑系统提示词。editing 非 null 时为编辑：开弹窗即 loading，/ai/systemPrompt/info
-// 返回后回填 description+prompt。两字段均必填。
+// 返回后回填 description+prompt。新增自动填入默认模板；两字段均必填。
 export function AiSystemPromptFormDialog({
   open,
   onOpenChange,

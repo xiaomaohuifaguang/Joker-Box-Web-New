@@ -3,17 +3,17 @@
 import { History, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import type { ChatModel } from "@/types";
+import type { ChatChannel } from "@/types";
 
 // 抽屉顶栏：模型选择 + 流式开关 + 新建会话（主操作，带文字） + 历史会话（激活态高亮）。
 export function AiChatHeader({
-  models, modelId, onModelChange, stream, onStreamChange, onNewSession, onToggleSessions, sessionsActive,
+  channels, modelId, onModelChange, stream, onStreamChange, onNewSession, onToggleSessions, sessionsActive,
 }: {
-  models: ChatModel[];
+  channels: ChatChannel[];
   modelId: string;
   onModelChange: (id: string) => void;
   stream: boolean;
@@ -30,10 +30,15 @@ export function AiChatHeader({
           <SelectValue placeholder="选择模型" />
         </SelectTrigger>
         <SelectContent position="popper">
-          {models.map((m) => (
-            <SelectItem key={m.id} value={m.id}>
-              {m.name}
-            </SelectItem>
+          {channels.map((channel) => (
+            <SelectGroup key={channel.id}>
+              <SelectLabel>{channel.name || `渠道 ${channel.id}`}</SelectLabel>
+              {(channel.models ?? []).map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           ))}
         </SelectContent>
       </Select>

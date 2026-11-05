@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import {
   chatOnce,
   chatStream,
+  getChatChannelsWithModels,
   getChatMessages,
-  getChatModels,
   getChatSessions,
 } from "@/lib/api/aiChat";
 import { ApiError } from "@/lib/api";
-import type { ChatFileInfo, ChatModel, ChatRole, ChatSession } from "@/types";
+import { getDefaultModelSettings } from "@/lib/api/aiModel";
+import type { ChatChannel, ChatFileInfo, ChatModel, ChatRole, ChatSession } from "@/types";
 
 export interface UiMessage {
   key: string;
@@ -34,7 +35,8 @@ function normRole(role: string | null | undefined): ChatRole {
 
 // AI 会话状态机：模型/会话/消息/流式。sessionId=null 表示未建（首发 /chat 后端自动建）。
 export function useAiChat() {
-  const [models, setModels] = useState<ChatModel[]>([]);
+  const [channels, setChannels] = useState<ChatChannel[]>([]);
+  const models: ChatModel[] = channels.flatMap((channel) => channel.models ?? []);
   const [modelId, setModelId] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -60,17 +62,34 @@ export function useAiChat() {
   const lastRequestRef = useRef<{ content: string; files?: ChatFileInfo[] } | null>(null);
 
   // 懒加载：首挂不拉取，首次打开面板时由外部调 init()（initedRef 保证只拉一次）。
-  // 拉模型（默认选第一个）+ 会话列表。模型拉取失败提示（否则 send 被静默禁用）。
+  // 拉渠道模型 + 默认模型配置 + 会话列表。优先选 CHAT 默认模型；未配置、默认模型不可用
+  // 或默认配置加载失败时回退到首个可用模型。渠道模型失败需提示（否则 send 被静默禁用）。
   const initedRef = useRef(false);
   const init = useCallback(() => {
     if (initedRef.current) return;
     initedRef.current = true;
-    getChatModels()
-      .then((list) => {
-        setModels(list);
-        setModelId((cur) => cur || list[0]?.id || "");
-      })
-      .catch(() => toast.error("加载模型失败"));
+    Promise.allSettled([
+      getChatChannelsWithModels(),
+      getDefaultModelSettings(),
+    ]).then(([channelsResult, defaultsResult]) => {
+      if (channelsResult.status === "rejected") {
+        setChannels([]);
+        setModelId("");
+        toast.error("加载模型失败");
+        return;
+      }
+
+      const list = channelsResult.value;
+      const availableModels = list.flatMap((channel) => channel.models ?? []);
+      const defaultId = defaultsResult.status === "fulfilled"
+        ? defaultsResult.value.CHAT?.id
+        : undefined;
+      const initialModelId = availableModels.find((model) => model.id === defaultId)?.id
+        ?? availableModels[0]?.id
+        ?? "";
+      setChannels(list);
+      setModelId((cur) => cur || initialModelId);
+    });
     getChatSessions()
       .then(setSessions)
       .catch(() => {});
@@ -257,6 +276,7 @@ export function useAiChat() {
 
   return {
     init,
+    channels,
     models,
     modelId,
     setModelId,

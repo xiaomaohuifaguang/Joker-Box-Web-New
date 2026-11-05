@@ -1,9 +1,11 @@
 // AI 会话相关类型（对应 /ai/completions/* 接口）。
+import type { AiChannel } from "./aiChannel";
+import type { AiModel } from "./ai-model";
 
 /** 消息角色（后端大写，前端归一化小写比对）。 */
 export type ChatRole = "system" | "user" | "assistant" | "tool";
 
-/** CHAT 类型模型（/ai/completions/models 返回）。 */
+/** CHAT 类型模型（channelsWithModels 的 models 元素）。 */
 export interface ChatModel {
   id: string;
   name: string;
@@ -12,6 +14,11 @@ export interface ChatModel {
   /** 图像理解能力（缺省按 false 处理）。 */
   vision?: boolean;
 }
+
+/** 可用聊天渠道及其模型（/ai/completions/channelsWithModels 返回）。 */
+export type ChatChannel = Omit<AiChannel, "models"> & {
+  models: AiModel[];
+};
 
 /** 聊天附件（fileUpload 响应 data / messages 的 files 元素）。 */
 export interface ChatFileInfo {

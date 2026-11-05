@@ -24,3 +24,5 @@ export * from "./website";
 export * from "./website-manager";
 export * from "./dynamicFormFieldTemplate"
 export * from "./dynamicFormFieldGroupTemplate"
+export * from "./aiProvider"
+export * from "./aiChannel"
