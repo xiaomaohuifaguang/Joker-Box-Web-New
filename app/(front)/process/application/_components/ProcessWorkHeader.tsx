@@ -46,7 +46,7 @@ export function ProcessWorkHeader({
             <span className="mr-1 text-foreground/70">№</span>
             {code || "—"}
           </p>
-          <h1 className="mt-1.5 truncate font-display text-2xl font-semibold">
+          <h1 className="mt-1.5 truncate text-page-title font-semibold">
             {title || "未命名流程"}
           </h1>
           {subtitle && (

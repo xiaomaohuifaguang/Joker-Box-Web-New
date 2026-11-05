@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import type { AiChannel, AiChannelInput, AiChannelModel } from "@/types";
 import { AiProviderSelect } from "./AiProviderSelect";
+import { TableEmptyRow } from "@/components/TableEmptyRow";
 
 const EMPTY: AiChannel = {
   id: 0,
@@ -410,10 +411,10 @@ export function AiChannelFormDialog({
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="h-9 px-2 text-xs">name</TableHead>
-                      <TableHead className="h-9 px-2 text-xs">model</TableHead>
-                      <TableHead className="h-9 w-16 px-2 text-center text-xs">vision</TableHead>
-                      <TableHead className="h-9 w-20 px-2 text-right text-xs">操作</TableHead>
+                      <TableHead className="h-9 px-2">name</TableHead>
+                      <TableHead className="h-9 px-2">model</TableHead>
+                      <TableHead className="h-9 w-16 px-2 text-center">vision</TableHead>
+                      <TableHead className="h-9 w-20 px-2 text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -484,14 +485,7 @@ export function AiChannelFormDialog({
                         );
                       })
                     ) : (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell
-                          colSpan={4}
-                          className="h-24 text-center text-sm text-muted-foreground"
-                        >
-                          从提供方增加模型，或手动新增一行
-                        </TableCell>
-                      </TableRow>
+                      <TableEmptyRow colSpan={4} title="从提供方增加模型，或手动新增一行" />
                     )}
                   </TableBody>
                 </Table>

@@ -30,7 +30,7 @@ export default function UserManagerPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <h1 className="font-display text-lg font-semibold">用户管理</h1>
+      <h1 className="text-page-title font-semibold">用户管理</h1>
       <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-background">
         <div className="w-80 shrink-0 border-r bg-surface">
           <OrgTreePanel

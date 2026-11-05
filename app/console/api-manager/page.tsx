@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Pencil,
-  RotateCcw,
-  Search,
-} from "lucide-react";
+import { Pencil, RotateCcw, Search } from "lucide-react";
 import { useApiPathPage } from "@/hooks/useApiPathPage";
 import { getRoleSelector } from "@/lib/api/apiPath";
 import { Button } from "@/components/ui/button";
@@ -33,17 +27,8 @@ import { cn } from "@/lib/utils";
 import type { ApiPath, SelectOption } from "@/types";
 import { ServerGroupCascader } from "./_components/ServerGroupCascader";
 import { ApiPathEditDialog } from "./_components/ApiPathEditDialog";
-
-const PAGE_SIZES = [10, 20, 50];
-
-// 生成分页页码：总页数 ≤7 全显示；否则首尾各保留 + 当前页窗口，中间用省略号。
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-  if (current >= total - 3)
-    return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "…", current - 1, current, current + 1, "…", total];
-}
+import { DataPagination } from "@/components/DataPagination";
+import { TableEmptyRow } from "@/components/TableEmptyRow";
 
 // API 管理：筛选（搜索/角色/服务+分组级联）+ 表格 + 分页 + 白名单快速切换 + 编辑。
 export default function ApiManagerPage() {
@@ -86,8 +71,6 @@ export default function ApiManagerPage() {
 
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const pageNumbers = getPageNumbers(current, totalPages);
 
   function reset() {
     setSearch("");
@@ -100,7 +83,7 @@ export default function ApiManagerPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <h1 className="font-display text-lg font-semibold">API 管理</h1>
+      <h1 className="text-page-title font-semibold">API 管理</h1>
 
       {/* 筛选区 */}
       <div className="flex flex-wrap items-center gap-2">
@@ -146,13 +129,13 @@ export default function ApiManagerPage() {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs font-medium text-muted-foreground">名称</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">路径</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">服务</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">分组</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">白名单</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">创建时间</TableHead>
-              <TableHead className="w-20 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
+              <TableHead>名称</TableHead>
+              <TableHead>路径</TableHead>
+              <TableHead>服务</TableHead>
+              <TableHead>分组</TableHead>
+              <TableHead>白名单</TableHead>
+              <TableHead>创建时间</TableHead>
+              <TableHead className="w-20 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,11 +150,7 @@ export default function ApiManagerPage() {
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7} className="h-40 text-center text-sm text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
+              <TableEmptyRow colSpan={7} title="暂无数据" />
             ) : (
               records.map((item, idx) => (
                 <TableRow key={`${item.path}-${item.server}-${idx}`}>
@@ -215,61 +194,16 @@ export default function ApiManagerPage() {
       </div>
 
       {/* 分页 */}
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span>共 {total} 条</span>
-        <div className="ml-auto flex items-center gap-1">
-          <Select
-            value={String(size)}
-            onValueChange={(v) => { setSize(Number(v)); setCurrent(1); }}
-          >
-            <SelectTrigger className="h-8 w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s} / 页
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={current <= 1}
-            onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-            aria-label="上一页"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          {pageNumbers.map((p, i) =>
-            p === "…" ? (
-              <span key={`e-${i}`} className="px-1 text-muted-foreground">…</span>
-            ) : (
-              <Button
-                key={p}
-                variant={p === current ? "default" : "outline"}
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setCurrent(p)}
-              >
-                {p}
-              </Button>
-            ),
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={current >= totalPages}
-            onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-            aria-label="下一页"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <DataPagination
+        current={current}
+        size={size}
+        total={total}
+        onCurrentChange={setCurrent}
+        onSizeChange={(s) => {
+          setSize(s);
+          setCurrent(1);
+        }}
+      />
 
       {/* 编辑对话框 */}
       <ApiPathEditDialog

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Ban, ChevronLeft, ChevronRight, Eye, Pencil, Plus, RotateCcw, Search, Send, Trash2 } from "lucide-react";
+import { Ban, Eye, Pencil, Plus, RotateCcw, Search, Send, Trash2 } from "lucide-react";
 import { deployDynamicForm, removeDynamicForm, stopDynamicForm } from "@/lib/api/dynamicForm";
 import { ApiError } from "@/lib/api";
 import { useDynamicFormPage } from "@/hooks/useDynamicFormPage";
@@ -10,13 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -36,22 +29,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { DynamicForm } from "@/types";
-
-const PAGE_SIZES = [10, 20, 50];
+import { DataPagination } from "@/components/DataPagination";
+import { TableEmptyRow } from "@/components/TableEmptyRow";
 
 const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   "0": { label: "草稿", variant: "secondary" },
   "1": { label: "已发布", variant: "default" },
   "-1": { label: "停用", variant: "outline" },
 };
-
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-  if (current >= total - 3)
-    return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "…", current - 1, current, current + 1, "…", total];
-}
 
 // 表单模板列表：标题 + 搜索 + 表格 + 分页。布局对齐其它后台页（h1 + flex h-full flex-col gap-4）。
 // 操作列按状态开放：草稿=编辑/删除/发布；已发布=查看/停用；停用=编辑/发布。
@@ -125,13 +110,11 @@ export function FormListPanel({
 
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const pageNumbers = getPageNumbers(current, totalPages);
 
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-lg font-semibold">表单设计</h1>
+        <h1 className="text-page-title font-semibold">表单设计</h1>
         <Button onClick={() => onDesign(null)} size="sm" className="ml-auto">
           <Plus className="h-4 w-4" />
           新增表单
@@ -160,12 +143,12 @@ export function FormListPanel({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs font-medium text-muted-foreground">名称</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">描述</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">版本</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">状态</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">更新时间</TableHead>
-              <TableHead className="w-32 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
+              <TableHead>名称</TableHead>
+              <TableHead className="hidden lg:table-cell">描述</TableHead>
+              <TableHead>版本</TableHead>
+              <TableHead>状态</TableHead>
+              <TableHead className="hidden lg:table-cell">更新时间</TableHead>
+              <TableHead className="w-32 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,11 +163,7 @@ export function FormListPanel({
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="h-40 text-center text-sm text-muted-foreground">
-                  还没有表单，点右上角「新增表单」开始
-                </TableCell>
-              </TableRow>
+              <TableEmptyRow colSpan={6} title="还没有表单，点右上角「新增表单」开始" />
             ) : (
               records.map((f) => (
                 <TableRow key={f.id} className="group">
@@ -291,66 +270,16 @@ export function FormListPanel({
       </div>
 
       {/* 分页 */}
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span>共 {total} 条</span>
-        <div className="ml-auto flex items-center gap-1">
-          <Select
-            value={String(size)}
-            onValueChange={(v) => {
-              setSize(Number(v));
-              setCurrent(1);
-            }}
-          >
-            <SelectTrigger className="h-8 w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s} / 页
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={current <= 1}
-            onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-            aria-label="上一页"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          {pageNumbers.map((p, i) =>
-            p === "…" ? (
-              <span key={`e-${i}`} className="px-1 text-muted-foreground">
-                …
-              </span>
-            ) : (
-              <Button
-                key={p}
-                variant={p === current ? "default" : "outline"}
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setCurrent(p)}
-              >
-                {p}
-              </Button>
-            ),
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={current >= totalPages}
-            onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-            aria-label="下一页"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <DataPagination
+        current={current}
+        size={size}
+        total={total}
+        onCurrentChange={setCurrent}
+        onSizeChange={(s) => {
+          setSize(s);
+          setCurrent(1);
+        }}
+      />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>

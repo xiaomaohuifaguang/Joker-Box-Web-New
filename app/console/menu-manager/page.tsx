@@ -93,7 +93,7 @@ export default function MenuManagerPage() {
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-lg font-semibold">菜单管理</h1>
+        <h1 className="text-page-title font-semibold">菜单管理</h1>
         <ToggleGroup
           type="single"
           value={String(menuType)}

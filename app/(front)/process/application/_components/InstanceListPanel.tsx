@@ -1,19 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Pencil, Search } from "lucide-react";
+import { Eye, Pencil, Search } from "lucide-react";
 import { useProcessInstancePage } from "@/hooks/useProcessInstancePage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -29,16 +22,8 @@ import {
   PROCESS_INSTANCE_STATUS_FALLBACK,
   type ProcessInstanceType,
 } from "@/types";
-
-const PAGE_SIZES = [10, 20, 50];
-
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-  if (current >= total - 3)
-    return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "…", current - 1, current, current + 1, "…", total];
-}
+import { DataPagination } from "@/components/DataPagination";
+import { TableEmptyRow } from "@/components/TableEmptyRow";
 
 // 我的流程列表：tab（待处理/进行中/全部/草稿）+ 防抖搜索 + 表格 + 分页。
 // 操作列：待处理=处理（带 taskId 进处理视图，对齐审批中心待办），草稿=编辑、其他=查看（跳转路由视图）。
@@ -91,8 +76,6 @@ export function InstanceListPanel({
 
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const pageNumbers = getPageNumbers(current, totalPages);
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,14 +110,14 @@ export function InstanceListPanel({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs font-medium text-muted-foreground">编号</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">标题</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">流程</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">版本</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">状态</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">创建时间</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">更新时间</TableHead>
-              <TableHead className="w-16 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
+              <TableHead>编号</TableHead>
+              <TableHead>标题</TableHead>
+              <TableHead className="hidden lg:table-cell">流程</TableHead>
+              <TableHead className="hidden lg:table-cell">版本</TableHead>
+              <TableHead>状态</TableHead>
+              <TableHead className="hidden lg:table-cell">创建时间</TableHead>
+              <TableHead className="hidden lg:table-cell">更新时间</TableHead>
+              <TableHead className="w-16 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -152,14 +135,7 @@ export function InstanceListPanel({
                 </TableRow>
               ))
             ) : records.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={8}
-                  className="h-40 text-center text-sm text-muted-foreground"
-                >
-                  暂无流程记录
-                </TableCell>
-              </TableRow>
+              <TableEmptyRow colSpan={8} title="暂无流程记录" />
             ) : (
               records.map((r) => {
                 const st =
@@ -167,7 +143,7 @@ export function InstanceListPanel({
                   PROCESS_INSTANCE_STATUS_FALLBACK;
                 return (
                   // key 用 id+taskId 复合：待处理 tab 同一实例可产生多个任务（多行同 id），单 id 会撞 key。
-                  <TableRow key={`${r.id}-${r.taskId ?? ""}`} className="transition-colors hover:bg-brand-2/10">
+                  <TableRow key={`${r.id}-${r.taskId ?? ""}`}>
                     <TableCell className="font-mono text-xs font-medium tracking-wide text-foreground/80">
                       <span className="mr-0.5 text-muted-foreground">№</span>
                       {r.code || "-"}
@@ -230,66 +206,16 @@ export function InstanceListPanel({
         </Table>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span>共 {total} 条</span>
-        <div className="ml-auto flex items-center gap-1">
-          <Select
-            value={String(size)}
-            onValueChange={(v) => {
-              setSize(Number(v));
-              setCurrent(1);
-            }}
-          >
-            <SelectTrigger className="h-8 w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s} 条
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled={current <= 1}
-            onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-            aria-label="上一页"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          {pageNumbers.map((n, i) =>
-            n === "…" ? (
-              <span key={`e-${i}`} className="px-1">
-                …
-              </span>
-            ) : (
-              <Button
-                key={n}
-                variant={n === current ? "default" : "outline"}
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setCurrent(n)}
-              >
-                {n}
-              </Button>
-            ),
-          )}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled={current >= totalPages}
-            onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-            aria-label="下一页"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <DataPagination
+        current={current}
+        size={size}
+        total={total}
+        onCurrentChange={setCurrent}
+        onSizeChange={(s) => {
+          setSize(s);
+          setCurrent(1);
+        }}
+      />
     </div>
   );
 }

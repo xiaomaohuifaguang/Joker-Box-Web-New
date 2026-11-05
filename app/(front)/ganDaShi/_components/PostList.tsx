@@ -1,36 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Plus,
-  RotateCcw,
-  Search,
-} from "lucide-react";
+import { Eye, Plus, RotateCcw, Search } from "lucide-react";
 import { usePostPage } from "@/hooks/usePostPage";
 import { Container } from "@/components/Container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const PAGE_SIZES = [10, 20, 50];
-
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-  if (current >= total - 3)
-    return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "…", current - 1, current, current + 1, "…", total];
-}
+import { DataPagination } from "@/components/DataPagination";
 
 // 帖子列表：搜索 + 分页 + 帖子卡（标题/digest/作者/时间/浏览）。点击进详情。
 export function PostList({
@@ -57,13 +34,11 @@ export function PostList({
   const { page, loading } = usePostPage({ search, current, size, refreshKey });
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const pageNumbers = getPageNumbers(current, totalPages);
 
   return (
     <Container className="py-8 md:py-12">
       <header className="mb-6 flex items-center gap-4">
-        <h1 className="font-display text-2xl font-semibold">干大事</h1>
+        <h1 className="text-page-title font-semibold">干大事</h1>
         <p className="text-sm text-muted-foreground">在这里聊点大的。</p>
         <Button onClick={onNew} size="sm" className="ml-auto">
           <Plus className="h-4 w-4" />
@@ -145,66 +120,17 @@ export function PostList({
 
       {/* 分页 */}
       {records.length > 0 && (
-        <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span>共 {total} 条</span>
-          <div className="ml-auto flex items-center gap-1">
-            <Select
-              value={String(size)}
-              onValueChange={(v) => {
-                setSize(Number(v));
-                setCurrent(1);
-              }}
-            >
-              <SelectTrigger className="h-8 w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZES.map((s) => (
-                  <SelectItem key={s} value={String(s)}>
-                    {s} / 页
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-              disabled={current <= 1}
-              onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-              aria-label="上一页"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {pageNumbers.map((p, i) =>
-              p === "…" ? (
-                <span key={`e-${i}`} className="px-1 text-muted-foreground">
-                  …
-                </span>
-              ) : (
-                <Button
-                  key={p}
-                  variant={p === current ? "default" : "outline"}
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setCurrent(p)}
-                >
-                  {p}
-                </Button>
-              ),
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-              disabled={current >= totalPages}
-              onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-              aria-label="下一页"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <DataPagination
+          current={current}
+          size={size}
+          total={total}
+          onCurrentChange={setCurrent}
+          onSizeChange={(s) => {
+            setSize(s);
+            setCurrent(1);
+          }}
+          className="mt-6"
+        />
       )}
     </Container>
   );

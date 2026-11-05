@@ -80,7 +80,7 @@ export function PostDetail({
       ) : post ? (
         <article>
           <header className="mb-6">
-            <h1 className="font-display text-2xl font-semibold">{post.title}</h1>
+            <h1 className="text-page-title font-semibold">{post.title}</h1>
             <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">
                 {post.createByName || post.createUsername || "匿名"}

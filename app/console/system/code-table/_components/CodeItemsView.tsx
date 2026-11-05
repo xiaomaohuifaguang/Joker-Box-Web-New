@@ -157,7 +157,7 @@ export function CodeItemsView({
             <span className="font-mono text-sm text-muted-foreground">
               {table.code}
             </span>
-            <h1 className="font-display text-lg font-semibold">{table.name}</h1>
+            <h1 className="text-page-title font-semibold">{table.name}</h1>
             <Badge variant={table.tree === "1" ? "default" : "outline"}>
               {table.tree === "1" ? "树形" : "扁平"}
             </Badge>

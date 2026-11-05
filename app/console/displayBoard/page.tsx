@@ -21,7 +21,7 @@ export default function DisplayBoardPage() {
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-lg font-semibold">数据展板</h1>
+        <h1 className="text-page-title font-semibold">数据展板</h1>
         {updatedAt && (
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
             数据更新于 {pad(updatedAt.getHours())}:{pad(updatedAt.getMinutes())}:

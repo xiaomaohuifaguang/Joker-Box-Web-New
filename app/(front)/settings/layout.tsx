@@ -13,7 +13,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     <RequireAuth>
       <Container className="max-w-5xl flex-1 py-8 md:py-12">
         <header className="mb-6 md:mb-8">
-          <h1 className="font-display text-2xl font-semibold tracking-tight">
+          <h1 className="text-page-title font-semibold">
             个人设置
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">

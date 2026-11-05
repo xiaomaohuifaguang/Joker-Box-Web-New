@@ -836,7 +836,7 @@ function DesignerInner({
             <ArrowLeft className="h-4 w-4" />
             返回列表
           </Button>
-          <h1 className="font-display text-lg font-semibold">{readOnly ? "查看流程" : "编辑流程"}</h1>
+          <h1 className="text-page-title font-semibold">{readOnly ? "查看流程" : "编辑流程"}</h1>
         </div>
         <div className="flex flex-1 items-center justify-center rounded-lg border text-sm text-muted-foreground">
           加载中…
@@ -853,7 +853,7 @@ function DesignerInner({
           <ArrowLeft className="h-4 w-4" />
           返回列表
         </Button>
-        <h1 className="font-display text-lg font-semibold">
+        <h1 className="text-page-title font-semibold">
           {readOnly ? "查看流程" : id == null ? "新增流程" : "编辑流程"}
         </h1>
         <span className="font-mono text-xs text-muted-foreground">

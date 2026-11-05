@@ -66,7 +66,7 @@ export default function WebsitePage() {
   return (
     <Container className="py-8 md:py-12">
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">收藏网站</h1>
+        <h1 className="text-page-title font-semibold">收藏网站</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           常用站点聚合，按分组整理。
         </p>
