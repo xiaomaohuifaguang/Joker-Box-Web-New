@@ -88,7 +88,7 @@
   --font-sans: var(--body-font), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-mono: var(--mono-font), "PingFang SC", "Microsoft YaHei", monospace;
   --font-display: var(--display-font), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  /* 字标字体：只用于 Logo 和首页大标题；主题未设 --brand-font 时回退 display。 */
+  /* 字标字体：只用于 Logo 和首页大标题；主题未设 --brand-font 时继承 Joker（:root）的 Fraunces。 */
   --font-brand: var(--brand-font, var(--display-font)), "PingFang SC", "Microsoft YaHei", sans-serif;
 
   /* 字号（页面标题 20/28、区块标题 16/24、正文 14/22、辅助 13/20、最小 12）*/
