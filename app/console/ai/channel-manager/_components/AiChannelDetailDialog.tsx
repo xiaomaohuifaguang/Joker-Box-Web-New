@@ -117,7 +117,7 @@ export function AiChannelDetailDialog({
               <dd>{info.isCustom ? "-" : info.providerId ?? "-"}</dd>
             </div>
             <div>
-              <dt className="mb-1 text-muted-foreground">API KEY</dt>
+              <dt className="mb-1 text-muted-foreground">API Key</dt>
               <dd className="break-all">{info.apiKey || "-"}</dd>
             </div>
             <div className="sm:col-span-2">

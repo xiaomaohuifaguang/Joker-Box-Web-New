@@ -92,7 +92,7 @@ export function AvatarUpload() {
           <Camera className="h-6 w-6 text-background" />
         </span>
         {preview && (
-          <Badge className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 text-[10px]">
+          <Badge className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 text-xs">
             预览
           </Badge>
         )}

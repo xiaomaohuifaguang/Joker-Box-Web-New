@@ -135,7 +135,7 @@ export function StartView({
         ) : (
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="font-display text-2xl font-semibold">
+              <h1 className="text-page-title font-semibold">
                 发起流程{info?.processName ? ` · ${info.processName}` : ""}
               </h1>
               {info?.version && (

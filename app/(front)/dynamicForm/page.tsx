@@ -55,7 +55,7 @@ function DynamicFormFill() {
     return (
       <Container className="flex flex-1 flex-col items-center justify-center py-24 text-center">
         <CheckCircle2 className="h-12 w-12 text-success" />
-        <h1 className="mt-4 font-display text-2xl font-semibold">提交成功</h1>
+        <h1 className="mt-4 text-page-title font-semibold">提交成功</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           「{form.name}」已收到你的填写。
         </p>
@@ -71,7 +71,7 @@ function DynamicFormFill() {
 
   return (
     <Container className="flex-1 py-10">
-      <h1 className="font-display text-3xl font-semibold tracking-tight">{form.name}</h1>
+      <h1 className="text-page-title font-semibold">{form.name}</h1>
       {form.description && (
         <p className="mt-2 text-sm text-muted-foreground">{form.description}</p>
       )}

@@ -471,7 +471,7 @@ function SortableRow({
         </button>
         <span className="truncate text-sm font-medium">{node.label}</span>
         {!enabled && (
-          <span className="text-[10px] text-muted-foreground">停用</span>
+          <span className="text-xs text-muted-foreground">停用</span>
         )}
       </div>
 
@@ -488,10 +488,7 @@ function SortableRow({
       {/* 状态 */}
       <div>
         <Badge
-          variant={enabled ? "default" : "outline"}
-          className={cn(
-            enabled ? "bg-brand text-background" : "text-muted-foreground",
-          )}
+          variant={enabled ? "success" : "outline"}
         >
           {enabled ? "启用" : "停用"}
         </Badge>
@@ -522,7 +519,7 @@ function SortableRow({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-destructive"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
           onClick={onDelete}
           aria-label="删除"
         >

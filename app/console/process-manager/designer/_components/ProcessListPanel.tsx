@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Ban, ChevronLeft, ChevronRight, Eye, Pencil, Plus, RotateCcw, Search, Send, Trash2 } from "lucide-react";
+import { Ban, Eye, Pencil, Plus, RotateCcw, Search, Send, Trash2 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import {
   deployProcessDefinition,
@@ -16,13 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -42,22 +35,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { ProcessDefinition } from "@/types";
+import { DataPagination } from "@/components/DataPagination";
 
-const PAGE_SIZES = [10, 20, 50];
-
-const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+const STATUS: Record<string, { label: string; variant: "success" | "secondary" | "outline" }> = {
   "0": { label: "草稿", variant: "secondary" },
-  "1": { label: "已发布", variant: "default" },
+  "1": { label: "已发布", variant: "success" },
   "-1": { label: "停用", variant: "outline" },
 };
-
-function getPageNumbers(current: number, total: number): (number | "…")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
-  if (current >= total - 3)
-    return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "…", current - 1, current, current + 1, "…", total];
-}
 
 // 分类列展示名：注册表 type → name；注册表外的旧值原样显示。
 function categoryLabel(c?: string): string {
@@ -142,13 +126,11 @@ export function ProcessListPanel({
 
   const records = page?.records ?? [];
   const total = page?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const pageNumbers = getPageNumbers(current, totalPages);
 
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-lg font-semibold">流程设计</h1>
+        <h1 className="text-page-title font-semibold">流程设计</h1>
         <Button onClick={() => onDesign(null)} size="sm" className="ml-auto">
           <Plus className="h-4 w-4" />
           新增流程
@@ -194,13 +176,13 @@ export function ProcessListPanel({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs font-medium text-muted-foreground">名称</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">分类</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">描述</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">版本</TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">状态</TableHead>
-              <TableHead className="hidden text-xs font-medium text-muted-foreground lg:table-cell">更新时间</TableHead>
-              <TableHead className="w-32 text-right text-xs font-medium text-muted-foreground">操作</TableHead>
+              <TableHead>名称</TableHead>
+              <TableHead className="hidden lg:table-cell">分类</TableHead>
+              <TableHead className="hidden lg:table-cell">描述</TableHead>
+              <TableHead>版本</TableHead>
+              <TableHead>状态</TableHead>
+              <TableHead className="hidden lg:table-cell">更新时间</TableHead>
+              <TableHead className="w-32 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -240,7 +222,7 @@ export function ProcessListPanel({
                         {STATUS[status]?.label ?? status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell tabular-nums">
                       {p.updateTime || "-"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -272,7 +254,7 @@ export function ProcessListPanel({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => setDeleting(p)}
                             aria-label="删除"
                           >
@@ -314,66 +296,16 @@ export function ProcessListPanel({
       </div>
 
       {/* 分页 */}
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span>共 {total} 条</span>
-        <div className="ml-auto flex items-center gap-1">
-          <Select
-            value={String(size)}
-            onValueChange={(v) => {
-              setSize(Number(v));
-              setCurrent(1);
-            }}
-          >
-            <SelectTrigger className="h-8 w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s} / 页
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={current <= 1}
-            onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-            aria-label="上一页"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          {pageNumbers.map((p, i) =>
-            p === "…" ? (
-              <span key={`e-${i}`} className="px-1 text-muted-foreground">
-                …
-              </span>
-            ) : (
-              <Button
-                key={p}
-                variant={p === current ? "default" : "outline"}
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setCurrent(p)}
-              >
-                {p}
-              </Button>
-            ),
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={current >= totalPages}
-            onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-            aria-label="下一页"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <DataPagination
+        current={current}
+        size={size}
+        total={total}
+        onCurrentChange={setCurrent}
+        onSizeChange={(s) => {
+          setSize(s);
+          setCurrent(1);
+        }}
+      />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>

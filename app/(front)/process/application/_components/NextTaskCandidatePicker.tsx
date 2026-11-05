@@ -141,7 +141,7 @@ function NodeCandidateSelect({
     <div className="grid gap-1.5">
       <span className="text-sm font-medium">
         {info.nodeName ?? info.nodeId}
-        <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
           {single ? "选择 1 人" : "可多选"}
         </span>
       </span>

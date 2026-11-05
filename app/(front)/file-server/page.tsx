@@ -191,9 +191,10 @@ function FileServer() {
     <Container className="py-8 md:py-12">
       {/* 标题 + 面包屑 + 上传/新建 */}
       <header className="mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl font-semibold">码头</h1>
+        <h1 className="text-page-title font-semibold">码头</h1>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm">
-          {path.map((p, i) => (
+          {/* 只有根目录时不显示：和页面标题重复 */}
+          {path.length > 1 && path.map((p, i) => (
             <span key={p.id} className="flex shrink-0 items-center gap-1">
               {i > 0 && <span className="text-muted-foreground">/</span>}
               <button
@@ -325,10 +326,10 @@ function FileServer() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs">名称</TableHead>
-                    <TableHead className="w-28 text-xs">大小</TableHead>
-                    <TableHead className="w-44 text-xs">修改时间</TableHead>
-                    <TableHead className="w-24 text-right text-xs">操作</TableHead>
+                    <TableHead>名称</TableHead>
+                    <TableHead className="w-28">大小</TableHead>
+                    <TableHead className="w-44">修改时间</TableHead>
+                    <TableHead className="w-24 text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

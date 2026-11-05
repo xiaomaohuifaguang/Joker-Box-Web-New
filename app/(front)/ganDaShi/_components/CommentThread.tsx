@@ -137,12 +137,12 @@ export function CommentThread({
           <span className="font-medium text-foreground">
             {root.createByName || "匿名"}
           </span>
-          <span className="font-mono">{root.createTime}</span>
+          <span className="tabular-nums">{root.createTime}</span>
           {canDelete && (
             <Button
               variant="ghost"
               size="icon"
-              className="ml-auto h-6 w-6 text-destructive"
+              className="ml-auto h-6 w-6 text-muted-foreground hover:text-destructive"
               onClick={() => handleDelete(root.id)}
               aria-label="删除"
             >
@@ -184,12 +184,12 @@ export function CommentThread({
                     {r.createByName || "匿名"}
                   </span>
                   {r.replayName && <span>回复 @{r.replayName}</span>}
-                  <span className="font-mono">{r.createTime}</span>
+                  <span className="tabular-nums">{r.createTime}</span>
                   {canDelete && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="ml-auto h-6 w-6 text-destructive"
+                      className="ml-auto h-6 w-6 text-muted-foreground hover:text-destructive"
                       onClick={() => handleDelete(r.id)}
                       aria-label="删除"
                     >

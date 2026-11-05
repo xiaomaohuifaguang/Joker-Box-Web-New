@@ -334,7 +334,7 @@ export function MenuFormDialog({
             <div className="flex flex-col gap-2 border-t pt-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">关联 api</Label>
-                <span className="font-mono text-[10px] text-muted-foreground">
+                <span className="font-mono text-xs text-muted-foreground">
                   已选 {selected.size} · 白名单不可选
                 </span>
               </div>

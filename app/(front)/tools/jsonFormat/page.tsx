@@ -54,7 +54,7 @@ export default function JsonFormatPage() {
     <RequirePermission>
     <div className="flex flex-1 flex-col gap-3 p-4 md:p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display text-lg font-semibold">JSON 格式化</h1>
+        <h1 className="text-page-title font-semibold">JSON 格式化</h1>
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={format}>
             <Maximize2 className="h-4 w-4" />

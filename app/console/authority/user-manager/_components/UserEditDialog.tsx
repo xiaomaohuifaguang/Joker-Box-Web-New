@@ -246,7 +246,7 @@ export function UserEditDialog({
                   {detail.userExtend?.phone || "-"}
                 </dd>
                 <dt className="text-muted-foreground">创建时间</dt>
-                <dd className="font-mono text-xs text-muted-foreground">
+                <dd className="text-xs text-muted-foreground tabular-nums">
                   {detail.createTime}
                 </dd>
               </dl>

@@ -159,7 +159,7 @@ export function ApplicationInner({ processType }: { processType?: string }) {
   return (
     <Container className="py-8 md:py-12">
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">
+        <h1 className="text-page-title font-semibold">
           {processTypeName(processType)}申请中心
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

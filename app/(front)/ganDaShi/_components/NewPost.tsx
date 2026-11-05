@@ -51,7 +51,7 @@ export function NewPost({ onBack }: { onBack: () => void }) {
         <ArrowLeft className="h-4 w-4" />
         返回
       </Button>
-      <h1 className="font-display mb-6 text-2xl font-semibold">发帖</h1>
+      <h1 className="mb-6 text-page-title font-semibold">发帖</h1>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Label>标题</Label>

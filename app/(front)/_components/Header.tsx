@@ -3,17 +3,13 @@
 import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useMenuTree } from "@/hooks/useMenuTree";
-import { useTheme } from "@/hooks/useTheme";
-import { useUser } from "@/hooks/useUser";
-import { UserMenu } from "./UserMenu";
-import { LayoutToggle } from "@/components/LayoutToggle";
+import { ChevronRight, Menu, Palette } from "lucide-react";
+import { AppearanceMenu } from "@/components/AppearanceMenu";
+import { AppearancePanel } from "@/components/AppearancePanel";
+import { CommandMenu } from "@/components/CommandMenu";
+import { Container } from "@/components/Container";
 import { LogoMark } from "@/components/LogoMark";
-import { ThemeSelect } from "@/components/ThemeSelect";
 import { MenuIcon } from "@/components/menuIcons";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -35,169 +31,126 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { UserMobilePanel } from "@/components/user-menu/UserMobilePanel";
+import { useAuth } from "@/hooks/useAuth";
+import { useMenuTree } from "@/hooks/useMenuTree";
+import { useNavTo } from "@/hooks/useNavTo";
+import { findActiveLeaf, menuContains } from "@/lib/nav-match";
+import { cn } from "@/lib/utils";
 import { MENU_TYPE } from "@/types";
+import { UserMenu } from "./UserMenu";
+
+// 顶栏导航项（链接和带子菜单的触发器共用）：悬停有底色，选中与侧栏同一套品牌色淡底。
+const navItemClass =
+  "inline-flex h-9 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
+const navItemActiveClass = "bg-brand/15 font-medium text-foreground hover:bg-brand/20";
 
 function NavLink({
   href,
   label,
   active,
-  icon,
   onClick,
 }: {
   href: string;
   label: string;
   active: boolean;
-  icon?: string;
   onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`relative inline-flex items-center gap-1.5 text-sm transition-colors hover:text-foreground ${
-        active ? "text-foreground" : "text-muted-foreground"
-      }`}
+      aria-current={active ? "page" : undefined}
+      className={cn(navItemClass, active && navItemActiveClass)}
     >
-      {icon && <MenuIcon name={icon} className="h-4 w-4" />}
       {label}
-      {active && (
-        <span className="absolute -bottom-1.5 left-0 h-px w-full bg-brand" />
-      )}
     </Link>
   );
 }
 
-// NavigationMenu trigger 样式：覆盖默认填充胶囊，匹配极简文字风。
+// NavigationMenu trigger：覆盖默认样式，与顶栏链接一致；展开时保持悬停底色。
 const navTriggerClass =
-  "inline-flex h-auto w-auto items-center gap-1.5 rounded-none bg-transparent px-0 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground focus:bg-transparent focus:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground";
+  "w-auto gap-1 bg-transparent font-normal focus:bg-accent focus:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground data-[state=open]:hover:bg-accent data-[state=open]:focus:bg-accent";
 
-function SunIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
+// 移动菜单一行的样式。
+function mobileRowClass(active: boolean) {
+  return cn(
+    "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent",
+    active ? "bg-brand/15 font-medium text-foreground hover:bg-brand/20" : "text-muted-foreground",
   );
 }
 
-function MoonIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
-// 前台头部：左 logo / 中 导航（桌面）/ 右 预设+明暗+登录（桌面）或汉堡 Sheet（移动）。
-// 导航由后端 /menu/menuTree(menuType=-2) 驱动；菜单 icon 字段存在时渲染图标，否则纯文字。
+// 前台头部：左 logo / 中 导航（桌面）/ 右 搜索 + 外观 + 用户入口（桌面）或 搜索 + 汉堡（移动）。
+// 导航由后端 /menu/menuTree(menuType=-2) 驱动；顶栏纯文字，图标只在移动菜单一级显示。
 export function Header() {
-  const { authenticated, logout } = useAuth();
-  const { scheme, toggleScheme } = useTheme();
-  const { user } = useUser();
+  const { authenticated } = useAuth();
   const pathname = usePathname();
+  const navTo = useNavTo();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobile = () => setMobileOpen(false);
 
   const { menu } = useMenuTree(MENU_TYPE.FRONT);
   // 首页固定常驻首位（logo 也回首页）；接口若也返回 "/" 则去重。
   const menuItems = (menu ?? []).filter((m) => m.path !== "/");
-
-  // 静态导出下同 path 仅改 query 的软导航不会重建页面组件，详情态（?view=...）的 Inner
-  // 不会自动回列表。同 path 时拦截：pushState 改 URL + 手动补发 popstate，让 Inner 的
-  // popstate 监听响应并 parseView 重算。不同 path 走 Link 默认导航（不拦截）。
-  function navTo(e: MouseEvent<HTMLAnchorElement>, path: string) {
-    if (path !== pathname) return; // 跨页：交给 Link 正常导航
-    if (window.location.search === "") return; // 无 query（已在列表态）：无需处理
-    e.preventDefault();
-    window.history.pushState(null, "", path);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  }
-
-  const initials = (user?.nickname || user?.username || "?")
-    .slice(0, 2)
-    .toUpperCase();
-  const name = user?.nickname ?? user?.username ?? "用户";
+  const activePath = findActiveLeaf(menuItems, pathname);
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
-      <div className="flex h-16 items-center px-6">
-        {/* 左：logo--大王牌标记（小丑帽，无花色）+ 字标 */}
+      <Container className="flex h-16 items-center gap-4">
         <div className="flex flex-1 items-center">
           <Link href="/" className="flex items-center gap-2">
             <LogoMark />
-            <span data-slot="logo-text" className="font-display text-lg font-semibold tracking-tight">
+            <span data-slot="logo-text" className="font-brand text-lg font-semibold tracking-tight">
               Joker Box
             </span>
           </Link>
         </div>
 
-        {/* 中：导航（桌面；当前页发丝下划线；父菜单用 NavigationMenu，键盘可达）*/}
+        {/* 中：导航（桌面；父菜单用 NavigationMenu，键盘可达）*/}
         <NavigationMenu viewport={false} className="hidden flex-none md:flex">
-          <NavigationMenuList className="gap-6">
+          <NavigationMenuList className="gap-1">
             <NavigationMenuItem>
               <NavLink href="/" label="首页" active={pathname === "/"} />
             </NavigationMenuItem>
-            {menuItems.map((item) =>
-              item.children?.length ? (
+            {menuItems.map((item) => {
+              const active = menuContains(item, activePath);
+              return item.children?.length ? (
                 <NavigationMenuItem key={item.path}>
-                  <NavigationMenuTrigger className={navTriggerClass}>
-                    {item.icon && (
-                      <MenuIcon name={item.icon} className="h-4 w-4" />
-                    )}
+                  <NavigationMenuTrigger
+                    className={cn(navItemClass, navTriggerClass, active && navItemActiveClass)}
+                  >
                     {item.name}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    {/* 子菜单：名称上 / 描述下（有值才渲染），发丝分割线分隔，hover 泛 felt 绿 */}
-                    <ul className="flex w-60 flex-col p-1.5">
-                      {item.children.map((c, i) => (
-                        <li
-                          key={c.path}
-                          className={i > 0 ? "border-t border-border/60" : ""}
-                        >
-                          <NavigationMenuLink
-                            asChild
-                            active={pathname === c.path}
-                            className="flex flex-col items-start gap-0.5 rounded-md px-3 py-2.5 transition-colors hover:bg-brand-2/15 focus:bg-brand-2/15 data-[active=true]:bg-transparent"
-                          >
-                            <Link href={c.path} onClick={(e) => navTo(e, c.path)}>
-                              <span
-                                className={`font-display text-[15px] font-medium leading-tight ${
-                                  pathname === c.path
-                                    ? "text-foreground"
-                                    : "text-foreground/90"
-                                }`}
-                              >
-                                {c.name}
-                              </span>
-                              {c.description ? (
-                                <span className="text-xs leading-snug text-muted-foreground">
-                                  {c.description}
+                    {/* 子菜单：名称上 / 描述下（有值才渲染） */}
+                    <ul className="flex w-60 flex-col gap-0.5 p-1.5">
+                      {item.children.map((c) => {
+                        const childActive = menuContains(c, activePath);
+                        return (
+                          <li key={c.path}>
+                            <NavigationMenuLink
+                              asChild
+                              active={childActive}
+                              className={cn(
+                                "flex flex-col items-start gap-0.5 rounded-md px-3 py-2 transition-colors hover:bg-accent focus:bg-accent",
+                                childActive &&
+                                  "bg-brand/15 hover:bg-brand/20 focus:bg-brand/20 data-[active=true]:bg-brand/15",
+                              )}
+                            >
+                              <Link href={c.path} onClick={(e) => navTo(e, c.path)}>
+                                <span className={cn("text-sm", childActive && "font-medium")}>
+                                  {c.name}
                                 </span>
-                              ) : null}
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
-                      ))}
+                                {c.description ? (
+                                  <span className="text-xs text-muted-foreground">
+                                    {c.description}
+                                  </span>
+                                ) : null}
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -206,37 +159,19 @@ export function Header() {
                   <NavLink
                     href={item.path}
                     label={item.name}
-                    active={pathname === item.path}
-                    icon={item.icon}
+                    active={active}
                     onClick={(e) => navTo(e, item.path)}
                   />
                 </NavigationMenuItem>
-              ),
-            )}
+              );
+            })}
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* 右：桌面（预设 + 明暗 + 登录/用户菜单）/ 移动（汉堡 -> Sheet）*/}
-        <div className="flex flex-1 items-center justify-end gap-3">
-          <div className="hidden items-center gap-3 md:flex">
-            <ThemeSelect />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleScheme}
-                  aria-label={scheme === "dark" ? "切换浅色模式" : "切换深色模式"}
-                  className="text-muted-foreground"
-                >
-                  {scheme === "dark" ? <SunIcon /> : <MoonIcon />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {scheme === "dark" ? "切换浅色模式" : "切换深色模式"}
-              </TooltipContent>
-            </Tooltip>
-            <LayoutToggle />
+        <div className="flex flex-1 items-center justify-end gap-2">
+          <CommandMenu />
+          <div className="hidden items-center gap-2 md:flex">
+            <AppearanceMenu showLayout />
             {authenticated ? (
               <UserMenu />
             ) : (
@@ -244,7 +179,7 @@ export function Header() {
                 <Button asChild variant="outline" size="sm">
                   <Link href="/register">注册</Link>
                 </Button>
-                <Button asChild variant="default" size="sm">
+                <Button asChild size="sm">
                   <Link href="/login">登录</Link>
                 </Button>
               </>
@@ -263,60 +198,44 @@ export function Header() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-72 gap-0 p-0"
-              aria-describedby={undefined}
-            >
+            <SheetContent side="right" className="w-80 gap-0 p-0" aria-describedby={undefined}>
               <SheetHeader className="border-b">
-                <SheetTitle className="font-display text-lg font-semibold">
-                  Joker Box
-                </SheetTitle>
+                <SheetTitle className="font-brand text-lg font-semibold">Joker Box</SheetTitle>
               </SheetHeader>
-              <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-                <Link
-                  href="/"
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
-                    pathname === "/" ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
+              <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+                <Link href="/" onClick={closeMobile} className={mobileRowClass(pathname === "/")}>
                   <MenuIcon name="Home" className="h-4 w-4" />
                   首页
                 </Link>
-                {menuItems.map((item) =>
-                  item.children?.length ? (
-                    <Collapsible key={item.path}>
-                      <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground">
-                        {item.icon && (
-                          <MenuIcon name={item.icon} className="h-4 w-4" />
-                        )}
+                {menuItems.map((item) => {
+                  const active = menuContains(item, activePath);
+                  return item.children?.length ? (
+                    <Collapsible key={item.path} defaultOpen={active} className="group/mobile">
+                      <CollapsibleTrigger
+                        className={cn(mobileRowClass(false), active && "font-medium text-foreground")}
+                      >
+                        {item.icon && <MenuIcon name={item.icon} className="h-4 w-4" />}
                         {item.name}
+                        <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/mobile:rotate-90" />
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <div className="ml-3 flex flex-col border-l pl-2">
+                        <div className="ml-5 mt-1 flex flex-col gap-1 border-l pl-2">
                           {item.children.map((c) => (
                             <Link
                               key={c.path}
                               href={c.path}
                               onClick={(e) => {
-                                setMobileOpen(false);
+                                closeMobile();
                                 navTo(e, c.path);
                               }}
-                              className={`flex flex-col items-start gap-0.5 rounded-md px-3 py-1.5 transition-colors hover:bg-background ${
-                                pathname === c.path
-                                  ? "text-foreground"
-                                  : "text-muted-foreground"
-                              }`}
+                              className={cn(
+                                mobileRowClass(menuContains(c, activePath)),
+                                "flex-col items-start gap-0.5",
+                              )}
                             >
-                              <span className="flex items-center gap-2 text-sm">
-                                {c.icon && (
-                                  <MenuIcon name={c.icon} className="h-4 w-4" />
-                                )}
-                                {c.name}
-                              </span>
+                              <span>{c.name}</span>
                               {c.description ? (
-                                <span className="pl-6 text-xs text-muted-foreground">
+                                <span className="text-xs font-normal text-muted-foreground">
                                   {c.description}
                                 </span>
                               ) : null}
@@ -330,67 +249,41 @@ export function Header() {
                       key={item.path}
                       href={item.path}
                       onClick={(e) => {
-                        setMobileOpen(false);
+                        closeMobile();
                         navTo(e, item.path);
                       }}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-background hover:text-foreground ${
-                        pathname === item.path
-                          ? "text-foreground"
-                          : "text-muted-foreground"
-                      }`}
+                      className={mobileRowClass(active)}
                     >
-                      {item.icon && (
-                        <MenuIcon name={item.icon} className="h-4 w-4" />
-                      )}
+                      {item.icon && <MenuIcon name={item.icon} className="h-4 w-4" />}
                       {item.name}
                     </Link>
-                  ),
-                )}
-              </div>
-              <div className="flex flex-col gap-3 border-t p-4">
-                <div className="flex items-center gap-2">
-                  <ThemeSelect />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleScheme}
-                    aria-label="切换深色模式"
-                    className="text-muted-foreground"
-                  >
-                    {scheme === "dark" ? <SunIcon /> : <MoonIcon />}
-                  </Button>
-                  <LayoutToggle />
-                </div>
+                  );
+                })}
+
+                {/* 外观内联在滚动区，避免在 Sheet 里再开浮层 */}
+                <Collapsible className="group/mobile mt-2 border-t pt-2">
+                  <CollapsibleTrigger className={mobileRowClass(false)}>
+                    <Palette className="h-4 w-4" />
+                    外观设置
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/mobile:rotate-90" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 py-2">
+                    <AppearancePanel showLayout />
+                  </CollapsibleContent>
+                </Collapsible>
+              </nav>
+              <div className="border-t">
                 {authenticated ? (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="bg-brand-2 font-display text-xs text-background">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="flex-1 truncate text-sm">{name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        logout();
-                        setMobileOpen(false);
-                      }}
-                      aria-label="退出登录"
-                      className="h-8 w-8 shrink-0 text-muted-foreground"
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <UserMobilePanel onNavigate={closeMobile} />
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 p-3">
                     <Button asChild variant="outline" className="flex-1">
-                      <Link href="/register" onClick={() => setMobileOpen(false)}>
+                      <Link href="/register" onClick={closeMobile}>
                         注册
                       </Link>
                     </Button>
-                    <Button asChild variant="default" className="flex-1">
-                      <Link href="/login" onClick={() => setMobileOpen(false)}>
+                    <Button asChild className="flex-1">
+                      <Link href="/login" onClick={closeMobile}>
                         登录
                       </Link>
                     </Button>
@@ -400,7 +293,7 @@ export function Header() {
             </SheetContent>
           </Sheet>
         </div>
-      </div>
+      </Container>
     </header>
   );
 }

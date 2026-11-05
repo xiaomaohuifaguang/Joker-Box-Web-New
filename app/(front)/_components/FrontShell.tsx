@@ -2,11 +2,10 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import { Moon, Sun } from "lucide-react";
 import { AiChatWidget } from "@/components/ai-chat/AiChatWidget";
-import { LayoutToggle } from "@/components/LayoutToggle";
+import { AppearanceMenu } from "@/components/AppearanceMenu";
+import { CommandMenu } from "@/components/CommandMenu";
 import { SystemPromptBanner } from "@/components/SystemPromptBanner";
-import { ThemeSelect } from "@/components/ThemeSelect";
 import { Button } from "@/components/ui/button";
 import {
   SidebarInset,
@@ -17,7 +16,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAuth } from "@/hooks/useAuth";
 import { useFrontLayout } from "@/hooks/useFrontLayout";
 import { useMounted } from "@/hooks/useMounted";
-import { useTheme } from "@/hooks/useTheme";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { FrontSidebar } from "./FrontSidebar";
@@ -26,15 +24,14 @@ import { UserMenu } from "./UserMenu";
 // 前台外壳：两种布局模式可切换（lib/front-layout 持久化，LayoutToggle 切换）：
 // - top（默认）：Header + 公告横幅 + main（文档流滚动）+ Footer + AI 助手。
 // - side：仿后台 app-shell（SidebarProvider + FrontSidebar + SidebarInset），
-//   inset 顶栏放触发钮/主题/布局切换/用户入口，主区内部容器滚动，Footer 在滚动区底部。
-// 供 (front)/layout.tsx 与 NotFoundPage（全局 404 不在路由组布局内，需自含外壳）共用。
+//   inset 顶栏放触发钮/搜索/外观/用户入口，主区内部容器滚动，Footer 在滚动区底部。
+// 切换入口在外观菜单（AppearanceMenu），供 (front)/layout.tsx 与 NotFoundPage 共用。
 // useMounted 门控：布局存 localStorage（client-only），首帧渲染占位避免顶栏->侧栏跳变。
 // --front-chrome-h：顶栏模式 sticky/scroll 偏移 = Header 高（4rem）；侧栏模式 inset 顶栏
 // 在滚动区外，sticky 相对容器顶只需小缓冲（0.5rem）。供 website 等页使用。
 export function FrontShell({ children }: { children: ReactNode }) {
   const mounted = useMounted();
   const { layout } = useFrontLayout();
-  const { scheme, toggleScheme } = useTheme();
   const { authenticated } = useAuth();
 
   if (!mounted) {
@@ -57,28 +54,8 @@ export function FrontShell({ children }: { children: ReactNode }) {
               <TooltipContent>切换侧栏</TooltipContent>
             </Tooltip>
             <div className="ml-auto flex items-center gap-2">
-              <ThemeSelect />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleScheme}
-                    aria-label={scheme === "dark" ? "切换浅色模式" : "切换深色模式"}
-                    className="text-muted-foreground"
-                  >
-                    {scheme === "dark" ? (
-                      <Sun className="h-4 w-4" />
-                    ) : (
-                      <Moon className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {scheme === "dark" ? "切换浅色" : "切换深色"}
-                </TooltipContent>
-              </Tooltip>
-              <LayoutToggle />
+              <CommandMenu />
+              <AppearanceMenu showLayout />
               {authenticated ? (
                 <UserMenu />
               ) : (

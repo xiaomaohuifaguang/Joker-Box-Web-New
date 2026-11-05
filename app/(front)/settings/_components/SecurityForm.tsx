@@ -70,7 +70,6 @@ export function SecurityForm() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-sm bg-brand" />
           账号安全
         </CardTitle>
         <CardDescription>

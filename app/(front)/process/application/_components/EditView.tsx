@@ -140,7 +140,7 @@ export function EditView({
       </Button>
       <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-semibold">编辑草稿</h1>
+          <h1 className="text-page-title font-semibold">编辑草稿</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {metaName}
             {metaVersion ? ` · v${metaVersion}` : ""}

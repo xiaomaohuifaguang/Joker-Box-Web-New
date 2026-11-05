@@ -50,7 +50,7 @@ export function InheritMainFormField({
           }
         />
       </div>
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <p className="text-xs leading-snug text-muted-foreground">
         {mainFormBound
           ? "勾选后，本节点表单在流程主表单（表单绑定）字段基础上追加。"
           : "需先在「流程配置」选好绑定表单和版本，才能继承主表单字段。"}
