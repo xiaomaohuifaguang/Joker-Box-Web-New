@@ -1,0 +1,75 @@
+/* 首页能力牌组 + 牌桌纹样（颜色全走 token，所有预设通用）。
+   牌组是全站唯一的入场动画；其余界面保持安静。 */
+
+/* 菱格纹：只用于首页 hero 和登录/注册页品牌栏 */
+.felt-pattern {
+  background-image:
+    repeating-linear-gradient(60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 6%, transparent) 23px 24px),
+    repeating-linear-gradient(-60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 6%, transparent) 23px 24px);
+}
+
+/* 小屏：横向滑动，不做扇形 */
+.hero-fan {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-block: 0.25rem 1.25rem;
+}
+.hero-card {
+  flex: 0 0 11rem;
+  min-height: 15rem;
+  scroll-snap-align: start;
+}
+
+/* 桌面：以牌组下方为圆心展开 */
+@media (min-width: 64rem) {
+  .hero-fan {
+    position: relative;
+    display: block;
+    height: 25rem;
+    overflow: visible;
+    padding: 0;
+  }
+  .hero-card {
+    position: absolute;
+    bottom: 0;
+    left: calc(50% - 5.5rem);
+    width: 11rem;
+    height: 16rem;
+    transform-origin: 50% 190%;
+    transform: rotate(var(--fan));
+    transition: transform var(--motion-duration, 200ms) var(--motion-ease, ease);
+    animation: hero-deal 600ms cubic-bezier(0.2, 0, 0, 1) backwards;
+    animation-delay: calc(var(--i) * 60ms);
+  }
+  .hero-card:hover,
+  .hero-card:focus-visible {
+    z-index: 10;
+    transform: rotate(var(--fan)) translateY(-1.25rem);
+  }
+  /* 牌叠在一起时描述会被下一张切断：拿起这张牌才显示，最上面一张常显 */
+  .hero-card-text {
+    opacity: 0;
+    transition: opacity var(--motion-duration, 200ms) linear;
+  }
+  .hero-card:hover .hero-card-text,
+  .hero-card:focus-visible .hero-card-text,
+  .hero-card:last-child .hero-card-text {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-deal {
+  from {
+    opacity: 0;
+    transform: rotate(0deg) translateY(1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card {
+    animation: none;
+    transition: none;
+  }
+}

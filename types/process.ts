@@ -215,6 +215,8 @@ export interface ProcessInstance {
   taskId?: string;
   /** 当前任务名称（与 taskId 同级；待办/待认领列表 + 处理/认领详情返回） */
   taskName?: string;
+  /** 发起人昵称 */
+  createByName?: string;
   /** 处理页可用的审批按钮（info 返回，与 processDefinitionName 同级）：pass 通过 / back 驳回 / reject 拒绝 */
   buttonActions?: string[];
   /** 驳回配置（info 返回，与 buttonActions 同级；含驳回按钮时携带） */

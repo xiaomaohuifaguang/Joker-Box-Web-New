@@ -6,7 +6,7 @@ Route group（`(front)` 不进 URL）。`layout.tsx`(Server) 只是薄壳，实�
 
 跨文件约定：布局根设 CSS 变量 `--front-chrome-h`（top=4rem Header 高 / side=0.5rem），页面内 sticky 偏移/scroll-mt 用它（如 website）；**写依赖滚动的代码不要监听 window scroll**（side 模式不触发），用 IntersectionObserver。导航 Link 统一用 `hooks/useNavTo`（同 path 仅改 query 手动 popstate）。**FrontShell 同时被 `components/NotFoundPage` 复用**（全局 404 只套根布局、不进路由组布局，需自含前台外壳；改 FrontShell 结构时注意 404 页联动）。有 `loading.tsx`/`error.tsx`。
 
-- `page.tsx`：首页（Server，branding hero）。
+- `page.tsx`：首页（薄路由 → `_components/HomeInner` 按登录态切换）。未登录 `PublicLanding`（介绍 + 能力牌组，牌组样式 `app/styles/features/hero-cards.css`；能力牌不链接受保护页面，否则进 404）；已登录 `Workbench`（功能入口由菜单树叶子生成 + `TodoPanel` 待办，有审批中心权限才显示；`hooks/useWorkbenchTodo` 按 `PROCESS_TYPES` 逐分类查待办/待认领后汇总）。
 - `website/`：收藏网站。`/website/group` 分组，每组 brand 方块标记 + 卡片网格（hover 浮起 + 域名 mono）。左粘性分组导航（桌面竖列 / 移动横向 chip），点分组平滑跳转 + scroll-spy 高亮当前（IntersectionObserver 顶部条带，两种布局通用，尊重 reduced-motion）。白名单公开。
 - `file-server/`：码头（云盘）。`<RequireAuth>`。双视图（卡片/列表）+ 排序（名称/大小/时间，文件夹置顶）+ 拖拽上传（浮层）+ 右键菜单（项: 打开/下载/重命名/删除；空白区: 上传/新建）+ 面包屑。传参约定：`/file/*` 的 list/createFolder/delete/rename 走 query；upload 走 multipart（自定义 fetch，不走 `lib/api`）；download 走 GET blob+token（触发浏览器下载）。`_components/`(FileCard, FileRow, FileMenuItems, NameDialog)。
 - `dynamicForm/`：动态表单填写页。`/dynamicForm?formId=&version=`，`<RequireAuth>`。复用后台设计器的 `DynamicFormRenderer`（渲染/联动/远程选项/校验）按 `info(formId,version)` 渲染已发布版本，`/dynamicForm/submit`（body formId/version/data）提交，成功态 + 再填一次（重拉）。hook `hooks/useDynamicFormFill`。

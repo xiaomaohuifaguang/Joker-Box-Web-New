@@ -26,6 +26,10 @@ shadcn/ui（`radix-ui`）primitives ~50 个 + `sonner`。`components.json` + `li
   内容区：GFM 表格/任务列表/引用主题化，代码块卡（复制/语言标签/横向滚动 + Shiki css-var 高亮融入预设 token，流式降级），KaTeX 数学，Mermaid 图（懒加载 + token 主题 + DOMPurify 过滤 SVG），消息级复制全文 + 回到底部浮钮；样式统一 `[data-ai-md]` 作用域。
 
 ## 业务共享件（多管理页共用）
+- `DataPagination`：列表分页条（总数 + 每页条数 + 页码，手机收成当前/总页）。新列表直接用，不要再手写分页。
+- `TableEmptyRow`：表格空状态行，有下一步时传 `description`/`action`。
+- `NavTile`：功能入口格（工作台 + 后台仪表盘），菜单没配图标时用名称首字占位。
+- `AuthBrandPanel`：登录/注册页左栏。
 - `menuIcons.tsx`：Menu 图标注册表（`MENU_ICON_GROUPS` 14 类 ~149 个）+ `MenuIcon` switch 渲染（菜单管理选择 + 前台/后台导航渲染共用；硬编码 switch 规避 react-hooks static-components）。
 - `ApiPathBindingTree`：api 绑定树（服务/分组/apiPath 三级 checkbox，`roleBind` 回显、`whiteList` 禁用）；菜单/角色管理共用。
 - `TriCheckbox`：三态勾选框（all/some/none）；`ApiPathBindingTree` + `MenuCheckboxTree` 共用。

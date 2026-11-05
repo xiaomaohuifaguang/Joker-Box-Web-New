@@ -70,7 +70,7 @@ export function ApprovalInner({ processType }: { processType?: string }) {
   }
   const view = override ?? urlView;
 
-  const [activeTab, setActiveTab] = useState<ApprovalInstanceType>("4");
+  const [activeTab, setActiveTab] = useState<ApprovalInstanceType>("2");
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 浏览器前进/后退：popstate 直接用 window.location 重算（useSearchParams 在静态导出下可能滞后）。

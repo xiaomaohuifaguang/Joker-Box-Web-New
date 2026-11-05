@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthBrandPanel } from "@/components/AuthBrandPanel";
 import { LogoMark } from "@/components/LogoMark";
-import { JesterHat } from "@/components/JesterHat";
 
 // 统一登录页：已登录则跳走；提交账密拿 token；「记住密码」base64 存 localStorage。
 // 输入框非受控（defaultValue 从记住的凭证回填），关浏览器 autofill（密码框 new-password）。
@@ -77,55 +77,36 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-screen md:grid-cols-2">
-      {/* 品牌舞台（仅桌面）：harlequin 菱格 + 烫金内框 + 小丑帽 emblem，黑金剧场气质。全 token。 */}
-      <section
-        className="relative hidden flex-col items-center justify-center gap-10 overflow-hidden border-r bg-surface md:flex"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px), repeating-linear-gradient(-60deg, transparent 0 23px, color-mix(in srgb, var(--brand) 5%, transparent) 23px 24px)",
-        }}
-      >
-        <div aria-hidden className="pointer-events-none absolute inset-8 border border-brand/30" />
-        <JesterHat className="h-24 w-24 text-brand" />
-        <div className="text-center">
-          <p className="font-brand text-3xl font-semibold tracking-tight">Joker Box</p>
-          <p className="mt-3 text-sm text-muted-foreground">万千功能，一站聚合</p>
-        </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-          Plate Nº 53
-        </p>
-      </section>
+      <AuthBrandPanel />
 
-      {/* 表单（右侧 / 移动全宽）：安静单栏，无牌面装扮。 */}
+      {/* 表单（右侧 / 移动全宽） */}
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <LogoMark className="h-10 w-8" />
-          <h1 className="mt-6 font-display text-4xl font-semibold tracking-tight">欢迎回来</h1>
-          <p className="mt-2 text-sm text-muted-foreground">登录以继续</p>
+          <h1 className="mt-6 text-3xl font-semibold">欢迎回来</h1>
+          <p className="mt-2 text-sm text-muted-foreground">登录后继续使用你的工具和文件</p>
 
-          <form onSubmit={handleSubmit} autoComplete="off" className="mt-8 flex flex-col gap-6">
+          <form onSubmit={handleSubmit} autoComplete="off" className="mt-8 flex flex-col gap-5">
             {error && <p className="text-sm text-destructive">{error}</p>}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="username" className="text-xs text-muted-foreground">用户名</Label>
+              <Label htmlFor="username">用户名</Label>
               <Input
                 id="username"
                 name="username"
                 autoComplete="off"
                 defaultValue={creds?.username ?? ""}
-                placeholder="用户名"
-                className="h-11 rounded-none border-0 border-b-2 border-border bg-transparent px-0 shadow-none focus-visible:border-brand focus-visible:ring-0"
+                className="h-11"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password" className="text-xs text-muted-foreground">密码</Label>
+              <Label htmlFor="password">密码</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="new-password"
                 defaultValue={creds?.password ?? ""}
-                placeholder="密码"
-                className="h-11 rounded-none border-0 border-b-2 border-border bg-transparent px-0 shadow-none focus-visible:border-brand focus-visible:ring-0"
+                className="h-11"
               />
             </div>
             <div className="flex items-center gap-2">

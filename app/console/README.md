@@ -1,10 +1,10 @@
 # app/console — 后台
 
-`layout.tsx` = `<RequireAdmin>` + `SidebarProvider`(Sidebar + SidebarInset)；顶栏 = SidebarTrigger + `ConsoleBreadcrumb`（菜单树+路由算路径链，纯文本）+ 全局搜索 + 外观菜单。有 `loading.tsx`/`error.tsx`。`page.tsx` 是仪表盘（占位）。Sidebar 菜单 backend-driven（`useMenuTree` menuType=-1），折叠态父项点开向右浮层，footer 用户菜单。`_components/`：ConsoleSidebar（`components/app-shell/AppSidebar` 薄封装）、ConsoleBreadcrumb。
+`layout.tsx` = `<RequireAdmin>` + `SidebarProvider`(Sidebar + SidebarInset)；顶栏 = SidebarTrigger + `ConsoleBreadcrumb`（菜单树+路由算路径链，纯文本）+ 全局搜索 + 外观菜单。有 `loading.tsx`/`error.tsx`。`page.tsx` 是仪表盘（用户 KPI + 按菜单树生成的管理入口）。Sidebar 菜单 backend-driven（`useMenuTree` menuType=-1），折叠态父项点开向右浮层，footer 用户菜单。`_components/`：ConsoleSidebar（`components/app-shell/AppSidebar` 薄封装）、ConsoleBreadcrumb。
 
 路由权限：`<RequireAdmin>` 用后台菜单树判断（URL 直进无权限路由 → 404），见 `components/README.md`。
 
-通用约定：分页列表 hook 收 `{search,current,size,refreshKey}`，增删改后 `setRefreshKey(k=>k+1)` 重拉；分页页码 + 省略号；删除走 AlertDialog 二次确认。
+通用约定：分页列表 hook 收 `{search,current,size,refreshKey}`，增删改后 `setRefreshKey(k=>k+1)` 重拉；分页用共享 `components/DataPagination`，空行用 `TableEmptyRow`；页面标题用 `text-page-title font-semibold`；删除走 AlertDialog 二次确认。
 
 ## authority/（权限）
 - `org-manager/`：机构管理。左机构树（后端虚拟根 id=-1「全部」为第一层单节点）+ 右列表（表格+分页+搜索）。CRUD：新增/编辑（`OrgFormDialog` 父级 Select）、删除（AlertDialog）。`_components/`(OrgListPanel, OrgFormDialog)。
